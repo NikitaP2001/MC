@@ -73,3 +73,4 @@ runtest: $(TESTS)
 
 clean:
 	$(RM) $(OBJ_DIR)\*.o $(OBJ_DIR)\*.res
+	$(RM) $(TEST_DIR)\*.exe
