@@ -126,7 +126,7 @@ struct token {
 
 /* extracts tokens from unit contents
  */
-bool get_tokens(std::vector<std::vector<char>> const &TU_content,
+bool get_tokens(std::vector<std::vector<char>> &TU_content,
 std::vector<token> &tokens);
 
 } // ::lexer

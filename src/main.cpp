@@ -20,7 +20,8 @@ int main(int argc, char *argv[])
         fcontent.push_back(lcontent);
     }
 
-     
+    std::vector<lexer::token> tokens; 
+    lexer::get_tokens(fcontent, tokens);
 
 
     return 0;

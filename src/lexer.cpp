@@ -3,6 +3,13 @@
 
 using namespace lexer;
 
+bool lexer::get_tokens(std::vector<std::vector<char>> &TU_content,
+std::vector<token> &tokens)
+{
+
+    return 0;
+}
+
 const char *token_tag_table[] = 
 {
     "keyword", "identifier", "operator",
@@ -55,10 +62,3 @@ const char *kws_sym_table[] = {
     "static",     
     "while", 
 };
-
-bool get_tokens(std::vector<std::vector<char>> const &TU_content,
-std::vector<token> &tokens)
-{
-
-    return 0;
-}
