@@ -56,6 +56,10 @@ enum op_t {
     AND_ASSIGN,         // &=
     XOR_ASSIGN,         // ^=
     OR_ASSIGN,          // |=
+    COMA,               // ,
+    RIGHT_CRL_BR,       // }
+    LEFT_CRL_BR,        // {
+    SEMICOLON,          // ;
 };
 extern const char *ops_sym_table[];
 
@@ -113,10 +117,10 @@ struct token {
         const int id;
 
         name(int _id) : id(id) {}
-        name(char *szName) : str(szName) {}
+        name(const char *szName) : str(szName) {}
     } t_name;
 
-    token(token_tag tag, char *szName)
+    token(token_tag tag, const char *szName)
     : t_name(szName) {}
 
     token(token_tag tag, int id)
