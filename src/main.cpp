@@ -7,7 +7,6 @@
 #include <cstring>
 #include "dbg_time.hpp"
 #include "lexer.hpp"
-#include <windows.h>
 
 int main(int argc, char *argv[])
 {

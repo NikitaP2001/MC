@@ -1,5 +1,4 @@
-read_tsc PROTO
-
+include dbg_time.inc
 .code
 
 read_tsc proc

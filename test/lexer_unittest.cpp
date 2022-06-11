@@ -1,15 +1,14 @@
 #include <vector>
 #include <string>
 #include <gtest/gtest.h>
-#include "./../inc/lexer.hpp"
+#include "lexer.hpp"
 
 using namespace lexer;
-
 
 TEST(GetTokenTest, SimpleMain) {
 
     std::string uin = " \
-    // main func \ 
+    // main func \
     int main() \
     { \
         int a = 0; \
