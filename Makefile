@@ -56,16 +56,16 @@ vpath %.o OBJ_DIR
 
 CPP_SRC = $(wildcard $(SRC_DIR)/*.cpp)
 ARCH_CPP_SRC = $(wildcard $(ARCH_SRC_DIR)/*.cpp)
-TESTS_SRC = $(wildcard $(TEST_DIR)/*.cpp)
+TEST_SRC = $(wildcard $(TEST_DIR)/*.cpp)
 ARCH_ASM_SRC = $(wildcard $(ARCH_SRC_DIR)/*.asm)
 
 OBJECTS = $(subst $(SRC_DIR)/,$(OBJ_DIR)/,$(CPP_SRC:.cpp=.o))
 OBJECTS += $(subst $(ARCH_SRC_DIR)/,$(OBJ_DIR)/,$(ARCH_CPP_SRC:.cpp=.o))
 OBJECTS += $(subst $(ARCH_SRC_DIR)/,$(OBJ_DIR)/,$(ARCH_ASM_SRC:.asm=.o))
-TEST_OBJ = $(subst $(TEST_DIR)/,$(OBJ_DIR)/,$(TESTS_SRC:.cpp=.o))
+# TEST_OBJ = $(subst $(TEST_DIR)/,$(OBJ_DIR)/,$(TESTS_SRC:.cpp=.o))
 TEST_OBJ += $(filter-out $(OBJ_DIR)/main.o, $(OBJECTS))
 
-TESTS := $(TESTS_SRC:.cpp=.exe)
+TEST := $(TEST_SRC:.cpp=.exe)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@echo CC $<
@@ -78,6 +78,10 @@ $(OBJ_DIR)/%.o: $(TEST_DIR)/%.cpp
 $(OBJ_DIR)/%.o: $(ARCH_SRC_DIR)/%.asm
 	@echo AS $<
 	$(AS) $(ACFLAGS) $(A_OUT) $@ $<
+
+$(OBJ_DIR)/%.o: $(ARCH_SRC_DIR)/%.cpp
+	@echo cc $<
+	$(CC) $(CCFLAGS) $(C_OUT) $@ $<
 	
 all: CCFLAGS += $(DBG_CCFLAGS)
 all: $(TARGET) 
@@ -92,17 +96,18 @@ $(TARGET): $(OBJECTS)
 
 TESTLIB = $(LDLIBS)
 TESTLIB += -lgtest -lgtest_main
-$(TESTS): $(TEST_OBJ)
-	@echo LD $@
-	$(LD) $(LDFLAGS) $(C_OUT) $@ $^ $(TESTLIB)
 
-test: $(TESTS)
+.PHONY: test
+test: $(TEST_OBJ) $(TEST_SRC)
+	@echo LD $(TEST)
+	$(LD) $(LDFLAGS) -I $(INC_DIR) $(C_OUT) $(TEST) $^ $(TESTLIB)
 
-runtest: $(TESTS)
+
+runtest: $(TEST)
 	$(foreach test,$^,$(test) ;)
 
 .PHONY: clean
 clean:
 	$(RM) $(subst /,\,$(OBJ_DIR))
-	$(RM) $(subst /,\,$(TESTS))
+	$(RM) $(subst /,\,$(TEST))
 
