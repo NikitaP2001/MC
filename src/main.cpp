@@ -1,15 +1,15 @@
 #include <iostream>
-#include <fstream>
 #include <vector>
+#include <list>
 #include <algorithm>
 #include <iterator>
-#include <string>
-#include <cstring>
-#include "dbg_time.hpp"
+#include "main.hpp"
 #include "lexer.hpp"
 #include "unit.hpp"
+#include "dbg_time.hpp"
 
 #include <windows.h>
+
 
 class task;
 
@@ -22,26 +22,48 @@ int main(int argc, char *argv[])
     }
 
     char *fn = argv[1];
-    unsigned long long t0 = read_tsc();
-    std::fstream fin(argv[1], std::ios::in);
-    std::vector<std::vector<char>> fcontent;
-    std::string fline;
+    std::list<std::vector<char>> fcontent;
 
-    while (std::getline(fin, fline)) {
-        std::vector<char> lcontent(fline.begin(), fline.end());
-        fcontent.push_back(lcontent);
+    unsigned long long t0 = read_tsc();
+
+    HANDLE hFin = CreateFile(argv[1], GENERIC_READ, 0, NULL, OPEN_EXISTING,
+    FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFin == INVALID_HANDLE_VALUE) {
+        ERR2("create file failed", );
+        exit(1);
+    }
+
+    HANDLE hfm = CreateFileMapping(hFin, NULL, PAGE_READONLY, 0, 0, NULL);
+    if (hfm == NULL) {
+        ERR2("create mapping failed", );
+        exit(1);
+    }
+
+    char *pdata = (char *)MapViewOfFile(hfm, FILE_MAP_READ, 0, 0, 0);
+    if (pdata == NULL)
+        ERR2("Map view failed", );
+
+    MEMORY_BASIC_INFORMATION hfmminfo;
+    if (VirtualQuery(pdata, &hfmminfo, sizeof(hfmminfo)) == 0)
+        ERR2("VirtualQuery failed", );
+
+    for (char *p = pdata, *prevln = pdata;
+    p - pdata < hfmminfo.RegionSize; p++) {
+        if (*p == '\n') {
+            std::vector<char> vline(prevln, p);
+            vline.pop_back();
+            fcontent.push_back(vline);
+            prevln = p;
+        }
     }
 
     std::cout << "rd time: " << read_tsc() - t0 << std::endl;
 
-    std::vector<lexer::token> tokens; 
-    lexer::get_tokens(fcontent, tokens);
+    if (UnmapViewOfFile(pdata) == 0)
+        ERR2("Unmap view failed", );
 
-    HANDLE hFin = CreateFile(argv[1], GENERIC_READ, 0, NULL, OPEN_EXISTING,
-    FILE_ATTRIBUTE_NORMAL, NULL);
-
-    if (!CreateFileMapping(hFin, NULL, PAGE_READONLY, 0, 0, NULL))
-        std::cerr << "Create mapping failed" << std::endl;
+    CloseHandle(hfm);
+    CloseHandle(hFin);
 
 /*
     for (auto &ln : fcontent) {
