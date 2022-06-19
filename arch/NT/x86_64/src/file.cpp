@@ -1,30 +1,39 @@
+#include <exception>
 #include "file.hpp"
+#include "main.hpp"
 
-file::file(std::string path)
+file::file(std::string fpath, bool readonly = true)
 : path(fpath)
 {
-    HANDLE hFile = CreateFile(path.c_str(), GENERIC_READ, 0,
-    NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    DWORD dwDesiredAccess = (readonly) ? GENERIC_READ
+	    : GENERIC_READ | GENERIC_WRITE;
+    hFile = CreateFile(path.c_str(), dwDesiredAccess, 0,
+	NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE) {
-        ERR2("create file failed", );
-        exit(1);
+	std::string eMsg("fail: open file "); 
+	eMsg.insert(eMsg.end(), fpath.begin(), fpath.end());
+	throw std::runtime_error(eMsg);
     }
 }
 
 file::~file()
 {
-
     CloseHandle(hFile);
 }
 
-disk_file::disk_file(std::string fpath)
+mm_file::mm_file(std::string fpath)
 : file(fpath)
 {
-    
+    HANDLE hFileMapping = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
+    if (hFileMapping == NULL) {
+	std::string eMsg("fail: create file mapping "); 
+	eMsg.insert(eMsg.end(), fpath.begin(), fpath.end());
+	throw std::runtime_error(eMsg);
+    }
 
 }
 
-disk_file::~disk_file()
+mm_file::~mm_file()
 {
-
+    CloseHandle(hFileMapping);
 }

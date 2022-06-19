@@ -4,7 +4,7 @@ ifeq ($(OS),Windows_NT)
 
 	# Windows toolchain
 	SHELL=cmd.exe
-	AS=@\masm32\bin\ml64.exe 2>NUL
+	AS=@ml64.exe 2>NUL
 	CC=@c++
 	LD=@c++
 	RM=@-del /q 2>NUL
@@ -76,11 +76,11 @@ $(OBJ_DIR)/%.o: $(TEST_DIR)/%.cpp
 	$(CC) $(CCFLAGS) $(C_OUT) $@ $<
 	
 $(OBJ_DIR)/%.o: $(ARCH_SRC_DIR)/%.asm
-	@echo AS $<
+	@echo as $<
 	$(AS) $(ACFLAGS) $(A_OUT) $@ $<
 
 $(OBJ_DIR)/%.o: $(ARCH_SRC_DIR)/%.cpp
-	@echo cc $<
+	@echo CC $<
 	$(CC) $(CCFLAGS) $(C_OUT) $@ $<
 	
 all: CCFLAGS += $(DBG_CCFLAGS)
