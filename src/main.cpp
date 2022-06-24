@@ -3,15 +3,14 @@
 #include <list>
 #include <algorithm>
 #include <iterator>
+#include <windows.h>
+
 #include "main.hpp"
 #include "lexer.hpp"
 #include "unit.hpp"
-#include "dbg_time.hpp"
+#include "misc.hpp"
+#include "file.hpp"
 
-#include <windows.h>
-
-
-class task;
 
 int main(int argc, char *argv[])
 {
@@ -21,56 +20,39 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    char *fn = argv[1];
-    std::list<std::vector<char>> fcontent;
+    int fsize = 10000;
+    int wr_cnt = 1000;
+    fs::path ftest = "testfile";
+    if (fs::exists(ftest))
+        fs::remove(ftest);
 
-    unsigned long long t0 = read_tsc();
+    // generate random file content
+    srand(time(NULL));
+    char *fdat = new char[fsize];
+    char *rdbuf = new char[fsize];
+    for (int i = 0; i < fsize; i++)
+        fdat[i] = static_cast<char>(rand() % 0xFF);
 
-    HANDLE hFin = CreateFile(argv[1], GENERIC_READ, 0, NULL, OPEN_EXISTING,
-    FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFin == INVALID_HANDLE_VALUE) {
-        ERR2("create file failed");
-        exit(1);
-    }
+    std::ofstream stest(ftest.generic_string(), std::ios::binary);
+    stest.write(fdat, fsize); 
+    stest.close();
 
-    HANDLE hfm = CreateFileMapping(hFin, NULL, PAGE_READONLY, 0, 0, NULL);
-    if (hfm == NULL) {
-        ERR2("create mapping failed");
-        exit(1);
-    }
+    {
+        mm_file fout(ftest.generic_string(), false);
 
-    char *pdata = (char *)MapViewOfFile(hfm, FILE_MAP_READ, 0, 0, 0);
-    if (pdata == NULL)
-        ERR2("Map view failed");
-
-    MEMORY_BASIC_INFORMATION hfmminfo;
-    if (VirtualQuery(pdata, &hfmminfo, sizeof(hfmminfo)) == 0)
-        ERR2("VirtualQuery failed");
-
-    for (char *p = pdata, *prevln = pdata;
-    p - pdata < hfmminfo.RegionSize; p++) {
-        if (*p == '\n') {
-            std::vector<char> vline(prevln, p);
-            vline.pop_back();
-            fcontent.push_back(vline);
-            prevln = p;
+        for (int ntest; ntest < wr_cnt; ntest++) {
+            int wrpos = rand() % fsize;
+            int wrlen = rand() % (fsize - wrpos - 1) + 1;
+            for (int i = 0; i < wrlen; i++) {
+                char brnd = static_cast<char>(rand() % 0xFF);
+                fdat[wrpos + i] = brnd;
+            }
+            fout.write(&fdat[wrpos], wrpos, 10000);
         }
     }
 
-    std::cout << "rd time: " << read_tsc() - t0 << std::endl;
-
-    if (UnmapViewOfFile(pdata) == 0)
-        ERR2("Unmap view failed");
-
-    CloseHandle(hfm);
-    CloseHandle(hFin);
-
-/*
-    for (auto &ln : fcontent) {
-        for (auto ch : ln)
-            std::cout << ch;
-        std::cout << '\n';
-    } */
+    delete[] rdbuf;
+    delete[] fdat;
 
     return 0;
 }

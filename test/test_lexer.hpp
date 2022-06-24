@@ -1,7 +1,7 @@
 #include <vector>
 #include <string>
 #include <gtest/gtest.h>
-#include "lexer.hpp"
+#include "../inc/lexer.hpp"
 
 using namespace lexer;
 
@@ -20,12 +20,12 @@ TEST(GetTokenTest, SimpleMain) {
     } ";
     // expected tokens
     std::vector<token> etokens = {
-        token(TOK_KEYWORD, INT),
+        token(TOK_KEYWORD, KW_INT),
         token(TOK_IDENTIFIER, "main"),
         token(TOK_OPERATOR, LEFT_RND_BR),
         token(TOK_OPERATOR, RIGHT_RND_BR),
         token(TOK_OPERATOR, LEFT_CRL_BR),
-        token(TOK_KEYWORD, INT),
+        token(TOK_KEYWORD, KW_INT),
         token(TOK_IDENTIFIER, "a"),
         token(TOK_OPERATOR, ASSIGN),
         token(TOK_OPERATOR, SEMICOLON),

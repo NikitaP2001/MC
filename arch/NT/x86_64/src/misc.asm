@@ -1,4 +1,4 @@
-include dbg_time.inc
+include misc.inc
 .code
 
 read_tsc proc

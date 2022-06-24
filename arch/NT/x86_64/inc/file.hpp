@@ -12,13 +12,22 @@ protected:
 
     std::string path;
     HANDLE hFile = INVALID_HANDLE_VALUE;
+    uint64_t FileSize; 
+    bool _readonly;
 
 public:
 
     file(std::string fpath, bool readonly);
 
-    virtual void read(snippet &content) const = 0;
-    virtual void write(void *src, void *f_offset, int size) = 0;   // write file content to disk
+    virtual uint64_t read(snippet &content) const = 0;
+
+    virtual uint64_t read(void *dest, uint64_t f_offset, uint64_t size) const = 0;
+
+    virtual uint64_t write(void *src, uint64_t f_offset, uint64_t size) = 0;
+
+    virtual void resize(uint64_t new_size) = 0;
+
+    uint64_t size();
 
     virtual ~file();
 
@@ -31,15 +40,20 @@ public:
 class mm_file : file {
 private:
     LPVOID pView = NULL;	// file content in memory
-    DOWRD FileSize; 
     
     HANDLE hFileMapping;
 
 public:
-    virtual void read(snippet &content) const = 0;
-    virtual void write(snippet &content) const = 0;
 
-    mm_file(std::string fpath);
+    virtual uint64_t read(void *dest, uint64_t f_offset, uint64_t count) const;
+
+    virtual uint64_t read(snippet &content) const;
+
+    virtual uint64_t write(void *src, uint64_t f_offset, uint64_t count);
+
+    virtual void resize(uint64_t new_size);
+
+    mm_file(std::string fpath, bool readonly);
 
     ~mm_file();
 

@@ -100,7 +100,8 @@ TESTLIB += -lgtest -lgtest_main
 .PHONY: test
 test: $(TEST_OBJ) $(TEST_SRC)
 	@echo LD $(TEST)
-	$(LD) $(LDFLAGS) -I $(INC_DIR) $(C_OUT) $(TEST) $^ $(TESTLIB)
+	$(LD) $(LDFLAGS) -I $(INC_DIR) -I $(ARCH_INC_DIR) $(C_OUT) \
+	$(TEST) $^ $(TESTLIB)
 
 
 runtest: $(TEST)
