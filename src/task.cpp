@@ -9,7 +9,6 @@ std::map<std::string, command_type> str_com_map = {
 
 task::task(int argc, const char *argv[])
 {
-        char ex_msg[EX_MSG_SIZE];
         std::string carg;
         std::string ccommand;
 

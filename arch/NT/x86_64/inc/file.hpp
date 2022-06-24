@@ -1,3 +1,8 @@
+/*
+ *  Module file represents basic filesystem file
+ *  and memory mapped file
+ */
+
 #include <string>
 #include <vector>
 #include <list>
@@ -26,6 +31,8 @@ public:
     virtual uint64_t write(void *src, uint64_t f_offset, uint64_t size) = 0;
 
     virtual void resize(uint64_t new_size) = 0;
+
+    std::string get_path();
 
     uint64_t size();
 

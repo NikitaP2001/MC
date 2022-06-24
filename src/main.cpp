@@ -5,11 +5,11 @@
 #include <iterator>
 #include <windows.h>
 
-#include "main.hpp"
-#include "lexer.hpp"
-#include "unit.hpp"
 #include "misc.hpp"
+#include "main.hpp"
 #include "file.hpp"
+#include "unit.hpp"
+#include "lexer.hpp"
 
 
 int main(int argc, char *argv[])
@@ -20,39 +20,15 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    int fsize = 10000;
-    int wr_cnt = 1000;
-    fs::path ftest = "testfile";
-    if (fs::exists(ftest))
-        fs::remove(ftest);
+    mm_file fin(argv[1], true);
+    snippet sn;
+    uint64_t cb = fin.read(sn);
 
-    // generate random file content
-    srand(time(NULL));
-    char *fdat = new char[fsize];
-    char *rdbuf = new char[fsize];
-    for (int i = 0; i < fsize; i++)
-        fdat[i] = static_cast<char>(rand() % 0xFF);
-
-    std::ofstream stest(ftest.generic_string(), std::ios::binary);
-    stest.write(fdat, fsize); 
-    stest.close();
-
-    {
-        mm_file fout(ftest.generic_string(), false);
-
-        for (int ntest; ntest < wr_cnt; ntest++) {
-            int wrpos = rand() % fsize;
-            int wrlen = rand() % (fsize - wrpos - 1) + 1;
-            for (int i = 0; i < wrlen; i++) {
-                char brnd = static_cast<char>(rand() % 0xFF);
-                fdat[wrpos + i] = brnd;
-            }
-            fout.write(&fdat[wrpos], wrpos, 10000);
-        }
+    for (auto &ln : sn.content) {
+        for (const char ch : ln)
+            std::cout << ch;
     }
 
-    delete[] rdbuf;
-    delete[] fdat;
-
+   
     return 0;
 }

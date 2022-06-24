@@ -1,3 +1,8 @@
+/*
+ *  Task module control the translation process
+ *  and hold translation context information
+ */
+
 #include <map>
 #include <set>
 #include <vector>
@@ -27,9 +32,7 @@ protected:
     std::vector<fs::path> lib_dirs;
 
 public:
-    #define EX_MSG_SIZE 100
-    #define EX_TYPE "Argparse error: "
+
     task(int argc, const char *argv[]);
-    
 
 };

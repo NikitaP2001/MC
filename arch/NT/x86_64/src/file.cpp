@@ -40,6 +40,11 @@ file::file(std::string fpath, bool readonly)
     }
 }
 
+std::string file::get_path()
+{
+    return path;
+}
+
 file::~file()
 {
     // correct end of file
@@ -97,6 +102,7 @@ mm_file::mm_file(std::string fpath, bool readonly)
         throw std::runtime_error(eMsg);
     }
 
+    // map view of entrire file
     DWORD dwAccess = (readonly) ? FILE_MAP_READ
     : FILE_MAP_READ | FILE_MAP_WRITE;
     pView = MapViewOfFile(hFileMapping, dwAccess, 0, 0, FileSize);
@@ -122,9 +128,25 @@ uint64_t mm_file::read(void *dest, uint64_t f_offset, uint64_t count) const
     return count;
 }
 
+/* put all file content to snippet structure,
+ *  return number of bytes read */
 uint64_t mm_file::read(snippet &content) const
 {
-    return 0;
+    uint64_t fpos = 0;
+    char *pbeg = static_cast<char *>(pView);
+
+    content.line = 0;
+    content.content.erase(content.content.begin(), content.content.end());
+
+    while (fpos < FileSize) {
+            std::vector<char> line;
+            for (char c = *(pbeg+fpos++);
+                fpos < FileSize && (c != '\n' && c != '\r');
+                c = *(pbeg+fpos++))
+                line.push_back(c);
+            content.content.push_back(line);
+    }
+    return fpos;
 }
 
 /* write @count bytes to file view by @f_offset offset
