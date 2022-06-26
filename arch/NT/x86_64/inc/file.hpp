@@ -3,6 +3,9 @@
  *  and memory mapped file
  */
 
+#ifndef FILE_HPP
+#define FILE_HPP
+
 #include <string>
 #include <vector>
 #include <list>
@@ -66,12 +69,63 @@ public:
 
 };
 
-/* represents some part of text file */
-struct snippet {
-    file *f_ld_from;    // associated file
-    long line;  // line it starts in file
+struct line {
+private:
+    char *pline;
 
-    std::list<std::vector<char>> content;
+    int line_size;
+
+    // line number within source file
+    int line_number;
+
+    bool is_changed = false;
+
+    int resize(int new_size);
+
+public:
+
+    line(char *pdata, int data_size, int ln_num);
+
+    /* attention - returned pointer may become 
+     * invalid after line write operations */
+    const char *const get_ptr() const;
+
+    int get_number() const;
+
+    /* note, that allocated mem out of initial line
+     * and write interval will be filled with spaces */
+    int write(const void *src, int offset, int count);
+
+    int insert(const void *src, int offset, int count);
+
+    int size() const;
+
+    line(const line &) = delete;
+
+    line &operator=(const line &) = delete;
+
+    ~line();
+
 };
 
+/* represents some part of text file */
+struct snippet {
 
+    std::list<line *> lines;
+
+    void clear()
+    {
+        for (auto *ln : lines)
+            delete ln;
+        lines.clear();
+    }
+
+    file *f_ld_from;    // associated file
+
+    ~snippet()
+    {
+        clear();
+    }
+};
+
+#endif // FILE_HPP

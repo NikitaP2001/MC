@@ -1,18 +1,16 @@
-#include <filesystem>
 #include <vector>
+#include <filesystem>
+#include "file.hpp"
+
 namespace fs = std::filesystem;
 
+class unit {
 
+    // opened source files
+    std::vector<file *> files;
 
+public:
 
-
-
-
-
-class Unit {
-
-
-    Unit(fs::path file_start, std::vector<fs::path> inc_dirs);
-
+    unit(fs::path file_start, std::vector<fs::path> inc_dirs);
 
 };

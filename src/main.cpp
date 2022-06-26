@@ -20,15 +20,5 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    mm_file fin(argv[1], true);
-    snippet sn;
-    uint64_t cb = fin.read(sn);
-
-    for (auto &ln : sn.content) {
-        for (const char ch : ln)
-            std::cout << ch;
-    }
-
-   
-    return 0;
+    
 }

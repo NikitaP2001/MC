@@ -1,4 +1,6 @@
 #include <stdexcept>
+#include <algorithm>
+#include <stdlib.h>
 #include "file.hpp"
 #include "main.hpp"
 
@@ -135,16 +137,18 @@ uint64_t mm_file::read(snippet &content) const
     uint64_t fpos = 0;
     char *pbeg = static_cast<char *>(pView);
 
-    content.line = 0;
-    content.content.erase(content.content.begin(), content.content.end());
+    // clear old data, if present
+    content.clear(); 
 
+    int line_num = 0;
     while (fpos < FileSize) {
-            std::vector<char> line;
-            for (char c = *(pbeg+fpos++);
-                fpos < FileSize && (c != '\n' && c != '\r');
-                c = *(pbeg+fpos++))
-                line.push_back(c);
-            content.content.push_back(line);
+        uint64_t oldpos = fpos;
+        for (char c = *(pbeg+fpos++); fpos < FileSize && c != '\n'; fpos++)
+            c = *(pbeg+fpos);
+        content.lines.push_back(new line(pbeg + oldpos,
+        fpos - oldpos, line_num));
+
+        line_num += 1;
     }
     return fpos;
 }
@@ -211,4 +215,82 @@ mm_file::~mm_file()
             ERR2("UnmapViewOfFile failed");
     }
     CloseHandle(hFileMapping);
+}
+
+line::line(char *pdata, int data_size, int ln_num)
+: pline(pdata), line_size(data_size), line_number(ln_num)
+{
+
+}
+
+const char *const line::get_ptr() const
+{
+    return pline;
+}
+
+int line::get_number() const
+{
+    return line_number;
+}
+
+int line::write(const void *src, int offset, int count)
+{
+    int new_sz = (offset + count > line_size) ? offset + count : line_size;
+    resize(new_sz);
+    memmove(pline + offset, src, count);
+
+    return count;
+}
+
+int line::resize(int new_size)
+{
+    char *pnew = (is_changed) ? (char *)realloc(pline, new_size)
+    : (char *)malloc(new_size);
+    if (pnew == NULL){
+        ERR2("realloc failed");
+        INFO(strerror(errno));
+        std::string eMsg = "memory alloc error";
+        throw std::runtime_error(eMsg);
+    }
+
+    if (!is_changed) {
+        int sz = (line_size < new_size) ? line_size : new_size;
+        memmove(pnew, pline, sz);
+        is_changed = true;
+    }
+
+    // fill new bytes with spaces
+    if (new_size > line_size)
+        memset(pnew + line_size, ' ', new_size - line_size);
+
+    line_size = new_size;
+    pline = pnew;
+
+    return new_size;
+}
+
+int line::insert(const void *src, int offset, int count)
+{
+    int oldsz = line_size;
+    if (offset < line_size)
+        resize(line_size + count);
+    else
+        resize(offset + count);
+
+    if (offset < oldsz)    
+        memmove(pline + offset + count, pline + offset, oldsz - offset);
+    memmove(pline + offset, src, count);
+
+    return count;
+}
+
+int line::size() const
+{
+    return line_size;
+}
+
+line::~line()
+{
+    if (is_changed)
+        free(pline);
 }
