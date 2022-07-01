@@ -1,3 +1,4 @@
+#include "file.hpp"
 
 namespace lexer {
 
@@ -130,7 +131,6 @@ struct token {
 
 /* extracts tokens from unit contents
  */
-bool get_tokens(std::vector<std::vector<char>> &TU_content,
-std::vector<token> &tokens);
+bool lexer::get_tokens(snippet &TU, std::vector<token> &tokens);
 
-} // ::lexer
+// ::lexer

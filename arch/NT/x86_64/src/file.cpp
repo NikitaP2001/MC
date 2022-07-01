@@ -248,7 +248,6 @@ int line::resize(int new_size)
     : (char *)malloc(new_size);
     if (pnew == NULL){
         ERR2("realloc failed");
-        INFO(strerror(errno));
         std::string eMsg = "memory alloc error";
         throw std::runtime_error(eMsg);
     }
