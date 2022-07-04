@@ -11,6 +11,8 @@ enum token_tag {
     TOK_STRING,
     TOK_INTEGER,
     TOK_FLOAT,
+
+    TOK_INVALID,
 };
 extern const char *token_tag_table[];
 
@@ -69,35 +71,35 @@ enum kw_t {
     KW_AUTO, 
     KW_DOUBLE,
     KW_INT,
-	KW_STRUC,	
-	KW_BREAK,
-	KW_ELSE,
-	KW_LONG,
-	KW_SWITCH,	
-	KW_CASE,
-	KW_ENUM,
-	KW_REGISTER,
-	KW_TYPEDE,	
-	KW_CHAR,
-	KW_EXTERN,
-	KW_RETURN,
-	KW_UNIO,	
-	KW_CONST,
-	KW_FLOAT,
-	KW_SHORT,
-	KW_UNSIGNE,	
-	KW_CONTINUE,
-	KW_FOR,
-	KW_SIGNED,
-	KW_VOI,	
-	KW_DEFAULT,
-	KW_GOTO,
-	KW_SIZEOF,
-	KW_VOLATILE,	
-	KW_DO,
-	KW_IF,
-	KW_STATIC,
-	KW_WHILE,
+    KW_STRUC,	
+    KW_BREAK,
+    KW_ELSE,
+    KW_LONG,
+    KW_SWITCH,	
+    KW_CASE,
+    KW_ENUM,
+    KW_REGISTER,
+    KW_TYPEDE,	
+    KW_CHAR,
+    KW_EXTERN,
+    KW_RETURN,
+    KW_UNIO,	
+    KW_CONST,
+    KW_FLOAT,
+    KW_SHORT,
+    KW_UNSIGNE,	
+    KW_CONTINUE,
+    KW_FOR,
+    KW_SIGNED,
+    KW_VOI,	
+    KW_DEFAULT,
+    KW_GOTO,
+    KW_SIZEOF,
+    KW_VOLATILE,	
+    KW_DO,
+    KW_IF,
+    KW_STATIC,
+    KW_WHILE,
 };
 extern const char *kws_sym_table[];
 
@@ -109,28 +111,41 @@ extern const char *kws_sym_table[];
  */
 struct token {
 
+    // source info for error reporting
+    int line;
+    file *f_src = NULL;
+
     token_tag attribute;
 
-    long line;
-
     union name {
-        const char *str;
-        const int id;
+        char *str;  // string which represents token value
 
-        name(int _id) : id(id) {}
-        name(const char *szName) : str(szName) {}
+        int id;     // indentifier of token from corresponding
+                    // namespace
+        name(const char *token_val)
+        {
+            str = new char[strlen(token_val) + 1];
+            char *szval = str;
+            while (*szval++ = *token_val++);
+        }
+        name (int token_val) : id(token_val) {}
+        ~name()
+        {
+            delete[] str;
+        }
     } t_name;
 
-    token(token_tag tag, const char *szName)
-    : t_name(szName) {}
+    token(const char* val, token_tag attr)
+    : attribute(attr), t_name(val);
 
-    token(token_tag tag, int id)
-    : t_name(id) {}
+    token(int val, token_tag attr)
+    : attribute(attr), t_name(val);
+
 
 };
-
+	
 /* extracts tokens from unit contents
  */
-bool lexer::get_tokens(snippet &TU, std::vector<token> &tokens);
+bool get_tokens(snippet &TU, std::vector<token> &tokens);
 
-// ::lexer
+}	// ::lexer

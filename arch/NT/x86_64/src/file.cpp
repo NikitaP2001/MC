@@ -145,6 +145,9 @@ uint64_t mm_file::read(snippet &content) const
         uint64_t oldpos = fpos;
         for (char c = *(pbeg+fpos++); fpos < FileSize && c != '\n'; fpos++)
             c = *(pbeg+fpos);
+        line *nln = new line(pbeg + oldpos,
+        fpos - oldpos, line_num);
+        nln->f_ln_from = this;
         content.lines.push_back(new line(pbeg + oldpos,
         fpos - oldpos, line_num));
 

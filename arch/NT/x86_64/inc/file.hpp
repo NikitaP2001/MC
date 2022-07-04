@@ -84,6 +84,8 @@ private:
 
 public:
 
+    file *f_ln_from;    // associated file
+
     line(char *pdata, int data_size, int ln_num);
 
     /* attention - returned pointer may become 
@@ -120,7 +122,6 @@ struct snippet {
         lines.clear();
     }
 
-    file *f_ld_from;    // associated file
 
     ~snippet()
     {
