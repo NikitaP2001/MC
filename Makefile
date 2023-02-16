@@ -12,11 +12,13 @@ TEST_DIR = $(realpath test)
 #vpath %.o OBJ_DIR
 
 # toolchain
-CC=@gcc -std=c99
+CC= @gcc -std=c99
+CPP = gcc
 LD=@gcc
+DRMEM = drmemory.exe -logdir c:/logs --
 
 # compiler flags
-CCFLAGS = -c -I $(INC_DIR)
+CCFLAGS = -c -pedantic -Wall -Wextra -Werror -I $(INC_DIR)
 DBG_CCFLAGS = -DDEBUG -g
 RLS_CCFLAGS = -s -fdata-sections -ffunction-sections -O3
 
@@ -44,13 +46,13 @@ $(TARGET): $(SUBDIRS)
 	@echo LD $@
 	$(LD) $(LDFLAGS) $(C_OUT) $@ $(LDLIBS) $(OBJ)
 		
+.PHONY: test
+test: $(SUBDIRS)
+	@$(MAKE) -C $@ --no-print-directory	
+		
 .PHONY: $(SUBDIRS)
 $(SUBDIRS):	
 	@$(MAKE) -C $@ --no-print-directory
-
-.PHONY: $(TEST_DIR)
-$(TEST_DIR): $(SUBDIRS)
-	$(MAKE) -C $@
 
 runtest: $(TEST)
 	$(foreach test,$^,$(test) ;)

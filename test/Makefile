@@ -1,10 +1,10 @@
-SRC = $(wildcard *.c)
+SRC = $(wildcard *.cpp)
 
 OBJ = $(wildcard $(OBJ_DIR)/*.o)
 OBJ = $(filter-out $(OBJ_DIR)/main.o, $(OBJECTS))
 
-TEST = $(SRC:.c=.$(EXE_EXT))
+TEST = $(SRC:.cpp=.$(EXE_EXT))
 
 all:  $(OBJ) $(SRC)
 	@echo LD $(TEST)
-	$(LD) $(LDFLAGS) $(C_OUT) $(TEST) $^ $(TESTLIB)
+	$(CPP) $(LDFLAGS) -I $(INC_DIR) $(C_OUT) $(TEST) $^ $(TESTLIB)
