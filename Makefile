@@ -1,114 +1,61 @@
-# detect os and cpu arch
-ifeq ($(OS),Windows_NT)
-	TARGET = target.exe
+TARGET = mc.exe
 
-	# Windows toolchain
-	SHELL=cmd.exe
-	AS=@ml64.exe 2>NUL
-	CC=@c++
-	LD=@c++
-	RM=@-del /q 2>NUL
+EXE_EXT = exe
 
-	ifeq ($(PROCESSOR_ARCHITEW6432),AMD64)
-		ARCH ?= 64
-	endif
-
-	ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
-		ARCH ?= 64
-	else
-		ARCH ?= 32
-	endif
-
-	# set architecture specific sources path
-	ifeq ($(ARCH),64)
-		ARCH_SRC_DIR = $(realpath arch)/NT/x86_64/src
-		ARCH_INC_DIR = $(realpath arch)/NT/x86_64/inc
-
-	else
-
-	endif
-
-	# Compilation flags: masm and gcc
-	CCFLAGS = -c -I $(INC_DIR) -I $(ARCH_INC_DIR)
-	DBG_CCFLAGS = -DDEBUG -g
-	RLS_CCFLAGS = -s -fdata-sections -ffunction-sections -O3
-	ACFLAGS = /c /Cp /I $(ARCH_INC_DIR)
-	LDLIBS = 
-	LDFLAGS = 
-	RLS_LDFLAGS = -Wl,--gc-sections,-s
-
-	C_OUT = -o
-	A_OUT = /Fo
-	
-
-else
-
-endif
-
-SRC_DIR = $(realpath src)
+SRC_DIR = $(realpath mc)
 OBJ_DIR = $(realpath obj)
-INC_DIR = $(realpath inc)
+INC_DIR = $(realpath include)
 TEST_DIR = $(realpath test)
 
-vpath %.cpp SRC_DIR TEST_DIR
-vpath %.hpp INC_DIR
-vpath %.o OBJ_DIR
+#vpath %.c SRC_DIR TEST_DIR
+#vpath %.h INC_DIR
+#vpath %.o OBJ_DIR
 
-CPP_SRC = $(wildcard $(SRC_DIR)/*.cpp)
-ARCH_CPP_SRC = $(wildcard $(ARCH_SRC_DIR)/*.cpp)
-TEST_SRC = $(wildcard $(TEST_DIR)/*.cpp)
-ARCH_ASM_SRC = $(wildcard $(ARCH_SRC_DIR)/*.asm)
+# toolchain
+CC=@gcc -std=c99
+LD=@gcc
 
-OBJECTS = $(subst $(SRC_DIR)/,$(OBJ_DIR)/,$(CPP_SRC:.cpp=.o))
-OBJECTS += $(subst $(ARCH_SRC_DIR)/,$(OBJ_DIR)/,$(ARCH_CPP_SRC:.cpp=.o))
-OBJECTS += $(subst $(ARCH_SRC_DIR)/,$(OBJ_DIR)/,$(ARCH_ASM_SRC:.asm=.o))
-# TEST_OBJ = $(subst $(TEST_DIR)/,$(OBJ_DIR)/,$(TESTS_SRC:.cpp=.o))
-TEST_OBJ += $(filter-out $(OBJ_DIR)/main.o, $(OBJECTS))
+# compiler flags
+CCFLAGS = -c -I $(INC_DIR)
+DBG_CCFLAGS = -DDEBUG -g
+RLS_CCFLAGS = -s -fdata-sections -ffunction-sections -O3
 
-TEST := $(TEST_SRC:.cpp=.exe)
+LDLIBS = 
+LDFLAGS = 
+TESTLIB = $(LDLIBS)
+TESTLIB += -lgtest -lgtest_main
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
-	@echo CC $<
-	$(CC) $(CCFLAGS) $(C_OUT) $@ $<
-
-$(OBJ_DIR)/%.o: $(TEST_DIR)/%.cpp
-	@echo CC $<
-	$(CC) $(CCFLAGS) $(C_OUT) $@ $<
+# misc shortcuts
+C_OUT = -o 
 	
-$(OBJ_DIR)/%.o: $(ARCH_SRC_DIR)/%.asm
-	@echo as $<
-	$(AS) $(ACFLAGS) $(A_OUT) $@ $<
+export
+        
+SUBDIRS = $(SRC_DIR)
 
-$(OBJ_DIR)/%.o: $(ARCH_SRC_DIR)/%.cpp
-	@echo CC $<
-	$(CC) $(CCFLAGS) $(C_OUT) $@ $<
-	
 all: CCFLAGS += $(DBG_CCFLAGS)
-all: $(TARGET) 
+all: $(TARGET)
 
 release: CCFLAGS += $(RLS_CCFLAGS)
 release: LDFLAGS += $(RLS_LDFLAGS)
 release: $(TARGET)
 
-$(TARGET): $(OBJECTS)
+$(TARGET): OBJ = $(wildcard $(OBJ_DIR)/*.o)	
+$(TARGET): $(SUBDIRS)
 	@echo LD $@
-	$(LD) $(LDFLAGS) $(C_OUT) $@ $(LDLIBS) $^
+	$(LD) $(LDFLAGS) $(C_OUT) $@ $(LDLIBS) $(OBJ)
+		
+.PHONY: $(SUBDIRS)
+$(SUBDIRS):	
+	@$(MAKE) -C $@ --no-print-directory
 
-TESTLIB = $(LDLIBS)
-TESTLIB += -lgtest -lgtest_main
-
-.PHONY: test
-test: $(TEST_OBJ) $(TEST_SRC)
-	@echo LD $(TEST)
-	$(LD) $(LDFLAGS) -I $(INC_DIR) -I $(ARCH_INC_DIR) $(C_OUT) \
-	$(TEST) $^ $(TESTLIB)
-
+.PHONY: $(TEST_DIR)
+$(TEST_DIR): $(SUBDIRS)
+	$(MAKE) -C $@
 
 runtest: $(TEST)
 	$(foreach test,$^,$(test) ;)
 
 .PHONY: clean
 clean:
-	$(RM) $(subst /,\,$(OBJ_DIR))
-	$(RM) $(subst /,\,$(TEST))
+	rm -f $(OBJ_DIR)/*
 

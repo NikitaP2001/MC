@@ -1,1 +1,0 @@
-read_tsc PROTO
