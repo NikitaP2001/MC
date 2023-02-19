@@ -4,9 +4,9 @@
 #include <unit.h>
 
 
-int unit_from_file(const char *file_name, tr_unit *init_unit)
+_Bool unit_from_file(const char *file_name, struct tr_unit *init_unit)
 {
-        int status = true;
+        _Bool status = true;
         init_unit->snippets = snippet_create(file_name);
         if (init_unit->snippets == NULL)
                 status = false;

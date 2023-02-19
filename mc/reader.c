@@ -2,7 +2,7 @@
 
 #include <reader.h>
 
-static struct snippet *skip_empty(unit_reader *reader)
+static struct snippet *skip_empty(struct unit_reader *reader)
 {
         struct snippet *head = reader->curr_snippet;
         char_t *read_ptr = head->content + reader->read_pos;
@@ -21,14 +21,14 @@ static struct snippet *skip_empty(unit_reader *reader)
 }
 
 /* @return pointer to next non-zero char, or NULL if none left */
-static inline char_t *get_read_ptr(unit_reader *reader)
+static inline char_t *get_read_ptr(struct unit_reader *reader)
 {
         struct snippet *head = skip_empty(reader);
         return head == NULL ? NULL : head->content + reader->read_pos;
 }
 
 
-char_t reader_getc(unit_reader *reader)
+char_t reader_getc(struct unit_reader *reader)
 {
         char_t next_chr = EOF;
         struct snippet *start_snippet = reader->curr_snippet;

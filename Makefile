@@ -13,9 +13,8 @@ TEST_DIR = $(realpath test)
 
 # toolchain
 CC= @gcc -std=c99
-CPP = gcc
 LD=@gcc
-DRMEM = drmemory.exe -logdir c:/logs --
+DRMEM = drmemory.exe -batch -logdir ./logs --
 
 # compiler flags
 CCFLAGS = -c -pedantic -Wall -Wextra -Werror -I $(INC_DIR)
@@ -25,7 +24,7 @@ RLS_CCFLAGS = -s -fdata-sections -ffunction-sections -O3
 LDLIBS = 
 LDFLAGS = 
 TESTLIB = $(LDLIBS)
-TESTLIB += -lgtest -lgtest_main
+TESTLIB += 
 
 # misc shortcuts
 C_OUT = -o 
@@ -54,10 +53,12 @@ test: $(SUBDIRS)
 $(SUBDIRS):	
 	@$(MAKE) -C $@ --no-print-directory
 
-runtest: $(TEST)
-	$(foreach test,$^,$(test) ;)
+.PHONY: runtest
+runtest:
+	@$(MAKE) -C test $@ --no-print-directory	
 
 .PHONY: clean
-clean:
-	rm -f $(OBJ_DIR)/*
-
+clean: OBJ = $(wildcard $(OBJ_DIR)/*.o)	
+clean:	
+	@$(MAKE) -C test $@ --no-print-directory
+	@$(RM) $(OBJ)
