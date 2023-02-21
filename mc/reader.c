@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <stdio.h>
 
 #include <reader.h>
@@ -45,4 +46,23 @@ char_t reader_getc(struct unit_reader *reader)
         }
 
         return next_chr;
+}
+
+
+const char *reader_file_name(const struct unit_reader *reader)
+{
+        return reader->curr_snippet->file_name;
+}
+
+
+size_t reader_line_number(const struct unit_reader *reader)
+{
+        size_t snippet_line = reader->curr_snippet->line_number;
+        return snippet_line + reader->curr_line;
+}
+
+
+void reader_destroy(struct unit_reader *reader)
+{
+        free(reader);
 }

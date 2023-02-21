@@ -4,6 +4,5 @@
 
 int main()
 {
-        puts("ok");
-        getchar();
+        return 0;
 }

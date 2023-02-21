@@ -1,5 +1,8 @@
 *.exe
 *.o
+*.txt
+*.swp
 obj
 logs
-preproc.txt
+doc
+.vscode
