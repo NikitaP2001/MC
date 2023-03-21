@@ -6,6 +6,9 @@ enum mc_status {
         MC_FILE_OP_FAIL = 1,
         MC_MEMALLOC_FAIL = 2,
         MC_OPEN_FILE_FAIL = 3,
+        MC_INVALID_ARG = 4,
+
+        MC_FAIL = 5,
 };
 
 extern const char *mc_status_table[];

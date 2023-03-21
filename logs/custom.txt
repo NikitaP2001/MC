@@ -6,3 +6,13 @@ name=MSCRT un-freed alloc
 UNADDRESSABLE ACCESS
 name=gcc ___chkstk_ms workaround
 *!___chkstk_ms
+
+UNADDRESSABLE ACCESS
+name=gcc _pei386_runtime_relocator workaround
+...
+*!_pei386_runtime_relocator
+
+UNADDRESSABLE ACCESS
+name=gcc __pformat_int false positive
+...
+*!__pformat_int

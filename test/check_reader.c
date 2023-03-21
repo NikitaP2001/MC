@@ -1,7 +1,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <time.h>
 
 #include <check.h>
 
@@ -10,6 +9,17 @@
 #include <mc.h>
 
 #include "check_reader.h"
+
+struct test_conf {
+        size_t min_fsize;
+        size_t max_fsize;
+        size_t fcount;
+        char_t **content;
+        char **file_names;
+};
+
+#define FSIZE_MIN 0x100
+#define FSIZE_MAX 0x1000
 
 
 static inline int get_rand(int min, int max)
@@ -33,7 +43,7 @@ static void gen_file_content(struct test_conf *conf, size_t file_number)
 {
         size_t fsize = 0;
         FILE *fp = fopen(conf->file_names[file_number], "w");
-        ck_assert(fp == NULL);
+        ck_assert(fp != NULL);
 
         fsize = get_rand(conf->min_fsize, conf->max_fsize);
 
@@ -41,6 +51,7 @@ static void gen_file_content(struct test_conf *conf, size_t file_number)
         for (size_t i = 0; i < fsize; i++)
                 new_content[i] = get_rand_chr();
         conf->content[file_number] = new_content;
+        fwrite(new_content, sizeof(char_t),  fsize + 1, fp);
 
         ck_assert(!ferror(fp));
         fclose(fp);
@@ -207,6 +218,8 @@ START_TEST(test_getc_read)
                 char_t chr = 0;
                 for (int fpos = 0; conf.content[i][fpos] != '\0'; fpos++) {
                         chr = reader_getc(reader);
+                        if (chr != conf.content[i][fpos])
+                                __builtin_trap();
                         ck_assert_int_eq(chr, conf.content[i][fpos]);
                 }
                 chr = reader_getc(reader);
@@ -237,27 +250,6 @@ Suite *reader_suite(void)
 }
 
 
-void init_rand()
-{
-        struct timespec ts;
-        clock_gettime(CLOCK_REALTIME, &ts);
-        srand(ts.tv_nsec);
-}
 
-
-int main(void)
-{
-        int number_failed;
-        Suite *s;
-        SRunner *sr;
-
-        init_rand();
-        s = reader_suite();
-        sr = srunner_create(s);
-        srunner_run_all(sr, CK_NORMAL);
-        number_failed = srunner_ntests_failed(sr);
-        srunner_free(sr);
-        return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
-}
 
 

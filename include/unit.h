@@ -10,7 +10,8 @@ struct tr_unit {
         
 };
 
-enum mc_status unit_from_file(struct tr_unit *unit, const char *file_name);
+enum mc_status unit_from_files(struct tr_unit *unit, char **file_names, 
+                size_t file_count);
 
 _Bool unit_expand_macro(struct tr_unit *unit);
 

@@ -1,6 +1,5 @@
 TARGET = mc.exe
 
-EXE_EXT = exe
 
 SRC_DIR = $(realpath mc)
 OBJ_DIR = $(realpath obj)
