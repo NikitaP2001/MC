@@ -10,6 +10,12 @@ static inline void *dlist_next(void *head)
         return ((struct dlist_head*)head)->next;
 }
 
-void dlist_free(void *first_head, void (*call_free)(void*));
+void dlist_append(void *position, void *new_head);
+
+void dlist_insert(void *position, void *new_head);
+
+void dlist_del(void *entry);
+
+void dlist_destroy(void *first_head, void (*call_free)(void*));
 
 #endif /* _LIST_H_ */

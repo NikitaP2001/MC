@@ -3,6 +3,5 @@
 *.txt
 *.swp
 obj
-logs
 doc
 .vscode

@@ -8,10 +8,6 @@ INC_DIR = $(realpath include)
 LOG_DIR = $(realpath logs)
 TEST_DIR = $(realpath test)
 
-#vpath %.c SRC_DIR TEST_DIR
-#vpath %.h INC_DIR
-#vpath %.o OBJ_DIR
-
 # toolchain
 CC= @gcc -std=c99
 LD= @gcc
@@ -37,11 +33,11 @@ SUBDIRS = $(SRC_DIR)
 TMPDIRS = obj logs
 
 all: CCFLAGS += $(DBG_CCFLAGS)
-all: $(TARGET)
+all: $(TARGET)	
 
 release: CCFLAGS += $(RLS_CCFLAGS)
 release: LDFLAGS += $(RLS_LDFLAGS)
-release: $(TARGET)
+release: $(TARGET)	
 
 $(TARGET): OBJ = $(wildcard $(OBJ_DIR)/*.o)	
 $(TARGET): $(SUBDIRS)
@@ -56,6 +52,7 @@ $(SUBDIRS):	$(TMPDIRS)
 	@$(MAKE) -C $@ --no-print-directory
 	
 .PHONY: test
+test: CCFLAGS += $(DBG_CCFLAGS)
 test: $(SUBDIRS)
 	@$(MAKE) -C $@ --no-print-directory	
 

@@ -1,0 +1,8 @@
+POSSIBLE LEAK
+name=MSCRT un-freed alloc
+...
+*!pre_cpp_init
+
+UNADDRESSABLE ACCESS
+name=gcc ___chkstk_ms workaround
+*!___chkstk_ms

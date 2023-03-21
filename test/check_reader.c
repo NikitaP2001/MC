@@ -7,6 +7,7 @@
 
 #include <unit.h>
 #include <reader.h>
+#include <mc.h>
 
 #define MODULE_NAME "Reader"
 #define CORE_NAME "Core"
@@ -19,6 +20,16 @@
 static inline int get_rand(int min, int max)
 {
         return rand() % max + min;
+}
+
+
+static char ascii_chars[] = "\t\n\v\f\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCD \
+                  EFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+
+static inline int get_rand_chr()
+{
+        int chr_pos = get_rand(0, sizeof(ascii_chars) - 1);
+        return ascii_chars[chr_pos];
 }
 
 
@@ -42,15 +53,16 @@ static void get_file_names(char **file_names, int file_count)
                 file_names[i] = get_file_name(i); 
 }
 
+/* generated @content array will be zero terminated */
 static int gen_file_content(char *name, char **content)
 {
-        int fsize = 0;
+        size_t fsize = 0;
         FILE *fp = fopen(name, "w");
         if (fp != NULL) {
                 fsize = get_rand(FSIZE_MIN, FSIZE_MAX);
-                char *new_content = malloc(fsize);
-                for (int i = 0; i < fsize; i++)
-                        new_content[i] = get_rand(0x1, 0xFF);
+                char *new_content = calloc(fsize + 1, sizeof(char));
+                for (size_t i = 0; i < fsize; i++)
+                        new_content[i] = get_rand_chr();
                 if (fsize != fwrite(new_content, sizeof(char), fsize, fp))
                         fsize = 0;
                 *content = new_content;
@@ -72,10 +84,6 @@ static _Bool remove_files(char **file_names, int file_count)
 
 START_TEST(test_reader_file_name)
 {
-        struct tr_unit *unit = NULL;
-        struct unit_reader *reader = NULL;
-
-        
 
 
 }
@@ -83,8 +91,6 @@ END_TEST
 
 START_TEST(test_reader_line_number)
 {
-        struct tr_unit *unit = NULL;
-        struct unit_reader *reader = NULL;
 
         
 
@@ -97,29 +103,67 @@ START_TEST(test_reader_getc)
         const int count = 100;
         char *file_names[count];
         char *content[count];
+        struct tr_unit unit = {0};
+        struct unit_reader *reader = NULL;
 
         get_file_names(file_names, count);
 
         for (int i = 0; i < count; i++)
                 ck_assert(gen_file_content(file_names[i], &content[i]));
 
-        for (int i = 0; i < count; i++)
-                free(content[i]);
+        enum mc_status status = unit_from_file(&unit, file_names[0]);
+        ck_assert(MC_SUCC(status));
+       
+        struct snippet *head = unit.first_snippet;
+        for (int i = 1; i < count; i++) {
+                struct snippet *new_sn = snippet_create(file_names[i]);
+                ck_assert_ptr_ne(new_sn, NULL);
 
-        ck_assert(remove_files(file_names, count));
+                status = snippet_read_file(new_sn);
+                ck_assert(MC_SUCC(status));
+
+                snippet_append(head, new_sn);
+                head = new_sn;
+        }
+
+        reader = unit_get_reader(&unit);
+        ck_assert_ptr_ne(reader, NULL);
+
+        for (int i = 0; i < count; i++) {
+                char_t chr = 0;
+                for (int fpos = 0; content[i][fpos] != '\0'; fpos++) {
+                        chr = reader_getc(reader);
+                        ck_assert_int_eq(chr, content[i][fpos]);
+                }
+                chr = reader_getc(reader);
+                if (i + 1 < count)
+                        ck_assert_int_eq(chr, '\n');
+                else
+                        ck_assert_int_eq(chr, EOF);
+                free(content[i]);
+        }
+
+        reader_destroy(reader);
+        unit_destroy(&unit);
+        remove_files(file_names, count);
 }
 
 START_TEST(test_reader_getc_empty)
 {
-        struct tr_unit unit;
+        struct tr_unit unit = {0};
         struct unit_reader *reader = NULL;
         const char *file_name = "testfile.txt";
 
-        FILE *fp = fopen(file_name, "w");
+        FILE *fp = fopen(file_name, "wb");
         ck_assert_ptr_ne(fp, NULL);
         fclose(fp);
 
-        ck_assert(unit_from_file(&unit, file_name));
+        enum mc_status status = unit_from_file(&unit, file_name);
+        if (!MC_SUCC(status)) {
+                puts(strerror(errno));
+                puts(mc_str_status(status));
+                ck_abort();
+        }
         reader = unit_get_reader(&unit);
         ck_assert_ptr_ne(reader, NULL);
 
@@ -129,7 +173,7 @@ START_TEST(test_reader_getc_empty)
         ck_assert_str_eq(reader_file_name(reader), file_name);
 
         reader_destroy(reader);
-        unit_free(&unit);
+        unit_destroy(&unit);
         ck_assert_int_eq(remove(file_name), 0);
 }
 END_TEST
