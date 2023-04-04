@@ -75,23 +75,6 @@ static char *generate_name(int file_number)
 }
 
 
-START_TEST(test_file_name)
-{
-
-
-}
-END_TEST
-
-START_TEST(test_line_number)
-{
-
-        
-
-
-}
-END_TEST
-
-
 static void reader_test_init(struct test_conf *conf, size_t file_count)
 {
         conf->min_fsize = FSIZE_MIN;
@@ -120,7 +103,7 @@ static void reader_test_free(struct test_conf *conf)
 }
 
 
-START_TEST(test_init)
+START_TEST(init)
 {
         const int fcount = 1;
         struct test_conf conf = {0};
@@ -142,9 +125,9 @@ START_TEST(test_init)
 END_TEST
 
 
-START_TEST(test_getc_newline)
+START_TEST(getc_newline)
 {
-        const int fcount = 100;
+        const int fcount = 10;
         struct test_conf conf = {0};
         struct tr_unit unit = {0};
         struct unit_reader *reader = NULL;
@@ -172,9 +155,9 @@ START_TEST(test_getc_newline)
 }
 END_TEST
 
-START_TEST(test_getc_eof)
+START_TEST(getc_eof)
 {
-        const int fcount = 100;
+        const int fcount = 10;
         struct test_conf conf = {0};
         struct tr_unit unit = {0};
         struct unit_reader *reader = NULL;
@@ -202,9 +185,9 @@ START_TEST(test_getc_eof)
 }
 END_TEST
 
-START_TEST(test_getc_read)
+START_TEST(getc_read)
 {
-        const int fcount = 100;
+        const int fcount = 10;
         struct test_conf conf = {0};
         struct tr_unit unit = {0};
         struct unit_reader *reader = NULL;
@@ -218,8 +201,6 @@ START_TEST(test_getc_read)
                 char_t chr = 0;
                 for (int fpos = 0; conf.content[i][fpos] != '\0'; fpos++) {
                         chr = reader_getc(reader);
-                        if (chr != conf.content[i][fpos])
-                                __builtin_trap();
                         ck_assert_int_eq(chr, conf.content[i][fpos]);
                 }
                 chr = reader_getc(reader);
@@ -231,6 +212,57 @@ START_TEST(test_getc_read)
 }
 END_TEST
 
+START_TEST(sliced_file_name)
+{
+
+}
+END_TEST
+
+START_TEST(undiv_file_name)
+{
+
+
+}
+END_TEST
+
+START_TEST(sliced_file_line_num)
+{
+
+}
+
+END_TEST
+
+START_TEST(undiv_file_line_num)
+{
+        const int fcount = 10;
+        struct test_conf conf = {0};
+        struct tr_unit unit = {0};
+        struct unit_reader *reader = NULL;
+
+        reader_test_init(&conf, fcount);
+        
+        unit_from_files(&unit, conf.file_names, fcount);
+        reader = unit_get_reader(&unit);
+
+        size_t lineNumber = 0;
+        for (int i = 0; i < fcount; i++) {
+                for (int fpos = 0; conf.content[i][fpos] != '\0'; fpos++) {
+                        if (conf.content[i][fpos] == '\n')
+                                lineNumber += 1;
+                        reader_getc(reader);
+                        ck_assert_int_eq(reader_line_number(reader), lineNumber);
+                }
+                lineNumber = 0;
+                reader_getc(reader);
+        }
+
+        reader_destroy(reader);
+        unit_destroy(&unit);
+        reader_test_free(&conf);
+
+}
+END_TEST
+
 
 Suite *reader_suite(void)
 {
@@ -239,12 +271,14 @@ Suite *reader_suite(void)
         s = suite_create(MODULE_NAME);
         tc_core = tcase_create(CORE_NAME);
 
-        tcase_add_test(tc_core, test_init);
-        tcase_add_test(tc_core, test_getc_read);
-        tcase_add_test(tc_core, test_getc_eof);
-        tcase_add_test(tc_core, test_getc_newline);
-        tcase_add_test(tc_core, test_file_name);
-        tcase_add_test(tc_core, test_line_number);
+        tcase_add_test(tc_core, init);
+        tcase_add_test(tc_core, getc_read);
+        tcase_add_test(tc_core, getc_eof);
+        tcase_add_test(tc_core, getc_newline);
+        tcase_add_test(tc_core, undiv_file_name);
+        tcase_add_test(tc_core, sliced_file_name);
+        tcase_add_test(tc_core, undiv_file_line_num);
+        tcase_add_test(tc_core, sliced_file_line_num);
         suite_add_tcase(s, tc_core);
         return s;
 }

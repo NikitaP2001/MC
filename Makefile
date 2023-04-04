@@ -1,8 +1,6 @@
-TARGET = mc.exe
-
-
 SRC_DIR = $(realpath mc)
 OBJ_DIR = $(realpath obj)
+BIN_DIR = $(realpath bin)
 INC_DIR = $(realpath include)
 LOG_DIR = $(realpath logs)
 TEST_DIR = $(realpath test)
@@ -27,21 +25,16 @@ C_OUT = -o
 	
 export
         
-SUBDIRS = $(SRC_DIR)
+SUBDIRS = $(SRC_DIR) $(TEST_DIR)
 
-TMPDIRS = obj logs
+TMPDIRS = obj logs bin
 
 all: CCFLAGS += $(DBG_CCFLAGS)
-all: $(TARGET)	
+all: $(SUBDIRS)
 
 release: CCFLAGS += $(RLS_CCFLAGS)
 release: LDFLAGS += $(RLS_LDFLAGS)
-release: $(TARGET)	
-
-$(TARGET): OBJ = $(wildcard $(OBJ_DIR)/*.o)	
-$(TARGET): $(SUBDIRS)
-	@echo LD $@
-	$(LD) $(LDFLAGS) $(C_OUT) $@ $(LDLIBS) $(OBJ)
+release: $(SUBDIRS)
 
 $(TMPDIRS):	
 	@mkdir $@
@@ -49,11 +42,6 @@ $(TMPDIRS):
 .PHONY: $(SUBDIRS)
 $(SUBDIRS):	$(TMPDIRS)
 	@$(MAKE) -C $@ --no-print-directory
-	
-.PHONY: test
-test: CCFLAGS += $(DBG_CCFLAGS)
-test: $(SUBDIRS)
-	@$(MAKE) -C $@ --no-print-directory	
 
 .PHONY: runtest
 runtest: $(TMPDIRS)
@@ -64,7 +52,5 @@ memtest: $(TMPDIRS)
 	@$(MAKE) -C test $@ --no-print-directory
 	
 .PHONY: clean
-clean: OBJ = $(wildcard $(OBJ_DIR)/*.o)	
 clean:	
 	@$(MAKE) -C test $@ --no-print-directory
-	@$(RM) $(OBJ)

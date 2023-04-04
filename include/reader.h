@@ -17,6 +17,7 @@ struct unit_reader {
 
 };
 
+/* @returs '\n' on file edge, EOF on stream end */
 char_t reader_getc(struct unit_reader *reader);
 
 char_t reader_putc(struct unit_reader *reader, char_t chr);
