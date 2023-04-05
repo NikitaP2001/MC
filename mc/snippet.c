@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include <snippet.h>
+#include <tools.h>
 
 struct snippet *snippet_create(const char *file_name)
 {
@@ -16,15 +17,6 @@ struct snippet *snippet_create(const char *file_name)
         }
         
         return new_snippet;
-}
-
-
-static int get_file_size(FILE *fp)
-{
-        fseek(fp, 0, SEEK_END);
-        int size = ftell(fp);
-        fseek(fp, 0, SEEK_SET);
-        return size;
 }
 
 static enum mc_status read_text_file(FILE *fptr, char *buffer, int max_size)

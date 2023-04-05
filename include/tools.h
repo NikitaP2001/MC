@@ -1,0 +1,1 @@
+int get_file_size(FILE *fp);

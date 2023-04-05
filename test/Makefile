@@ -21,7 +21,7 @@ memtest: $(TARGET)
 	
 .PHONY: runtest
 runtest: $(TARGET)	
-	$(foreach test,$^, $(test) ;)
+	$(foreach test,$^, $(test) -p 20 ;)
 
 .PHONY: clean
 clean:
