@@ -11,6 +11,8 @@ enum mc_status {
         MC_FAIL = 5,
 };
 
+typedef char char_t;
+
 extern const char *mc_status_table[];
 
 #define MC_SUCC(status) (status == 0)

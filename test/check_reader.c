@@ -10,114 +10,28 @@
 #include <tools.h>
 
 #include "check_reader.h"
+#include "rndfile_gen.h"
 
 #define MODULE_NAME "Reader"
 #define CORE_NAME "Core"
 
 static size_t test_power = 1;
 
-/* TODO: overall init logic for splitting files randomly */
-struct test_conf {
-        size_t min_fsize;
-        size_t max_fsize;
-        size_t fcount;
-        char_t **content;
-        char **file_names;
-};
 
-#define FSIZE_MIN 0x100
-#define FSIZE_MAX 0x1000
-
-
-static inline int get_rand(int min, int max)
+static struct txtgen_conf reader_test_init(size_t fcount)
 {
-        return rand() % max + min;
-}
-
-
-static char ascii_chars[] = "\t\n\v\f\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCD \
-                  EFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-
-static inline int get_rand_chr()
-{
-        int chr_pos = get_rand(0, sizeof(ascii_chars) - 1);
-        return ascii_chars[chr_pos];
-}
-
-
-/* generated @content array will be zero terminated */
-static void gen_file_content(struct test_conf *conf, size_t file_number)
-{
-        size_t fsize = 0;
-        FILE *fp = fopen(conf->file_names[file_number], "w");
-        ck_assert(fp != NULL);
-
-        fsize = get_rand(conf->min_fsize, conf->max_fsize);
-
-        char *new_content = calloc(fsize + 1, sizeof(char));
-        for (size_t i = 0; i < fsize; i++)
-                new_content[i] = get_rand_chr();
-        conf->content[file_number] = new_content;
-        fwrite(new_content, sizeof(char_t),  fsize + 1, fp);
-
-        ck_assert(!ferror(fp));
-        fclose(fp);
-}
-
-
-#define FILE_PREFIX "testfile"
-#define STR_INT_SIZE 10
-
-static char *generate_name(int file_number)
-{
-        char *name = NULL;
-        const char *name_base = FILE_PREFIX;
-        char suffix[STR_INT_SIZE] = {0};
-
-        sprintf(suffix, "%d", file_number);
-        name = malloc(sizeof(name_base) + STR_INT_SIZE);
-        strcpy(name, name_base);
-        strcat(name, suffix);
-        return name;
-}
-
-
-static void reader_test_init(struct test_conf *conf, size_t file_count)
-{
-        conf->min_fsize = FSIZE_MIN * test_power;
-        conf->max_fsize = FSIZE_MAX * test_power;
-        conf->fcount = file_count;
-        conf->content = calloc(file_count, sizeof(char_t*));
-        conf->file_names = calloc(file_count, sizeof(char*));
-
-        for (size_t i = 0; i < file_count; i++) {
-                conf->file_names[i] = generate_name(i); 
-                gen_file_content(conf, i);
-        }
-}
-
-
-static void reader_test_free(struct test_conf *conf)
-{
-
-        for (size_t i = 0; i < conf->fcount; i++) {
-                remove(conf->file_names[i]);
-                free(conf->file_names[i]);
-                free(conf->content[i]);
-        }
-        free(conf->file_names);
-        free(conf->content);
+        struct txtgen_conf conf = { .power = test_power };
+        generator_init(&conf, fcount);
+        return conf;
 }
 
 
 START_TEST(init)
 {
         const int fcount = 1;
-        struct test_conf conf = {0};
         struct tr_unit unit = {0};
         struct unit_reader *reader = NULL;
-
-        reader_test_init(&conf, fcount);
+        struct txtgen_conf conf = reader_test_init(fcount);
         
         enum mc_status status = unit_from_files(&unit, conf.file_names, fcount);
         ck_assert(MC_SUCC(status));
@@ -127,7 +41,7 @@ START_TEST(init)
 
         reader_destroy(reader);
         unit_destroy(&unit);
-        reader_test_free(&conf);
+        generator_free(&conf);
 }
 END_TEST
 
@@ -135,13 +49,9 @@ END_TEST
 START_TEST(getc_newline)
 {
         const int fcount = test_power * 3;
-        struct test_conf conf = {0};
+        struct txtgen_conf conf = reader_test_init(fcount);
         struct tr_unit unit = {0};
         struct unit_reader *reader = NULL;
-
-        conf.min_fsize = 0;
-        conf.max_fsize = 15;
-        reader_test_init(&conf, fcount);
         
         unit_from_files(&unit, conf.file_names, fcount);
         reader = unit_get_reader(&unit);
@@ -158,20 +68,16 @@ START_TEST(getc_newline)
 
         reader_destroy(reader);
         unit_destroy(&unit);
-        reader_test_free(&conf);
+        generator_free(&conf);
 }
 END_TEST
 
 START_TEST(getc_eof)
 {
         const int fcount = test_power * 3;
-        struct test_conf conf = {0};
+        struct txtgen_conf conf = reader_test_init(fcount);
         struct tr_unit unit = {0};
         struct unit_reader *reader = NULL;
-
-        conf.min_fsize = 0;
-        conf.max_fsize = 4;
-        reader_test_init(&conf, fcount);
         
         unit_from_files(&unit, conf.file_names, fcount);
         reader = unit_get_reader(&unit);
@@ -188,19 +94,17 @@ START_TEST(getc_eof)
 
         reader_destroy(reader);
         unit_destroy(&unit);
-        reader_test_free(&conf);
+        generator_free(&conf);
 }
 END_TEST
 
 START_TEST(getc_read)
 {
         const int fcount = test_power * 3;
-        struct test_conf conf = {0};
+        struct txtgen_conf conf = reader_test_init(fcount);
         struct tr_unit unit = {0};
         struct unit_reader *reader = NULL;
 
-        reader_test_init(&conf, fcount);
-        
         unit_from_files(&unit, conf.file_names, fcount);
         reader = unit_get_reader(&unit);
 
@@ -215,19 +119,17 @@ START_TEST(getc_read)
 
         reader_destroy(reader);
         unit_destroy(&unit);
-        reader_test_free(&conf);
+        generator_free(&conf);
 }
 END_TEST
 
 START_TEST(file_name)
 {
         const int fcount = test_power * 2;
-        struct test_conf conf = {0};
+        struct txtgen_conf conf = reader_test_init(fcount);
         struct tr_unit unit = {0};
         struct unit_reader *reader = NULL;
 
-        reader_test_init(&conf, fcount);
-        
         unit_from_files(&unit, conf.file_names, fcount);
         reader = unit_get_reader(&unit);
         for (int i = 0; i < fcount; i++) {
@@ -239,19 +141,17 @@ START_TEST(file_name)
 
         reader_destroy(reader);
         unit_destroy(&unit);
-        reader_test_free(&conf);
+        generator_free(&conf);
 }
 END_TEST
 
 START_TEST(file_line_number)
 {
         const int fcount = test_power * 2;
-        struct test_conf conf = {0};
+        struct txtgen_conf conf = reader_test_init(fcount);
         struct tr_unit unit = {0};
         struct unit_reader *reader = NULL;
 
-        reader_test_init(&conf, fcount);
-        
         unit_from_files(&unit, conf.file_names, fcount);
         reader = unit_get_reader(&unit);
 
@@ -269,7 +169,7 @@ START_TEST(file_line_number)
 
         reader_destroy(reader);
         unit_destroy(&unit);
-        reader_test_free(&conf);
+        generator_free(&conf);
 
 }
 END_TEST

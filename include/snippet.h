@@ -5,7 +5,6 @@
 #include <list.h>
 #include <mc.h>
 
-typedef char char_t;
 
 struct snippet {
 
