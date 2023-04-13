@@ -5,6 +5,11 @@ struct dlist_head {
         struct dlist_head *next, *prev;
 };
 
+static inline _Bool dlhas_next(void *head)
+{
+        return ((struct dlist_head*)head)->next != NULL;
+}
+
 static inline void *dlist_next(void *head)
 {
         return ((struct dlist_head*)head)->next;

@@ -5,7 +5,7 @@
 #include <list.h>
 #include <mc.h>
 
-
+/* snippet represents some part of specific source file */
 struct snippet {
 
         struct dlist_head list;
@@ -20,20 +20,24 @@ struct snippet {
 /* @return null in result of alocation error */
 struct snippet *snippet_create(const char *file_name);
 
-static inline void snippet_append(struct snippet *position, 
-                struct snippet *new_snippet)
-{
-        dlist_append(position, new_snippet);
-}
-
-static inline void snippet_insert(struct snippet *position,
-                struct snippet *new_snippet)
-{
-        dlist_insert(position, new_snippet);
-}
-
 enum mc_status snippet_read_file(struct snippet *sn);
 
 void snippet_destroy(struct snippet *sn);
+
+struct sn_iter {
+        struct snippet *curr_sn;
+        size_t position;
+};
+
+struct sn_iter sni_insert(struct sn_iter split_pos, struct snippet *other);
+
+struct sn_iter sni_advance(struct sn_iter iter, size_t offset);
+
+_Bool sni_cmp(struct sn_iter first, struct sn_iter second);
+
+struct sn_iter snippet_begin(struct snippet *sn);
+
+struct sn_iter snippet_end();
+
 
 #endif /* _SNIPPET_H_ */

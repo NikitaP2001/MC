@@ -3,19 +3,21 @@
 
 #include <stddef.h>
 
-#include <snippet.h>
+#include <prunit.h>
+#include <mc.h>
 
 struct unit_reader {
         
-        struct snippet *curr_snippet;     
-
         /* line, begins from start of snippet */
         size_t curr_line;
 
-        /* offset within snippet content array */
-        size_t read_pos;
+        struct pru_iter rd_pos;
+
+        struct pru_iter rd_end;
 
 };
+
+struct unit_reader *reader_create(struct pru_iter begin, struct pru_iter end);
 
 /* @returs '\n' on file edge, EOF on stream end */
 char_t reader_getc(struct unit_reader *reader);

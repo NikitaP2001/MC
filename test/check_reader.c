@@ -4,7 +4,7 @@
 
 #include <check.h>
 
-#include <unit.h>
+#include <prunit.h>
 #include <reader.h>
 #include <mc.h>
 #include <tools.h>
@@ -29,14 +29,14 @@ static struct txtgen_conf reader_test_init(size_t fcount)
 START_TEST(init)
 {
         const int fcount = 1;
-        struct tr_unit unit = {0};
+        struct pr_unit unit = {0};
         struct unit_reader *reader = NULL;
         struct txtgen_conf conf = reader_test_init(fcount);
         
         enum mc_status status = unit_from_files(&unit, conf.file_names, fcount);
         ck_assert(MC_SUCC(status));
 
-        reader = unit_get_reader(&unit);
+        reader = reader_create(unit_begin(&unit), unit_end());
         ck_assert_ptr_ne(reader, NULL);
 
         reader_destroy(reader);
@@ -50,11 +50,11 @@ START_TEST(getc_newline)
 {
         const int fcount = test_power * 3;
         struct txtgen_conf conf = reader_test_init(fcount);
-        struct tr_unit unit = {0};
+        struct pr_unit unit = {0};
         struct unit_reader *reader = NULL;
         
         unit_from_files(&unit, conf.file_names, fcount);
-        reader = unit_get_reader(&unit);
+        reader = reader_create(unit_begin(&unit), unit_end());
 
         for (int i = 0; i < fcount; i++) {
                 char_t chr = 0;
@@ -76,11 +76,11 @@ START_TEST(getc_eof)
 {
         const int fcount = test_power * 3;
         struct txtgen_conf conf = reader_test_init(fcount);
-        struct tr_unit unit = {0};
+        struct pr_unit unit = {0};
         struct unit_reader *reader = NULL;
         
         unit_from_files(&unit, conf.file_names, fcount);
-        reader = unit_get_reader(&unit);
+        reader = reader_create(unit_begin(&unit), unit_end());
 
         for (int i = 0; i < fcount; i++) {
                 char_t chr = 0;
@@ -102,11 +102,11 @@ START_TEST(getc_read)
 {
         const int fcount = test_power * 3;
         struct txtgen_conf conf = reader_test_init(fcount);
-        struct tr_unit unit = {0};
+        struct pr_unit unit = {0};
         struct unit_reader *reader = NULL;
 
         unit_from_files(&unit, conf.file_names, fcount);
-        reader = unit_get_reader(&unit);
+        reader = reader_create(unit_begin(&unit), unit_end());
 
         for (int i = 0; i < fcount; i++) {
                 char_t chr = 0;
@@ -127,11 +127,11 @@ START_TEST(file_name)
 {
         const int fcount = test_power * 2;
         struct txtgen_conf conf = reader_test_init(fcount);
-        struct tr_unit unit = {0};
+        struct pr_unit unit = {0};
         struct unit_reader *reader = NULL;
 
         unit_from_files(&unit, conf.file_names, fcount);
-        reader = unit_get_reader(&unit);
+        reader = reader_create(unit_begin(&unit), unit_end());
         for (int i = 0; i < fcount; i++) {
                 ck_assert_str_eq(reader_file_name(reader), conf.file_names[i]);
                 for (int fpos = 0; conf.content[i][fpos] != '\0'; fpos++)
@@ -149,11 +149,11 @@ START_TEST(file_line_number)
 {
         const int fcount = test_power * 2;
         struct txtgen_conf conf = reader_test_init(fcount);
-        struct tr_unit unit = {0};
+        struct pr_unit unit = {0};
         struct unit_reader *reader = NULL;
 
         unit_from_files(&unit, conf.file_names, fcount);
-        reader = unit_get_reader(&unit);
+        reader = reader_create(unit_begin(&unit), unit_end());
 
         size_t lineNumber = 0;
         for (int i = 0; i < fcount; i++) {

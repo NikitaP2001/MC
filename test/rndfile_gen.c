@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 #include <check.h>
@@ -22,24 +23,31 @@ static inline int get_rand_chr()
         return ascii_chars[chr_pos];
 }
 
+_Bool write_file(const char *file_name, const char *content, size_t length)
+{
+        _Bool result = false;
+        FILE *fp = fopen(file_name, "w");
+        if (fp != NULL) {
+                fwrite(content, sizeof(char_t), length, fp);
+
+                result = ferror(fp) == 0;
+                fclose(fp);
+        }
+        return result; 
+}
 
 /* generated @content array will be zero terminated */
 static void gen_file_content(struct txtgen_conf *conf, size_t file_number)
 {
         size_t fsize = 0;
-        FILE *fp = fopen(conf->file_names[file_number], "w");
-        ck_assert(fp != NULL);
-
         fsize = get_rand(conf->min_fsize, conf->max_fsize);
+        const char *file_name = conf->file_names[file_number];
 
         char *new_content = calloc(fsize + 1, sizeof(char));
         for (size_t i = 0; i < fsize; i++)
                 new_content[i] = get_rand_chr();
         conf->content[file_number] = new_content;
-        fwrite(new_content, sizeof(char_t),  fsize + 1, fp);
-
-        ck_assert(!ferror(fp));
-        fclose(fp);
+        ck_assert(write_file(file_name, new_content, fsize + 1));
 }
 
 #define FILE_PREFIX "testfile"

@@ -16,6 +16,7 @@ struct txtgen_conf {
         char **file_names;
 };
 
+_Bool write_file(const char *file_name, const char *content, size_t length);
 
 void generator_init(struct txtgen_conf *conf, size_t file_count);
 
