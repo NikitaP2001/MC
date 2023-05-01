@@ -5,6 +5,7 @@
 #include <check.h>
 
 #include <mc.h>
+#include <tools.h>
 
 #include "rndfile_gen.h"
 
@@ -59,14 +60,9 @@ static char *form_prefix(struct txtgen_conf *conf)
         char *prefix = NULL;
         if (conf->dir_path != 0) {
                 size_t pref_size = strlen(conf->dir_path);
-                char lst_chr = conf->dir_path[pref_size - 1];
-                pref_size += (lst_chr == '/' || lst_chr == '\\') ? 0 : 1;
                 pref_size += sizeof(FILE_PREFIX);
                 prefix = malloc(pref_size);
                 strcpy(prefix, conf->dir_path);
-                if (lst_chr != '/' && lst_chr != '\\')
-                        strcat(prefix, "/");
-
         } else
                 prefix = calloc(sizeof(FILE_PREFIX), sizeof(char_t));
         strcat(prefix, FILE_PREFIX);
@@ -79,6 +75,7 @@ void generator_init(struct txtgen_conf *conf, size_t file_count)
         conf->min_fsize = FSIZE_MIN * conf->power;
         conf->max_fsize = FSIZE_MAX * conf->power;
         conf->fcount = file_count;
+        conf->dir_path = (conf->dir_path != NULL) ? fs_path(conf->dir_path) : NULL;
         conf->content = calloc(file_count, sizeof(char_t*));
         conf->file_names = calloc(file_count, sizeof(char*));
 
@@ -99,6 +96,8 @@ void generator_free(struct txtgen_conf *conf)
                 free(conf->file_names[i]);
                 free(conf->content[i]);
         }
+        if (conf->dir_path != NULL)
+                free(conf->dir_path);
         free(conf->file_names);
         free(conf->content);
 }

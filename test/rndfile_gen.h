@@ -17,7 +17,7 @@ struct txtgen_conf {
         char_t **content;
         char **file_names;
         /* pass custom dir path if needed */
-        const char *dir_path;
+        char *dir_path;
 };
 
 void generator_init(struct txtgen_conf *conf, size_t file_count);

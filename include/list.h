@@ -16,6 +16,10 @@ static inline void *dlist_next(void *head)
         return ((struct dlist_head*)head)->next;
 }
 
+#define DLIST_FOREACH_ENTRY(first) \
+for (struct dlist_head *entry = (struct dlist_head*)first; \
+entry != NULL; entry = dlist_next(entry))
+
 static inline void *dlist_prev(void *head)
 {
         return ((struct dlist_head*)head)->prev;

@@ -1,5 +1,6 @@
 #ifndef _MC_H_
 #define _MC_H_
+#include <stdio.h>
 
 enum mc_status {
         MC_OK = 0,
@@ -22,5 +23,7 @@ static inline const char *mc_str_status(int status)
 {
         return mc_status_table[status];
 }
+
+#define MC_WARN(message) printf("warning: %s", message);
 
 #endif /* _MC_H_ */
