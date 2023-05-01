@@ -7,6 +7,7 @@
 #include "check_snippet.h"
 #include "check_preproc.h"
 #include "check_prunit.h"
+#include "check_source_provider.h"
 
 struct config {
         size_t power;
@@ -45,6 +46,7 @@ int main(int argc, char *argv[])
         Suite *s_snippet = NULL;
         Suite *s_preproc = NULL;
         Suite *s_prunit = NULL;
+        Suite *s_srcprov = NULL;
         SRunner *sr = NULL;
 
         init_rand();
@@ -54,10 +56,12 @@ int main(int argc, char *argv[])
         s_snippet = snippet_suite();
         s_preproc = preproc_suite(power);
         s_prunit = prunit_suite(power);
+        s_srcprov = srcprov_suite(power);
         sr = srunner_create(s_reader);
         srunner_add_suite(sr, s_snippet);
         srunner_add_suite(sr, s_preproc);
         srunner_add_suite(sr, s_prunit);
+        srunner_add_suite(sr, s_srcprov);
 
         srunner_run_all(sr, CK_NORMAL);
         number_failed = srunner_ntests_failed(sr);

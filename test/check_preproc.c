@@ -17,11 +17,12 @@ static size_t test_power = 1;
 
 static char *read_iter(struct pru_iter begin, struct pru_iter end)
 {
-        size_t dist = pri_distance(begin, end);
-        char *result = malloc(dist);
+        size_t rsize = pri_distance(begin, end);
+        char *result = malloc(rsize + 1);
         struct unit_reader *reader = reader_create(begin, end);
-        for (size_t i = 0; i < dist; i++)
+        for (size_t i = 0; i < rsize; i++)
                 result[i] = reader_getc(reader);
+        result[rsize] = '\0';
         return result;
 }
 
@@ -31,12 +32,12 @@ START_TEST(escape_newline)
         "/*this is \\comment*/ \\\n" \
         "int b = 4;\\";
         char *expected = "int a = 3; /*this is \\comment*/ int b = 4;\\";
-        char *file_name = "src.c";
+        char *file_name = "src.ctt";
         write_file(file_name, test_text, sizeof(test_text));
         struct pr_unit unit = {0};
         unit_from_files(&unit, &file_name, 1);
         struct pru_iter it = unit_begin(&unit);
-        struct pru_iter itend = unit_end(&unit);
+        struct pru_iter itend = unit_end();
         pr_remove_newline_esc(it, itend);
         char *result = read_iter(it, itend);
         ck_assert(wordcmp(result, expected));

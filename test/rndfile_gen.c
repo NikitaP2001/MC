@@ -23,18 +23,6 @@ static inline int get_rand_chr()
         return ascii_chars[chr_pos];
 }
 
-_Bool write_file(const char *file_name, const char *content, size_t length)
-{
-        _Bool result = false;
-        FILE *fp = fopen(file_name, "w");
-        if (fp != NULL) {
-                fwrite(content, sizeof(char_t), length, fp);
-
-                result = ferror(fp) == 0;
-                fclose(fp);
-        }
-        return result; 
-}
 
 /* generated @content array will be zero terminated */
 static void gen_file_content(struct txtgen_conf *conf, size_t file_number)
@@ -50,20 +38,39 @@ static void gen_file_content(struct txtgen_conf *conf, size_t file_number)
         ck_assert(write_file(file_name, new_content, fsize + 1));
 }
 
-#define FILE_PREFIX "testfile"
 #define STR_INT_SIZE 10
 
-static char *generate_name(int file_number)
+char *generate_name(int file_number, const char *prefix)
 {
         char *name = NULL;
-        const char *name_base = FILE_PREFIX;
         char suffix[STR_INT_SIZE] = {0};
 
         sprintf(suffix, "%d", file_number);
-        name = malloc(sizeof(name_base) + STR_INT_SIZE);
-        strcpy(name, name_base);
+        name = malloc(sizeof(prefix) + STR_INT_SIZE);
+        strcpy(name, prefix);
         strcat(name, suffix);
         return name;
+}
+
+#define FILE_PREFIX "testfile"
+
+static char *form_prefix(struct txtgen_conf *conf)
+{
+        char *prefix = NULL;
+        if (conf->dir_path != 0) {
+                size_t pref_size = strlen(conf->dir_path);
+                char lst_chr = conf->dir_path[pref_size - 1];
+                pref_size += (lst_chr == '/' || lst_chr == '\\') ? 0 : 1;
+                pref_size += sizeof(FILE_PREFIX);
+                prefix = malloc(pref_size);
+                strcpy(prefix, conf->dir_path);
+                if (lst_chr != '/' && lst_chr != '\\')
+                        strcat(prefix, "/");
+
+        } else
+                prefix = calloc(sizeof(FILE_PREFIX), sizeof(char_t));
+        strcat(prefix, FILE_PREFIX);
+        return prefix;
 }
 
 void generator_init(struct txtgen_conf *conf, size_t file_count)
@@ -75,16 +82,18 @@ void generator_init(struct txtgen_conf *conf, size_t file_count)
         conf->content = calloc(file_count, sizeof(char_t*));
         conf->file_names = calloc(file_count, sizeof(char*));
 
+        char *prefix = form_prefix(conf);
         for (size_t i = 0; i < file_count; i++) {
-                conf->file_names[i] = generate_name(i); 
+                
+                conf->file_names[i] = generate_name(i, prefix); 
                 gen_file_content(conf, i);
         }
+        free(prefix);
 }
 
 
 void generator_free(struct txtgen_conf *conf)
 {
-
         for (size_t i = 0; i < conf->fcount; i++) {
                 remove(conf->file_names[i]);
                 free(conf->file_names[i]);

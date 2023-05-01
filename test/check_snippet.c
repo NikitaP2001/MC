@@ -76,8 +76,8 @@ START_TEST(insert_begin)
                 ck_assert_int_eq(c, conf.content[0][i]);
         }       
         reader_destroy(reader);
-        unit_destroy(&unit1);
-        unit_destroy(&unit2);
+        unit_free(&unit1);
+        unit_free(&unit2);
         generator_free(&conf);
 }
 END_TEST
@@ -108,8 +108,8 @@ START_TEST(insert_middle)
                 ck_assert_int_eq(c, conf.content[0][pos1]);
         }       
         reader_destroy(reader);
-        unit_destroy(&unit1);
-        unit_destroy(&unit2);
+        unit_free(&unit1);
+        unit_free(&unit2);
         generator_free(&conf);
 }
 END_TEST
@@ -127,7 +127,7 @@ START_TEST(advance)
                 it = sni_advance(it, i);
         }
         ck_assert(sni_cmp(it, snippet_end()));
-        unit_destroy(&unit);
+        unit_free(&unit);
         generator_free(&conf);
 }
 END_TEST

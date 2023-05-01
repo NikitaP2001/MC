@@ -28,7 +28,7 @@ START_TEST(advance_toend)
         struct pru_iter it = unit_begin(&unit);
         it = pri_advance(it, csize);
         ck_assert(pri_cmp(it, unit_end()));
-        unit_destroy(&unit);
+        unit_free(&unit);
         generator_free(&conf);
 }
 END_TEST
@@ -48,7 +48,7 @@ START_TEST(advance)
                 reader_destroy(rd);
 
         }
-        unit_destroy(&unit);
+        unit_free(&unit);
         generator_free(&conf);
 }
 END_TEST
@@ -74,7 +74,7 @@ START_TEST(distance_middle)
         exp_dist += len2;
         exp_dist += off_end;
         ck_assert_int_eq(exp_dist, dist);
-        unit_destroy(&unit);
+        unit_free(&unit);
         generator_free(&conf);
 }
 END_TEST
@@ -89,7 +89,7 @@ START_TEST(distance_end)
         for (size_t i = 0; i < conf.fcount; i++)
                 dist += cont_len(conf.content[i]);
         ck_assert_int_eq(dist, exp_dist);
-        unit_destroy(&unit);
+        unit_free(&unit);
         generator_free(&conf);
 }
 END_TEST
@@ -101,7 +101,7 @@ START_TEST(begin)
         unit_from_files(&unit, conf.file_names, 2);
         struct pru_iter uit = unit_begin(&unit);
         ck_assert_ptr_eq(uit.snip_it.curr_sn, unit.first_snippet);
-        unit_destroy(&unit);
+        unit_free(&unit);
         generator_free(&conf);
 }
 END_TEST

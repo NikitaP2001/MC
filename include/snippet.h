@@ -8,7 +8,7 @@
 /* snippet represents some part of specific source file */
 struct snippet {
 
-        struct dlist_head list;
+        struct dlist_head link;
 
         char *file_name;
         

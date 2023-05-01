@@ -3,12 +3,13 @@
 
 enum mc_status {
         MC_OK = 0,
-        MC_FILE_OP_FAIL = 1,
-        MC_MEMALLOC_FAIL = 2,
-        MC_OPEN_FILE_FAIL = 3,
+        MC_FAIL = 1,
+        MC_FILE_OP_FAIL = 2,
+        MC_MEMALLOC_FAIL = 3,
         MC_INVALID_ARG = 4,
-
-        MC_FAIL = 5,
+        MC_OPEN_FILE_FAIL = 5,
+        MC_INVALID_PATH = 6,
+        MC_UNKNOWN_CHAR = 7,
 };
 
 typedef char char_t;

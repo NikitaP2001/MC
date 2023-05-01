@@ -15,4 +15,6 @@ static inline _Bool is_white_space(int chr)
 
 _Bool wordcmp(char *str1, char *str2);
 
+_Bool write_file(const char *file_name, const char *content, size_t length);
+
 #endif /* _TTOOL_H_ */

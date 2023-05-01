@@ -40,7 +40,7 @@ START_TEST(init)
         ck_assert_ptr_ne(reader, NULL);
 
         reader_destroy(reader);
-        unit_destroy(&unit);
+        unit_free(&unit);
         generator_free(&conf);
 }
 END_TEST
@@ -67,7 +67,7 @@ START_TEST(getc_newline)
         }
 
         reader_destroy(reader);
-        unit_destroy(&unit);
+        unit_free(&unit);
         generator_free(&conf);
 }
 END_TEST
@@ -93,7 +93,7 @@ START_TEST(getc_eof)
         }
 
         reader_destroy(reader);
-        unit_destroy(&unit);
+        unit_free(&unit);
         generator_free(&conf);
 }
 END_TEST
@@ -118,7 +118,7 @@ START_TEST(getc_read)
         }
 
         reader_destroy(reader);
-        unit_destroy(&unit);
+        unit_free(&unit);
         generator_free(&conf);
 }
 END_TEST
@@ -140,7 +140,7 @@ START_TEST(file_name)
         }
 
         reader_destroy(reader);
-        unit_destroy(&unit);
+        unit_free(&unit);
         generator_free(&conf);
 }
 END_TEST
@@ -168,7 +168,7 @@ START_TEST(file_line_number)
         }
 
         reader_destroy(reader);
-        unit_destroy(&unit);
+        unit_free(&unit);
         generator_free(&conf);
 
 }

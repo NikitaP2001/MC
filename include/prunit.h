@@ -15,9 +15,9 @@ enum mc_status unit_from_files(struct pr_unit *unit, char **file_names,
                 size_t file_count);
 
 /* implement + write tests this will be new function */
-//void pu_create(struct pr_unit *unit, struct source_provider *src_prov);
+//enum mc_status pu_init(struct pr_unit *unit, struct source_provider *src_prov);
 
-void unit_destroy(struct pr_unit *unit);
+void unit_free(struct pr_unit *unit);
 
 struct pru_iter {
         struct sn_iter snip_it;

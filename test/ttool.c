@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdio.h>
+
 #include <mc.h>
 
 #include "ttool.h"
@@ -26,4 +28,17 @@ _Bool wordcmp(char *str1, char *str2)
                 }
         } while (c1 != '\0' && c2 != '\0');
         return is_eq;
+}
+
+_Bool write_file(const char *file_name, const char *content, size_t length)
+{
+        _Bool result = false;
+        FILE *fp = fopen(file_name, "w");
+        if (fp != NULL) {
+                fwrite(content, sizeof(char_t), length, fp);
+
+                result = ferror(fp) == 0;
+                fclose(fp);
+        }
+        return result; 
 }

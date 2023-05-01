@@ -28,9 +28,9 @@ static inline char_t reader_pri_getc(struct pru_iter pos)
 char_t reader_getc(struct unit_reader *reader)
 {
         char_t rd_char = EOF;
-        if (!pri_cmp(reader->rd_pos, reader->rd_pos)) {
+        if (!pri_cmp(reader->rd_pos, reader->rd_end)) {
                 rd_char = reader_pri_getc(reader->rd_pos);
-                pri_advance(reader->rd_pos, 1);
+                reader->rd_pos = pri_advance(reader->rd_pos, 1);
         }
         return rd_char;
 }

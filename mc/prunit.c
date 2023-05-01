@@ -33,7 +33,7 @@ enum mc_status unit_from_files(struct pr_unit *unit, char **file_names,
         for (size_t i = 1; i < file_count; i++) {
                 struct snippet *new_sn = snippet_create(file_names[i]);
                 if (new_sn == NULL) {
-                        unit_destroy(unit);
+                        unit_free(unit);
                         return MC_FAIL;
                 }
                 struct sn_iter itend = snippet_begin(head);
@@ -42,7 +42,7 @@ enum mc_status unit_from_files(struct pr_unit *unit, char **file_names,
 
                 status = snippet_read_file(new_sn);
                 if (!MC_SUCC(status)) {
-                        unit_destroy(unit);
+                        unit_free(unit);
                         return status;
                 }
         }
@@ -51,7 +51,7 @@ enum mc_status unit_from_files(struct pr_unit *unit, char **file_names,
 }
 
 
-void unit_destroy(struct pr_unit *unit)
+void unit_free(struct pr_unit *unit)
 {
         void (*free_fn)(void*) = (void (*)(void*))snippet_destroy;
         dlist_destroy(unit->first_snippet, free_fn);
@@ -68,7 +68,7 @@ size_t pri_distance(struct pru_iter first, struct pru_iter second)
         while (head != last) {
                 result += dist_toend;
                 head = dlist_next(head);
-                dist_toend = strlen(head->content);
+                dist_toend = (head != NULL) ? strlen(head->content) : 0;
         }
         result += second.snip_it.position - first.snip_it.position;
         return result;

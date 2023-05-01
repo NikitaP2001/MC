@@ -82,7 +82,7 @@ static struct snippet *snippet_cut(struct snippet *source, size_t offset)
         char_t *move_pos = source->content;
         for (size_t i = 0; i < offset && *move_pos != '\0'; i++) {
                 if (*move_pos++ == '\n')
-                        new_sn->line_number+= 1;
+                        new_sn->line_number += 1;
         }
         char_t *src_cont = malloc(offset + 1);
         strncpy(src_cont, source->content, offset);
@@ -94,7 +94,7 @@ static struct snippet *snippet_cut(struct snippet *source, size_t offset)
 
 /* makes list link appear at the @position, 
  * @returns next list entry after position
- * I The intergrity of the list is retained */
+ * The intergrity of the list is retained */
 static struct snippet *snippet_split(struct sn_iter split_pos)
 {
         size_t itpos = split_pos.position;
@@ -106,7 +106,7 @@ static struct snippet *snippet_split(struct sn_iter split_pos)
 
         struct snippet *before = split_pos.curr_sn;
         struct snippet *after = snippet_cut(before, itpos);
-        dlist_insert(dlist_next(before), after);
+        dlist_append(before, after);
         return after;
 }
 
