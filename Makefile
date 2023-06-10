@@ -1,56 +1,47 @@
-SRC_DIR = $(realpath mc)
 OBJ_DIR = $(realpath obj)
-BIN_DIR = $(realpath bin)
+BUILD_DIR = $(realpath build)
+ROOT_DIR = $(realpath .)
 INC_DIR = $(realpath include)
 LOG_DIR = $(realpath logs)
 TEST_DIR = $(realpath test)
 
-# toolchain
-CC= @gcc -std=c99
-LD= @gcc
-DRMEM = drmemory.exe -suppress $(LOG_DIR)/custom.txt -batch -logdir
+BUILD_RULES = $(realpath rules.mk)
 
-# compiler flags
-CCFLAGS = -c -pedantic -Wall -Wextra -Werror -I $(INC_DIR)
-DBG_CCFLAGS = -DDEBUG -g
-RLS_CCFLAGS = -s -fdata-sections -ffunction-sections -O3
-
-LDLIBS =
-LDFLAGS = 
-TESTLIB = $(LDLIBS)
-TESTLIB += -lcheck
-
-# misc shortcuts
-C_OUT = -o 
+include config.mk
 	
 export
-        
-SUBDIRS = $(SRC_DIR) $(TEST_DIR)
 
-TMPDIRS = obj logs bin
+all: CCFLAGS += $(DBG_CFLAGS)
+all: build	
 
-all: CCFLAGS += $(DBG_CCFLAGS)
-all: $(SUBDIRS)
-
-release: CCFLAGS += $(RLS_CCFLAGS)
+release: CCFLAGS += $(RLS_CFLAGS)
 release: LDFLAGS += $(RLS_LDFLAGS)
-release: $(SUBDIRS)
+release: build	
+
+TMPDIRS = obj logs build
 
 $(TMPDIRS):	
-	@mkdir $@
-		
-.PHONY: $(SUBDIRS)
-$(SUBDIRS):	$(TMPDIRS)
-	@$(MAKE) -C $@ --no-print-directory
+	@mkdir $@        
+	
+build: mc.a 	
 
-.PHONY: runtest
-runtest: $(TMPDIRS)
-	@$(MAKE) -C test $@ --no-print-directory	
+test.exe: 	
+	@echo LD $@
+	$(LD) $(LDFLAGS) $(C_OUT) $@ $^ $(TESTLIB)
+	
+mc.a:
+	@$(MAKE) -C $(basename $@) $@ --no-print-directory
 
 .PHONY: memtest
-memtest: $(TMPDIRS)
-	@$(MAKE) -C test $@ --no-print-directory
+memtest:
+	$(foreach test,$^, $(DRMEM) $(LOG_DIR) -- $(test) ;)	
+	
+.PHONY: runtest
+runtest:
+	$(foreach test,$^, $(test) -p 20 ;)
 	
 .PHONY: clean
-clean:	
+clean:
+	$(call print_info,Cleaning solution ...)
+	@$(MAKE) -C mc $@ --no-print-directory
 	@$(MAKE) -C test $@ --no-print-directory

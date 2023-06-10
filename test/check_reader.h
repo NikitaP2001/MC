@@ -1,1 +1,0 @@
-Suite *reader_suite(size_t power);

@@ -23,14 +23,14 @@ char_t *source_read(struct source_file *file);
 const char *source_name(struct source_file *file);
 
 struct dir_list {
-        struct dlist_head link;
+        struct list_head link;
         struct dir_entry {
                 char path[_MAX_PATH];
         } entry;
 };
 
 struct file_list {
-        struct dlist_head link;
+        struct list_head link;
         struct source_file file;
 };
 

@@ -1,1 +1,0 @@
-Suite *snippet_suite(void);

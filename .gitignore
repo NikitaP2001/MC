@@ -1,6 +1,7 @@
 *.exe
 *.o
 *.txt
+*.a
 *.swp
 obj
 doc

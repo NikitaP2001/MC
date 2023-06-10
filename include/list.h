@@ -2,33 +2,33 @@
 #define _LIST_H_
 #include <stddef.h>
 
-struct dlist_head {
-        struct dlist_head *next, *prev;
+struct list_head {
+        struct list_head *next, *prev;
 };
 
-static inline _Bool dlhas_next(void *head)
+static inline _Bool list_has_next(void *head)
 {
-        return ((struct dlist_head*)head)->next != NULL;
+        return ((struct list_head*)head)->next != NULL;
 }
 
-static inline void *dlist_next(void *head)
+static inline void *list_next(void *head)
 {
-        return ((struct dlist_head*)head)->next;
+        return ((struct list_head*)head)->next;
 }
 
-#define DLIST_FOREACH_ENTRY(first) \
-for (struct dlist_head *entry = (struct dlist_head*)first; \
-entry != NULL; entry = dlist_next(entry))
+#define LIST_FOREACH_ENTRY(first) \
+for (struct list_head *entry = (struct list_head*)first; \
+entry != NULL; entry = list_next(entry))
 
-static inline void *dlist_prev(void *head)
+static inline void *list_prev(void *head)
 {
-        return ((struct dlist_head*)head)->prev;
+        return ((struct list_head*)head)->prev;
 }
 
-void dlist_append(void *position, void *new_head);
+void list_append(void *position, void *new_head);
 
-void dlist_insert(void *position, void *new_head);
+void list_insert(void *position, void *new_head);
 
-void dlist_destroy(void *first_head, void (*call_free)(void*));
+void list_destroy(void *first_head, void (*call_free)(void*));
 
 #endif /* _LIST_H_ */
