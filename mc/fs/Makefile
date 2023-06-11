@@ -1,5 +1,5 @@
+MODULE := fs.a
+
 SRC := provider.c
 
-include $(ROOT_DIR)/rules.mk
-
-all: fs.a
+include $(BLDRULES)

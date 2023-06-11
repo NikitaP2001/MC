@@ -1,39 +1,56 @@
 
-OBJ := $(patsubst $(ROOT_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRC))
+# CONFIG TARGET PATH - we need to map the path between sources
+# and target modules in the build directory
 
-CUR_BUILDDIR := $(patsubst $(ROOT_DIR)/%,$(BUILD_DIR)/%,$(realpath .))
+# from position in source tree identiry corresponding position in
+# build directories tree. 
+CUR_BLDIR := $(patsubst $(ROOTDIR)%,$(BLDIR)%,$(realpath .))
 
-LIBDEST := $(foreach lib, $(LIBSRC), $(realpath .)/$(lib))
-LIBDEST := $(patsubst $(ROOT_DIR)/%.a,$(BUILD_DIR)/%.a,$(LIBDEST))
+# Objests in build directories tree from sources in source tree
+OBJ := $(SRC:.c=.o)
+OBJ := $(foreach file, $(OBJ), $(CUR_BLDIR)/$(file))
+.SECONDARY: $(OBJ)
 
-$(BUILD_DIR)/%.o: $(ROOT_DIR)/%.c $(CUR_BUILDDIR)
+# deps - modules in subdirectories of current module, we 
+# do not directly build it - it does responsible Makefile
+BLDEPS := $(foreach dep, $(DEPS), $(CUR_BLDIR)/$(dep))
+unexport DEPS
+
+# module - current module/s in current directory we are building now
+BLDMOD := $(foreach mod, $(MODULE), $(CUR_BLDIR)/$(mod))
+
+
+# BUILD RULES
+
+.PHONY: project
+project: $(CUR_BLDIR) $(BLDEPS) $(BLDMOD)
+
+$(BLDIR)/%.o: $(ROOTDIR)/%.c
 	@echo CC $<
 	$(CC) $(CFLAGS) $(C_OUT) $@ $<
 
-define orig_path
-	$(patsubst $(BUILD_DIR)/%.a,$(ROOT_DIR)/%.a,$(1))
-endef
-
-$(CUR_BUILDDIR):
-	@mkdir $@ 	
+$(CUR_BLDIR):
+	mkdir $@
 	
-$(LIBDEST):	
+define orig_path
+	$(patsubst $(BLDIR)/%.a,$(ROOTDIR)/%.a,$(1))
+endef	
+	
+$(BLDEPS):
+	echo $(CUR_BLDIR)
 	$(MAKE) -C $(dir $(call orig_path, $@))	
 	
-%.a: $(OBJ) $(CUR_BUILDDIR)
+%.a: $(OBJ)
 	@echo AR $@		
 	$(AR) rsc -o $@ $^
 	
-	
+%.exe: $(OBJ)
+	@echo LD $@
+	$(LD) $(LDFLAGS) $(C_OUT) $@ $^ $(LDLIBS)
+
 .PHONY: clean
 clean:
-	@$(RM) $(LIBDEST)	
-	@$(RM) $(OBJ)	
-	
-define add_mc
-	src-mc += $(foreach file,$(1),$(realpath $(file)))
-endef
-
-define add_test
-	src-test += $(foreach file,$(1),$(realpath $(file)))
-endef
+	$(call print_info, "cleaning $(CUR_BLDIR)")
+	@$(RM) $(BLDMOD)
+	@$(RM) $(OBJ)
+	@$(foreach dep, $(DEPS), $(MAKE) -C $(dir $(dep)) clean --no-print-directory; )

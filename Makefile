@@ -1,36 +1,22 @@
-OBJ_DIR = $(realpath obj)
-BUILD_DIR = $(realpath build)
-ROOT_DIR = $(realpath .)
-INC_DIR = $(realpath include)
-LOG_DIR = $(realpath logs)
-TEST_DIR = $(realpath test)
-
-BUILD_RULES = $(realpath rules.mk)
+DEPS:= mc/mc.a
 
 include config.mk
-	
+
 export
 
 all: CCFLAGS += $(DBG_CFLAGS)
-all: build	
+all: $(TMPDIRS) project
 
 release: CCFLAGS += $(RLS_CFLAGS)
 release: LDFLAGS += $(RLS_LDFLAGS)
-release: build	
+release: $(TMPDIRS) project
 
-TMPDIRS = obj logs build
+include $(BLDRULES)
+
+TMPDIRS = $(LOGDIR)
 
 $(TMPDIRS):	
-	@mkdir $@        
-	
-build: mc.a 	
-
-test.exe: 	
-	@echo LD $@
-	$(LD) $(LDFLAGS) $(C_OUT) $@ $^ $(TESTLIB)
-	
-mc.a:
-	@$(MAKE) -C $(basename $@) $@ --no-print-directory
+	mkdir $@
 
 .PHONY: memtest
 memtest:
@@ -39,9 +25,3 @@ memtest:
 .PHONY: runtest
 runtest:
 	$(foreach test,$^, $(test) -p 20 ;)
-	
-.PHONY: clean
-clean:
-	$(call print_info,Cleaning solution ...)
-	@$(MAKE) -C mc $@ --no-print-directory
-	@$(MAKE) -C test $@ --no-print-directory
