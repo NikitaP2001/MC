@@ -36,7 +36,8 @@ define orig_path
 endef
 	
 $(BLDEPS):
-	$(MAKE) -C $(dir $(call orig_path, $@)) --no-print-directory
+	$(call print_info, "building dep $@")
+	@$(MAKE) -C $(dir $(call orig_path, $@)) --no-print-directory
 	
 %.a: $(OBJ) $(BLDEPS)
 	@echo AR $@		
