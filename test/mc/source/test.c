@@ -2,8 +2,8 @@
 #include <stdlib.h>
 
 #include <check.h>
+#include "provider.h"
 
-#include "check_source_provider.h"
 
 struct config {
         size_t power;
@@ -34,6 +34,7 @@ struct config parse_args(int argc, char *argv[])
         }
         return result;
 }
+
 
 int main(int argc, char *argv[])
 {

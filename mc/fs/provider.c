@@ -7,7 +7,7 @@
 
 //static const char basic_charset[] = "a";
 
-char_t *source_read(struct source_file *file)
+char *source_read(struct source_file *file)
 {
         return (char*)file;
 }

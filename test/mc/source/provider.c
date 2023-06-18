@@ -7,7 +7,7 @@
 
 #include <source_provider.h>
 #include <tools.h>
-#include "rndfile_gen.h"
+#include "rndfile.h"
 
 #define MODULE_NAME "Prunit"
 #define CORE_NAME "Core"
@@ -47,7 +47,7 @@ START_TEST(read_unk_charset)
         provider_init(&pr);
         provider_add_local(&pr, "./");
         struct source_file *src = provider_get_local(&pr, file_name);
-        char_t *srctext = source_read(src);
+        char *srctext = source_read(src);
         ck_assert_str_eq(exp_test, srctext);
         ck_assert_int_eq(provider_lasterr(&pr), MC_UNKNOWN_CHAR);
         free(srctext);
@@ -66,7 +66,7 @@ START_TEST(read_no_end_newline)
         provider_init(&pr);
         provider_add_local(&pr, "./");
         struct source_file *src = provider_get_local(&pr, file_name);
-        char_t *srctext = source_read(src);
+        char *srctext = source_read(src);
         ck_assert_str_eq(exp_test, srctext);
         free(srctext);
         provider_free(&pr);
@@ -84,7 +84,7 @@ START_TEST(read_end_newline)
         provider_init(&pr);
         provider_add_local(&pr, "./");
         struct source_file *src = provider_get_local(&pr, file_name);
-        char_t *srctext = source_read(src);
+        char *srctext = source_read(src);
         ck_assert_str_eq(exp_test, srctext);
         free(srctext);
         provider_free(&pr);
@@ -102,7 +102,7 @@ START_TEST(read_empty)
         provider_init(&pr);
         provider_add_local(&pr, "./");
         struct source_file *src = provider_get_local(&pr, file_name);
-        char_t *srctext = source_read(src);
+        char *srctext = source_read(src);
         ck_assert_str_eq(exp_test, srctext);
         free(srctext);
         provider_free(&pr);

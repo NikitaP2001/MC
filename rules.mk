@@ -9,7 +9,6 @@ CUR_BLDIR := $(patsubst $(ROOTDIR)%,$(BLDIR)%,$(realpath .))
 # Objests in build directories tree from sources in source tree
 OBJ := $(SRC:.c=.o)
 OBJ := $(foreach file, $(OBJ), $(CUR_BLDIR)/$(file))
-.SECONDARY: $(OBJ)
 
 # deps - modules in subdirectories of current module, we 
 # do not directly build it - it does responsible Makefile
@@ -28,25 +27,24 @@ project: $(CUR_BLDIR) $(BLDEPS) $(BLDMOD)
 $(BLDIR)/%.o: $(ROOTDIR)/%.c
 	@echo CC $<
 	$(CC) $(CFLAGS) $(C_OUT) $@ $<
-
+	
 $(CUR_BLDIR):
 	mkdir $@
 	
 define orig_path
-	$(patsubst $(BLDIR)/%.a,$(ROOTDIR)/%.a,$(1))
-endef	
+	$(patsubst $(BLDIR)/%,$(ROOTDIR)/%,$(1))
+endef
 	
 $(BLDEPS):
-	echo $(CUR_BLDIR)
-	$(MAKE) -C $(dir $(call orig_path, $@))	
+	$(MAKE) -C $(dir $(call orig_path, $@)) --no-print-directory
 	
-%.a: $(OBJ)
+%.a: $(OBJ) $(BLDEPS)
 	@echo AR $@		
-	$(AR) rsc -o $@ $^
+	$(AR) -rcT $@ $@ $^
 	
 %.exe: $(OBJ)
 	@echo LD $@
-	$(LD) $(LDFLAGS) $(C_OUT) $@ $^ $(LDLIBS)
+	$(LD) $(C_OUT) $@ $^ $(LDLIBS) $(LDFLAGS) 
 
 .PHONY: clean
 clean:

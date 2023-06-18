@@ -18,7 +18,7 @@ struct source_file {
         char path[_MAX_PATH];
 };
 
-char_t *source_read(struct source_file *file);
+char *source_read(struct source_file *file);
 
 const char *source_name(struct source_file *file);
 

@@ -1,3 +1,5 @@
+MODULE := test.exe
 
-src-test += $(realpath provider.c)
-src-test += $(realpath test.c)
+SRC = test.c provider.c
+
+include $(BLDRULES)

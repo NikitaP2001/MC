@@ -1,5 +1,5 @@
 MODULE := mc.a
-DEPS := fs/fs.a pp/pp.a
+DEPS := fs/fs.a
 
 SRC = list.c mc.c tools.c
 

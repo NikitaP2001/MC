@@ -1,4 +1,4 @@
-ROOTDIR = $(realpath .)
+ROOTDIR := $(realpath .)
 INCDIR = $(ROOTDIR)/include
 BLDIR = $(ROOTDIR)/build
 LOGDIR = $(ROOTDIR)/logs
@@ -7,9 +7,9 @@ TESTDIR = $(ROOTDIR)/test
 BLDRULES = $(ROOTDIR)/rules.mk
 
 # toolchain
-CC= @gcc -std=c99
+CC = @gcc -std=c99
 AR = @x86_64-w64-mingw32-ar
-LD= @gcc
+LD = @gcc
 DRMEM = drmemory.exe -suppress $(LOGDIR)/custom.txt -batch -logdir
 
 # compiler flags
