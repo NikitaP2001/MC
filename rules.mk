@@ -22,7 +22,7 @@ BLDMOD := $(foreach mod, $(MODULE), $(CUR_BLDIR)/$(mod))
 # BUILD RULES
 
 .PHONY: project
-project: $(CUR_BLDIR) $(BLDEPS) $(BLDMOD)
+project: $(CUR_BLDIR) $(OBJ) $(BLDEPS) $(BLDMOD)
 
 $(BLDIR)/%.o: $(ROOTDIR)/%.c
 	@echo CC $<

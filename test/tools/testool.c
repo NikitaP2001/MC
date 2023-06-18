@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -41,4 +42,27 @@ _Bool write_file(const char *file_name, const char *content, size_t length)
                 fclose(fp);
         }
         return result; 
+}
+
+
+void invoke_tests()
+{
+        static const char *tname = "/test.exe";        
+        char *subdir = NULL;              
+        char *dirs = malloc(sizeof(TEST_DIRS));
+        strcpy(dirs, TEST_DIRS); 
+        
+        subdir = strtok(dirs, " ");
+        if (subdir != NULL) {                
+                do {         
+                        char *testpath = malloc(strlen(subdir)
+                        + sizeof(tname));
+                        strcpy(testpath, subdir);
+                        strcat(testpath, tname);
+                        system(testpath);                
+                        free(testpath);
+                } while ((subdir = strtok(NULL, " ")));
+        }
+        
+        free(dirs);
 }
