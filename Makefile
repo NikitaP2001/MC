@@ -19,11 +19,3 @@ TMPDIRS = $(LOGDIR)
 
 $(TMPDIRS):	
 	mkdir $@
-
-.PHONY: memtest
-memtest:
-	$(foreach test,$^, $(DRMEM) $(LOG_DIR) -- $(test) ;)	
-	
-.PHONY: runtest
-runtest:
-	$(foreach test,$^, $(test) -p 20 ;)

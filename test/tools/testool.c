@@ -45,12 +45,13 @@ _Bool write_file(const char *file_name, const char *content, size_t length)
 }
 
 
-void invoke_tests()
+void invoke_tests(const char *test_dirs)
 {
+        system("dir");
         static const char *tname = "/test.exe";        
         char *subdir = NULL;              
-        char *dirs = malloc(sizeof(TEST_DIRS));
-        strcpy(dirs, TEST_DIRS); 
+        char *dirs = malloc(sizeof(test_dirs));
+        strcpy(dirs, test_dirs); 
         
         subdir = strtok(dirs, " ");
         if (subdir != NULL) {                

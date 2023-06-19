@@ -23,6 +23,6 @@ _Bool write_file(const char *file_name, const char *content, size_t length);
 #define RUN_SUBMOD_TESTS() do {} while (0) 
 #endif
         
-void invoke_tests();
+void invoke_tests(const char *test_dirs);
 
 #endif /* _TTOOL_H_ */

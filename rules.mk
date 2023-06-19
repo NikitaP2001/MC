@@ -6,6 +6,14 @@
 # build directories tree. 
 CUR_BLDIR := $(patsubst $(ROOTDIR)%,$(BLDIR)%,$(realpath .))
 
+# add definitions to execute tests in subdirectories
+TDIRS := $(patsubst %/,%,$(dir $(filter %.exe %.a,$(DEPS))))
+ifneq ($(TDIRS),)
+	TESTS := -DTEST_DIRS='"$(TDIRS)"'
+else
+	TESTS :=
+endif
+
 # Objests in build directories tree from sources in source tree
 OBJ := $(SRC:.c=.o)
 OBJ := $(foreach file, $(OBJ), $(CUR_BLDIR)/$(file))
@@ -22,22 +30,21 @@ BLDMOD := $(foreach mod, $(MODULE), $(CUR_BLDIR)/$(mod))
 # BUILD RULES
 
 .PHONY: project
-project: $(CUR_BLDIR) $(OBJ) $(BLDEPS) $(BLDMOD)
+project: $(CUR_BLDIR) $(OBJ) $(BLDMOD)
+	$(call print_info, "building dep $@")
+	$(foreach dep,$(BLDEPS),$(MAKE) -C $(dir $(call orig_path, $(dep))) --no-print-directory ;)
 
 $(BLDIR)/%.o: $(ROOTDIR)/%.c
 	@echo CC $<
-	$(CC) $(CFLAGS) $(C_OUT) $@ $<
+	$(CC) $(CFLAGS) $(TESTS) $(C_OUT) $@ $<
 	
 $(CUR_BLDIR):
-	mkdir $@
-	
+	mkdir $@	
+
 define orig_path
 	$(patsubst $(BLDIR)/%,$(ROOTDIR)/%,$(1))
 endef
-	
-$(BLDEPS):
-	$(call print_info, "building dep $@")
-	@$(MAKE) -C $(dir $(call orig_path, $@)) --no-print-directory
+
 	
 %.a: $(OBJ) $(BLDEPS)
 	@echo AR $@		

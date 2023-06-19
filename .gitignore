@@ -5,4 +5,5 @@
 *.swp
 obj
 doc
+env.bat
 .vscode
