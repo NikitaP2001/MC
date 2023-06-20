@@ -7,7 +7,7 @@
 CUR_BLDIR := $(patsubst $(ROOTDIR)%,$(BLDIR)%,$(realpath .))
 
 # add definitions to execute tests in subdirectories
-TDIRS := $(patsubst %/,%,$(dir $(filter %.exe %.a,$(DEPS))))
+TDIRS := $(patsubst %/,%,$(dir $(filter %.exe,$(DEPS))))
 ifneq ($(TDIRS),)
 	TESTS := -DTEST_DIRS='"$(TDIRS)"'
 else

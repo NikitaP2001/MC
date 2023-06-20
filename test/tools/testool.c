@@ -47,20 +47,19 @@ _Bool write_file(const char *file_name, const char *content, size_t length)
 
 void invoke_tests(const char *test_dirs)
 {        
-        static const char *tname = "/test.exe";       
-        char *subdir = NULL;              
+        char *subdir = NULL;
+        static const char *cmdpatt = "cd %s && test.exe";
         char *dirs = malloc(sizeof(test_dirs));
         strcpy(dirs, test_dirs); 
         
         subdir = strtok(dirs, " ");
         if (subdir != NULL) {                
                 do {         
-                        char *testpath = malloc(strlen(subdir)
-                        + sizeof(tname));
-                        strcpy(testpath, subdir);
-                        strcat(testpath, tname);
-                        system(testpath);                
-                        free(testpath);
+                        char *tcmd = malloc(snprintf(NULL, 0, cmdpatt, subdir));
+                        sprintf(tcmd, cmdpatt, subdir);
+                        printf("Trying to run: %s\n", tcmd);
+                        system(tcmd);                
+                        free(tcmd);
                 } while ((subdir = strtok(NULL, " ")));
         }
         
