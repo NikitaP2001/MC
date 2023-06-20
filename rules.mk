@@ -29,10 +29,14 @@ BLDMOD := $(foreach mod, $(MODULE), $(CUR_BLDIR)/$(mod))
 
 # BUILD RULES
 
+define make_dep
+	$(MAKE) -C $(dir $(call orig_path, $(1))) --no-print-directory ;
+endef
+
 .PHONY: project
-project: $(CUR_BLDIR) $(OBJ) $(BLDMOD)
-	$(call print_info, "building dep $@")
-	$(foreach dep,$(BLDEPS),$(MAKE) -C $(dir $(call orig_path, $(dep))) --no-print-directory ;)
+project: $(CUR_BLDIR) $(OBJ) $(BLDEPS) $(BLDMOD)
+	@$(foreach dep,$(BLDEPS),$(call make_dep,$(dep)))
+	@:
 
 $(BLDIR)/%.o: $(ROOTDIR)/%.c
 	@echo CC $<
@@ -45,10 +49,13 @@ define orig_path
 	$(patsubst $(BLDIR)/%,$(ROOTDIR)/%,$(1))
 endef
 
+$(BLDEPS):
+	@$(call make_dep,$@)
 	
 %.a: $(OBJ) $(BLDEPS)
 	@echo AR $@		
-	$(AR) -rcT $@ $@ $^
+	@$(RM) $@
+	$(AR) -rcs --thin $@ $^
 	
 %.exe: $(OBJ)
 	@echo LD $@
