@@ -30,20 +30,23 @@ BLDMOD := $(foreach mod, $(MODULE), $(CUR_BLDIR)/$(mod))
 # BUILD RULES
 
 define make_dep
-	$(MAKE) -C $(dir $(call orig_path, $(1))) --no-print-directory ;
+	$(MAKE) -C $(dir $(call orig_path, $(1))) --no-print-directory;
 endef
 
 .PHONY: project
-project: $(CUR_BLDIR) $(OBJ) $(BLDEPS) $(BLDMOD)
-	@$(foreach dep,$(BLDEPS),$(call make_dep,$(dep)))
+project: pr_deps $(OBJ) $(BLDMOD) 
 	@:
+
+.PHONY: pr_deps
+pr_deps: $(CUR_BLDIR)
+	@$(foreach dep,$(BLDEPS),$(call make_dep,$(dep)))
 
 $(BLDIR)/%.o: $(ROOTDIR)/%.c
 	@echo CC $<
 	$(CC) $(CFLAGS) $(TESTS) $(C_OUT) $@ $<
 	
 $(CUR_BLDIR):
-	mkdir $@	
+	$(MKDIR) $@	
 
 define orig_path
 	$(patsubst $(BLDIR)/%,$(ROOTDIR)/%,$(1))
@@ -57,9 +60,12 @@ $(BLDEPS):
 	@$(RM) $@
 	$(AR) -rcs --thin $@ $^
 	
-%.exe: $(OBJ)
+BLDEXE := $(filter %.exe,$(BLDMOD))
+
+.PHONY: $(BLDEXE)
+$(BLDEXE):
 	@echo LD $@
-	$(LD) $(C_OUT) $@ $^ $(LDLIBS) $(LDFLAGS) 
+	$(LD) $(C_OUT) $@ $(OBJ) $(LDLIBS) $(LDFLAGS) 
 
 .PHONY: clean
 clean:

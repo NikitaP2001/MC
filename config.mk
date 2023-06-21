@@ -11,13 +11,15 @@ CC = @gcc -std=c99
 AR = @x86_64-w64-mingw32-ar
 LD = @gcc
 
+MKDIR = @mkdir_
+
 # compiler flags
 CFLAGS = -c -pedantic -Wall -Wextra -Werror -I $(INCDIR)
 DBG_CFLAGS = -g -DDEBUG
 RLS_CFLAGS = -s -fdata-sections -ffunction-sections -O3
 
 LDLIBS =
-LDFLAGS = 
+LDFLAGS = -static
 
 C_OUT = -o
 

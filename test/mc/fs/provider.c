@@ -1,0 +1,187 @@
+#include <stdbool.h>
+#include <stdlib.h>
+
+#include <unistd.h>
+
+#include <check.h>
+
+#include <source_provider.h>
+#include <tools.h>
+#include "rndfile.h"
+
+#define MODULE_NAME "Prunit"
+#define CORE_NAME "Core"
+
+#define DIRN_PREFIX "testdir"
+
+
+void create_dirs(size_t count)
+{
+        for (size_t i = 0; i < count; i++) {
+                char *name = generate_name(i, DIRN_PREFIX);
+                if (!fs_isdir(name))
+                        mkdir(name);
+                free(name);
+        }
+}
+
+void rm_dirs(size_t count)
+{
+        for (size_t i = 0; i < count; i++) {
+                char *name = generate_name(i, DIRN_PREFIX);
+                if (fs_isdir(name))
+                        remove(name);
+                free(name);
+        }
+}
+
+START_TEST(read_unk_charset)
+{
+        const char file_name[] = "src.ctt";
+        const char test_text[] = "This is - \x02 an unknown char!\n";
+        write_file(file_name, test_text, sizeof(test_text) - 1);
+        struct source_provider pr = {0};
+        provider_init(&pr);
+        provider_add_local(&pr, "./");
+        struct source_file *src = provider_get_local(&pr, file_name);
+        const char *srctext = source_read(src);
+        ck_assert_ptr_null(srctext);
+        ck_assert_int_eq(source_lasterr(src), MC_UNKNOWN_CHAR);
+        provider_free(&pr);
+        remove(file_name);
+}
+END_TEST
+
+START_TEST(read_no_end_newline)
+{
+        char *file_name = "src.ctt";
+        const char test_text[] = "No newline \nthere";
+        const char exp_test[] = "No newline \nthere\n";
+        write_file(file_name, test_text, sizeof(test_text) - 1);
+        struct source_provider pr = {0};
+        provider_init(&pr);
+        provider_add_local(&pr, "./");
+        struct source_file *src = provider_get_local(&pr, file_name);
+        const char *srctext = source_read(src);
+        ck_assert_str_eq(exp_test, srctext);
+        provider_free(&pr);
+        remove(file_name);
+}
+END_TEST
+
+START_TEST(read_end_newline)
+{
+        char *file_name = "src.ctt";
+        const char test_text[] = "There is a newline \nthere\n";
+        const char exp_test[] = "There is a newline \nthere\n";
+        write_file(file_name, test_text, sizeof(test_text) - 1);
+        struct source_provider pr = {0};
+        provider_init(&pr);
+        provider_add_local(&pr, "./");
+        struct source_file *src = provider_get_local(&pr, file_name);
+        const char *srctext = source_read(src);
+        ck_assert_str_eq(exp_test, srctext);
+        provider_free(&pr);
+        remove(file_name);
+}
+END_TEST
+
+START_TEST(read_empty)
+{
+        char *file_name = "src.ctt";
+        const char test_text[] = "";
+        const char exp_test[] = "";
+        write_file(file_name, test_text, sizeof(test_text) - 1);
+        struct source_provider pr = {0};
+        provider_init(&pr);
+        provider_add_local(&pr, "./");
+        struct source_file *src = provider_get_local(&pr, file_name);
+        const char *srctext = source_read(src);
+        ck_assert_str_eq(exp_test, srctext);
+        provider_free(&pr);
+        remove(file_name);
+}
+END_TEST
+
+START_TEST(add_dir)
+{
+        create_dirs(1);
+        struct source_provider pr = {0};
+        provider_init(&pr);
+
+        char *name = generate_name(0, DIRN_PREFIX);
+        provider_add_local(&pr, name);
+        ck_assert(MC_SUCC(provider_lasterr(&pr)));
+        provider_add_global(&pr, name);
+        ck_assert(MC_SUCC(provider_lasterr(&pr)));
+        free(name);
+
+        provider_free(&pr);
+        rm_dirs(1);
+}
+END_TEST
+
+START_TEST(get_file_local)
+{
+        struct source_provider pr = {0};
+        struct txtgen_conf conf = {0};
+        generator_init(&conf, 1);
+        provider_init(&pr);
+        provider_add_local(&pr, "./");
+        struct source_file *found = provider_get_global(&pr, conf.file_names[0]);
+        ck_assert_ptr_null(found);
+        found = provider_get_local(&pr, conf.file_names[0]);
+        ck_assert_ptr_nonnull(found);
+        provider_free(&pr);
+        generator_free(&conf);
+}
+END_TEST
+
+START_TEST(get_file_global)
+{
+        struct source_provider pr = {0};
+        struct txtgen_conf conf = {0};
+        generator_init(&conf, 1);
+        provider_init(&pr);
+        provider_add_global(&pr, "./");
+        struct source_file *found = provider_get_global(&pr, conf.file_names[0]);
+        ck_assert_ptr_nonnull(found);
+        found = provider_get_local(&pr, conf.file_names[0]);
+        ck_assert_ptr_nonnull(found);
+        provider_free(&pr);
+        generator_free(&conf);
+}
+END_TEST
+
+START_TEST(get_file_notexist)
+{
+        char *file_name = "src.ctt";
+        struct source_provider pr = {0};
+        provider_init(&pr);
+        provider_add_local(&pr, "./");
+        struct source_file *src = provider_get_local(&pr, file_name);
+        ck_assert_ptr_null(src);
+        provider_free(&pr);
+}
+END_TEST
+
+
+Suite *srcprov_suite()
+{
+        Suite *s = NULL;
+        TCase *tc_core = NULL;
+        s = suite_create(MODULE_NAME);
+        tc_core = tcase_create(CORE_NAME);
+
+        tcase_add_test(tc_core, read_unk_charset);
+        tcase_add_test(tc_core, read_no_end_newline);
+        tcase_add_test(tc_core, read_end_newline);
+        tcase_add_test(tc_core, read_empty);
+        tcase_add_test(tc_core, add_dir);
+        tcase_add_test(tc_core, get_file_local);
+        tcase_add_test(tc_core, get_file_global);
+        tcase_add_test(tc_core, get_file_notexist);
+        
+        suite_add_tcase(s, tc_core);
+        return s;
+}

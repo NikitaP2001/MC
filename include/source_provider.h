@@ -15,10 +15,15 @@
 /* note: source file and other fs places should be identified
  * by full path, which can be obtained using tools::fs_path */
 struct source_file {
+        char *content;
         char path[_MAX_PATH];
+
+        enum mc_status last_error;
 };
 
-char *source_read(struct source_file *file);
+enum mc_status source_lasterr(const struct source_file *file);
+
+const char *source_read(struct source_file *file);
 
 const char *source_name(struct source_file *file);
 
@@ -48,10 +53,10 @@ void provider_init(struct source_provider *provider);
 enum mc_status provider_lasterr(struct source_provider *provider);
 
 /* returns false if path is not valid */
-_Bool provider_add_local(struct source_provider *provider, 
+void provider_add_local(struct source_provider *provider, 
 const char *dir_path);
 
-_Bool provider_add_global(struct source_provider *provider, 
+void provider_add_global(struct source_provider *provider, 
 const char *dir_path);
 
 /* If multiple files with the same name without path specified could be 

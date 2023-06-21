@@ -34,7 +34,7 @@ _Bool wordcmp(char *str1, char *str2)
 _Bool write_file(const char *file_name, const char *content, size_t length)
 {
         _Bool result = false;
-        FILE *fp = fopen(file_name, "w");
+        FILE *fp = fopen(file_name, "wb");
         if (fp != NULL) {
                 fwrite(content, sizeof(char), length, fp);
 
@@ -57,7 +57,6 @@ void invoke_tests(const char *test_dirs)
                 do {         
                         char *tcmd = malloc(snprintf(NULL, 0, cmdpatt, subdir));
                         sprintf(tcmd, cmdpatt, subdir);
-                        printf("Trying to run: %s\n", tcmd);
                         system(tcmd);                
                         free(tcmd);
                 } while ((subdir = strtok(NULL, " ")));

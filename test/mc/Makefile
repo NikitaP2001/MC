@@ -1,5 +1,5 @@
 MODULE := test.exe
-DEPS := source/test.exe
+DEPS := fs/test.exe
 
 
 SRC = test.c
