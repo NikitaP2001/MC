@@ -1,5 +1,5 @@
 MODULE := fs.a
 
-SRC := provider.c
+SRC := fs.c
 
 include $(BLDRULES)

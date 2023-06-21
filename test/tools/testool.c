@@ -48,7 +48,7 @@ _Bool write_file(const char *file_name, const char *content, size_t length)
 void invoke_tests(const char *test_dirs)
 {        
         char *subdir = NULL;
-        static const char *cmdpatt = "cd %s && test.exe";
+        static const char *cmdpatt = "cd %s && test.exe --gtest_color=yes";
         char *dirs = malloc(sizeof(test_dirs));
         strcpy(dirs, test_dirs); 
         
@@ -57,7 +57,7 @@ void invoke_tests(const char *test_dirs)
                 do {         
                         char *tcmd = malloc(snprintf(NULL, 0, cmdpatt, subdir));
                         sprintf(tcmd, cmdpatt, subdir);
-                        system(tcmd);                
+                        system(tcmd);
                         free(tcmd);
                 } while ((subdir = strtok(NULL, " ")));
         }

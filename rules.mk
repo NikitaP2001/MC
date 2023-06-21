@@ -15,7 +15,10 @@ else
 endif
 
 # Objests in build directories tree from sources in source tree
-OBJ := $(SRC:.c=.o)
+CSRC := $(filter %.c,$(SRC))
+CXXSRC := $(filter %.cxx,$(SRC))
+OBJ := $(CSRC:.c=.o)
+OBJ += $(CXXSRC:.cxx=.o)
 OBJ := $(foreach file, $(OBJ), $(CUR_BLDIR)/$(file))
 
 # deps - modules in subdirectories of current module, we 
@@ -45,6 +48,15 @@ $(BLDIR)/%.o: $(ROOTDIR)/%.c
 	@echo CC $<
 	$(CC) $(CFLAGS) $(TESTS) $(C_OUT) $@ $<
 	
+$(BLDIR)/%.o: $(ROOTDIR)/%.cxx
+	@echo CC $<
+	$(CCX) $(CFLAGS) $(TESTS) $(C_OUT) $@ $<
+		
+		
+$(BLDIR)/%.o: $(ROOTDIR)/%.c
+	@echo CC $<
+	$(CC) $(CFLAGS) $(TESTS) $(C_OUT) $@ $<
+	
 $(CUR_BLDIR):
 	$(MKDIR) $@	
 
@@ -65,7 +77,7 @@ BLDEXE := $(filter %.exe,$(BLDMOD))
 .PHONY: $(BLDEXE)
 $(BLDEXE):
 	@echo LD $@
-	$(LD) $(C_OUT) $@ $(OBJ) $(LDLIBS) $(LDFLAGS) 
+	$(CXXLD) $(C_OUT) $@ $(OBJ) $(LDLIBS) $(LDFLAGS) 
 
 .PHONY: clean
 clean:

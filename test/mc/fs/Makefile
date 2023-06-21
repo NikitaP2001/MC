@@ -1,5 +1,5 @@
 MODULE := test.exe
 
-SRC = test.c provider.c
+SRC = test.cxx test_fs.cxx
 
 include $(BLDRULES)

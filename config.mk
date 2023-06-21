@@ -8,8 +8,10 @@ BLDRULES = $(ROOTDIR)/rules.mk
 
 # toolchain
 CC = @gcc -std=c99
+CCX = @g++
 AR = @x86_64-w64-mingw32-ar
 LD = @gcc
+CXXLD = @g++
 
 MKDIR = @mkdir_
 

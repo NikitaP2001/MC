@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include <source_provider.h>
+#include <fs.h>
 #include <tools.h>
 
 static const char basic_charset[] = "\t\n\v\f\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";

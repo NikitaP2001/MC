@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
+#include <assert.h>
+#include <string.h>
 #include <stdio.h>
-
-#include <check.h>
 
 #include <mc.h>
 #include <tools.h>
@@ -35,7 +35,7 @@ static void gen_file_content(struct txtgen_conf *conf, size_t file_number)
         for (size_t i = 0; i < fsize; i++)
                 new_content[i] = get_rand_chr();
         conf->content[file_number] = new_content;
-        ck_assert(write_file(file_name, new_content, fsize + 1));
+        assert(write_file(file_name, new_content, fsize + 1));
 }
 
 #define STR_INT_SIZE 10
