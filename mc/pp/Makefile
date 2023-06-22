@@ -1,5 +1,5 @@
-MODULE :=
+MODULE := pp.a
 
-SRC :=
+SRC := pp.c
 
 include $(BLDRULES)

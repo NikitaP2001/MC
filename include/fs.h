@@ -14,18 +14,18 @@
 
 /* note: source file and other fs places should be identified
  * by full path, which can be obtained using tools::fs_path */
-struct source_file {
+struct fs_file {
         char *content;
         char path[_MAX_PATH];
 
         enum mc_status last_error;
 };
 
-enum mc_status source_lasterr(const struct source_file *file);
+enum mc_status source_lasterr(const struct fs_file *file);
 
-const char *source_read(struct source_file *file);
+const char *source_read(struct fs_file *file);
 
-const char *source_name(struct source_file *file);
+const char *source_name(struct fs_file *file);
 
 struct dir_list {
         struct list_head link;
@@ -36,10 +36,10 @@ struct dir_list {
 
 struct file_list {
         struct list_head link;
-        struct source_file file;
+        struct fs_file file;
 };
 
-struct source_provider {
+struct filesys {
 
         struct dir_list *local_places, *global_places;
 
@@ -48,31 +48,31 @@ struct source_provider {
         enum mc_status last_error;
 };
 
-void provider_init(struct source_provider *provider);
+void fs_init(struct filesys *provider);
 
-enum mc_status provider_lasterr(struct source_provider *provider);
+enum mc_status fs_lasterr(struct filesys *provider);
 
 /* returns false if path is not valid */
-void provider_add_local(struct source_provider *provider, 
+void fs_add_local(struct filesys *provider, 
 const char *dir_path);
 
-void provider_add_global(struct source_provider *provider, 
+void fs_add_global(struct filesys *provider, 
 const char *dir_path);
 
 /* If multiple files with the same name without path specified could be 
  * found in global or local places - we will return first matching. */
 
 /* if failed to find in local, will the apply search in global places */
-struct source_file *provider_get_local(struct source_provider *prov, 
+struct fs_file *fs_get_local(struct filesys *prov, 
 const char *f_name);
 
 /* On the contrary, unlike get_local will search only in global places */
-struct source_file *provider_get_global(struct source_provider *prov, 
+struct fs_file *fs_get_global(struct filesys *prov, 
 const char *f_name);
 
-void provider_release_file(struct source_provider *provider, 
-struct source_file *file);
+void fs_release_file(struct filesys *provider, 
+struct fs_file *file);
 
-void provider_free(struct source_provider *provider);
+void fs_free(struct filesys *provider);
 
 #endif /* _SOURCE_PROVIDER_H_ */

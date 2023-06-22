@@ -18,12 +18,12 @@ _Bool source_allowed_chr(char chr)
         return result;
 }
 
-enum mc_status source_lasterr(const struct source_file *file)
+enum mc_status source_lasterr(const struct fs_file *file)
 {
         return file->last_error; 
 }
 
-const char *source_read(struct source_file *file)
+const char *source_read(struct fs_file *file)
 {
         if (file->content == NULL) {
                 FILE *sfile = fopen(file->path, "rb");
@@ -65,7 +65,7 @@ const char *source_read(struct source_file *file)
 }
 
 
-const char *source_name(struct source_file *file)
+const char *source_name(struct fs_file *file)
 {
         return fs_file_name(file->path);
 }
@@ -79,7 +79,7 @@ static struct file_list *file_list_search(struct file_list *list, const char *f_
 {
         LIST_FOREACH_ENTRY(list) {
                 struct file_list *f_entry = (struct file_list*)entry;
-                struct source_file *e_file = &(f_entry)->file;
+                struct fs_file *e_file = &(f_entry)->file;
                 const char *e_fname = source_name(e_file);
                 if (strcmp(e_fname, f_name) == 0)
                         return f_entry;
@@ -119,19 +119,19 @@ static void dir_list_destroy(struct dir_list *head)
 }
 
 
-void provider_init(struct source_provider *provider)
+void fs_init(struct filesys *provider)
 {
-        memset(provider, 0, sizeof(struct source_provider));
+        memset(provider, 0, sizeof(struct filesys));
 }
 
 
-enum mc_status provider_lasterr(struct source_provider *provider)
+enum mc_status fs_lasterr(struct filesys *provider)
 {
         return provider->last_error;
 }
 
 
-void provider_add_local(struct source_provider *provider, 
+void fs_add_local(struct filesys *provider, 
 const char *dir_path)
 {
         char *full_path = malloc(strlen(dir_path));
@@ -146,7 +146,7 @@ const char *dir_path)
 }
 
 
-void provider_add_global(struct source_provider *provider, 
+void fs_add_global(struct filesys *provider, 
 const char *dir_path)
 {
         char *full_path = malloc(strlen(dir_path));
@@ -161,7 +161,7 @@ const char *dir_path)
 }
 
 
-struct source_file *provider_get_local(struct source_provider *provider, 
+struct fs_file *fs_get_local(struct filesys *provider, 
 const char *f_name)
 {
         struct file_list *result = NULL;
@@ -180,11 +180,11 @@ const char *f_name)
                 return &result->file;
         }
         
-        return provider_get_global(provider, f_name);
+        return fs_get_global(provider, f_name);
 }
 
 
-struct source_file *provider_get_global(struct source_provider *provider, 
+struct fs_file *fs_get_global(struct filesys *provider, 
 const char *f_name)
 {
         struct file_list *result = NULL;
@@ -204,7 +204,7 @@ const char *f_name)
         return NULL;
 }
 
-void provider_free(struct source_provider *provider)
+void fs_free(struct filesys *provider)
 {
         if (provider->opened_global != NULL)
                 list_destroy(provider->opened_global, free);
