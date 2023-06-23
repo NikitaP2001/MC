@@ -33,9 +33,11 @@ struct pp_token {
 int pp_token_valcmp(struct pp_token *left, const char *value);
 
 struct preproc {
-        const char *file_pos;
+        const char *pos;
         size_t line;
         size_t file_line;
+
+        _Bool state;
 
         struct pp_token *first;
         struct pp_token *last;
@@ -43,6 +45,6 @@ struct preproc {
 
 void pp_init(struct preproc *pp, struct fs_file *file);
 
-_Bool pp_get_token(struct preproc *pp);
+struct pp_token *pp_get_token(struct preproc *pp);
 
 void pp_free(struct preproc *pp);

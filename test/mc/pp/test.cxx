@@ -17,7 +17,7 @@ extern "C" {
 TEST(pp_test, header_name)
 {
         const char file_name[] = FILE_NAME;
-        const char test_text[] = "0x3< \n#include <name>";
+        const char test_text[] = "0.3< \n#include <name>";
         write_file(file_name, test_text, sizeof(test_text) - 1);
         struct filesys fs = {};
         fs_init(&fs);
@@ -30,7 +30,7 @@ TEST(pp_test, header_name)
         pp_init(&pp, src);
 
         while (pp_get_token(&pp));
-        struct pp_token *tok = pp.first;  /* 0x3 */
+        struct pp_token *tok = pp.first;  /* 0.3 */
         ASSERT_NE(tok, nullptr);
         tok = (pp_token*)list_next(tok); /* < */
         ASSERT_NE(tok, nullptr);
