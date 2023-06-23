@@ -43,7 +43,9 @@ struct preproc {
         struct pp_token *last;
 };
 
-void pp_init(struct preproc *pp, struct fs_file *file);
+_Bool pp_init(struct preproc *pp, struct fs_file *file);
+
+_Bool pp_noerror(const struct preproc *pp);
 
 struct pp_token *pp_get_token(struct preproc *pp);
 

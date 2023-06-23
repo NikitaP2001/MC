@@ -1,7 +1,9 @@
 MODULE := test.exe
 DEPS := tools/tools.a mc/test.exe
 
-LDLIBS += -lgtest -l:mc.a -l:tools.a
+LD = $(CXXLD)
+
+LDLIBS += -lgtest -l:tools.a
 CFLAGS += -I $(realpath tools)
 LDFLAGS += -L $(CUR_BLDIR)/tools
 

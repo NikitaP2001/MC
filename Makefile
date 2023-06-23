@@ -1,10 +1,14 @@
+MODULE := mc.exe
 DEPS:= mc/mc.a test/test.exe
+
+SRC := main.c
 
 include config.mk
 
 export
 
 LDFLAGS += -L $(CUR_BLDIR)/mc
+LDLIBS += -l:mc.a
 
 all: CFLAGS += $(DBG_CFLAGS)
 all: $(TMPDIRS) project

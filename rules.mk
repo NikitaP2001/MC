@@ -72,12 +72,13 @@ $(BLDEPS):
 	@$(RM) $@
 	$(AR) -rcs --thin $@ $^
 	
+
 BLDEXE := $(filter %.exe,$(BLDMOD))
 
 .PHONY: $(BLDEXE)
 $(BLDEXE):
 	@echo LD $@
-	$(CXXLD) $(C_OUT) $@ $(OBJ) $(LDLIBS) $(LDFLAGS) 
+	$(LD) $(C_OUT) $@ $(OBJ) $(LDLIBS) $(LDFLAGS) 
 
 .PHONY: clean
 clean:

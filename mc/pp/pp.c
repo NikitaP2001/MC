@@ -13,6 +13,23 @@
  *      - change pp_is* functions to use pp instead of raw * */
 
 
+static struct pp_token *pp_try_form_token(const struct preproc *before, 
+const struct preproc *after, enum pp_type type)
+{
+        struct pp_token *token = NULL;
+        if (before->line == after->line && before->pos != after->pos 
+        && pp_noerror(after)) {
+                token = malloc(sizeof(struct pp_token));
+                token->file_line = after->file_line;
+                token->line = after->line;
+                token->length = after->pos - before->pos + 1;
+                token->value = before->pos;
+                token->type = type;
+        }
+        return token;
+}
+
+
 int pp_token_valcmp(struct pp_token *left, const char *value)
 {
         size_t r_len = strlen(value);
@@ -28,12 +45,6 @@ int pp_token_valcmp(struct pp_token *left, const char *value)
 static void pp_seterror(struct preproc *pp)
 {
         pp->state = false;
-}
-
-
-static _Bool pp_noerror(struct preproc *pp)
-{
-        return pp->state == true;
 }
 
 
@@ -54,7 +65,7 @@ static inline _Bool pp_isspace(char chr)
 }
 
 
-static inline _Bool pp_isoctal(struc preproc *pp)
+static inline _Bool pp_isoctal(struct preproc *pp)
 {
         return pp->pos[0] >= '0' && pp->pos[0] <= '7';
 }
@@ -70,6 +81,30 @@ static inline _Bool pp_nondigit(char chr)
 {
         return isalpha(chr) || chr == '_';
 }
+
+
+static _Bool pp_isstr(struct preproc *pp, const char *str)
+{
+        int slen = strlen(str);
+        const char *pos = pp->pos;
+        for (int i = 0; i < slen && pos[i] != '\0'; i++)  {
+                if (pos[i] != str[i])
+                        return false;
+        }
+        return true; 
+}
+
+
+static _Bool pp_is_one_of(char one, const char *of)
+{
+        int of_len = strlen(of);
+        for (int i = 0; i < of_len; i++) {
+                if (one != of[i])
+                        return false;   
+        }
+        return true; 
+}
+
 
 static void pp_skipspace(struct preproc *pp)
 {
@@ -92,7 +127,6 @@ static void pp_skipspace(struct preproc *pp)
 
 static void pp_fetch_header_name(struct preproc *pp)
 {
-        char *pos = pp->pos;
         if (*pp->pos == '<' || *pp->pos == '"') {
                 if (pp->last != NULL) {
                         struct pp_token *tok_inc = list_prev(pp->last);
@@ -103,7 +137,7 @@ static void pp_fetch_header_name(struct preproc *pp)
                                 && tok_hash->line == pp->line) {
 
                                         char last_tok = '\0';
-                                        if (*pos == '<')
+                                        if (pp->pos[0] == '<')
                                                 last_tok = '>';
                                         else
                                                 last_tok = '"';
@@ -125,7 +159,7 @@ static void pp_fetch_header_name(struct preproc *pp)
 static void pp_fetch_univ_char_name(struct preproc *pp)
 {
         if (pp->pos[0] == '\\' && toupper(pp->pos[1]) == 'U') {
-                int ndigits = (pp->pos[1]) == 'U') ? 8 : 4;
+                int ndigits = (pp->pos[1] == 'U') ? 8 : 4;
                 pp_advance(pp, 2);
                 while (ndigits > 0) {
                         if (!pp_ishex(*pp->pos)) {
@@ -214,23 +248,12 @@ static void pp_fetch_identifier(struct preproc *pp)
 }
 
 
-static inline _Bool pp_is_one_of(char one, const char *of)
-{
-        int of_len = strlen(of);
-        for (int i = 0; i < of_len; i++) {
-                if (one != of[i])
-                        return false;   
-        }
-        return true; 
-}
-
-
 static void pp_fetch_escape_seq(struct preproc *pp)
 {
         if (pp->pos[0] == '\\') {
-                pp_advance(pp);
+                pp_advance(pp, 1);
                 if (pp_is_one_of(*pp->pos, "'\"?\\abfnrtv")) {
-                        pp_advance(pp);
+                        pp_advance(pp, 1);
                         return;
                 }
 
@@ -245,9 +268,9 @@ static void pp_fetch_escape_seq(struct preproc *pp)
 
                 if (pp->pos[0] == 'x') {
                         if (pp_ishex(*pp->pos)) {
-                                pp_advance(pp);
+                                pp_advance(pp, 1);
                                 while (pp_ishex(*pp->pos))
-                                        pp_advance(pp);
+                                        pp_advance(pp, 1);
                                 return;
                         }
                 }
@@ -302,32 +325,71 @@ static inline void pp_fetch_chrconst(struct preproc *pp)
 }
 
 
-void pp_init(struct preproc *pp, struct fs_file *file)
+static inline void pp_fetch_punctuator(struct preproc *pp)
 {
+        if (pp_is_one_of(pp->pos[0], "[](){}~,;?")) {
+                pp_advance(pp, 1);
+                return;
+        }
 
+        static const char *str_punct[] = {
+                "%:%:", "...", "<<=", ">>=",
+
+                "->", "++", "--", "<<", ">>",
+                "<=", ">=", "==", "!=", "&&",
+                "||", "*=", "/=", "%=", "+=",
+                "-=", "&=", "^=", "|=", "##",
+                "<:", ">:", "<%", "%>", "%:",
+                
+                ".", "!", "-", "+", "*", "&",
+                "<", ">", "^", "|", ":", "=",
+                "#", ","
+        };
+
+        for (size_t pi = 0; pi < sizeof(str_punct) / sizeof(char *); pi++) {
+                if (pp_isstr(pp, str_punct[pi])) {
+                        pp_advance(pp, strlen(str_punct[pi]));
+                        return;
+                }
+        }
+
+        pp_seterror(pp);
 }
 
 
-static struct pp_token *pp_try_form_token(const struct preproc *before, 
-const struct preproc *after, enum pp_type type)
+_Bool pp_init(struct preproc *pp, struct fs_file *file)
 {
-        struct pp_token *token = NULL;
-        if (before->line == after->line && before->pos != after->pos 
-        && pp_noerror(after)) {
-                token = malloc(sizeof(struct pp_token));
-                token->file_line = after->file_line;
-                token->line = after->line;
-                token->length = after->pos - before->pos + 1;
-                token->value = before->pos;
-                token->type = type;
-        }
-        return token;
+        if (file->content == NULL)
+                pp->pos = source_read(file);
+        if (pp->pos == NULL)
+                return false;
+
+        pp->first = NULL;
+        pp->last = NULL;
+        pp->line = 0;
+        pp->file_line = 0;
+        pp->state = true;
+
+        return true;
+}
+
+
+_Bool pp_noerror(const struct preproc *pp)
+{
+        return pp->state == true;
+}
+
+
+
+void pp_free(struct preproc *pp)
+{
+        if (pp->first != NULL)
+                list_destroy(pp->first, free);
 }
 
 
 struct pp_token *pp_get_token(struct preproc *pp)
 {
-        const char *pos = pp->pos;
         struct pp_token *token = NULL;
 
         pp_skipspace(pp);
@@ -336,21 +398,21 @@ struct pp_token *pp_get_token(struct preproc *pp)
 
         /* header name */
         pp_fetch_header_name(pp);
-        struct pp_token *token = pp_try_form_token(&pp_save, pp, pp_hdr_name);
+        token = pp_try_form_token(&pp_save, pp, pp_hdr_name);
         if (token == NULL)
                 *pp = pp_save;
         else
                 return token;
         
         pp_fetch_chrconst(pp);
-        struct pp_token *token = pp_try_form_token(&pp_save, pp, pp_chr_const);
+        token = pp_try_form_token(&pp_save, pp, pp_chr_const);
         if (token == NULL)
                 *pp = pp_save;
         else
                 return token;
 
         pp_fetch_strlit(pp);
-        struct pp_token *token = pp_try_form_token(&pp_save, pp, pp_str_lit);
+        token = pp_try_form_token(&pp_save, pp, pp_str_lit);
         if (token == NULL)
                 *pp = pp_save;
         else
@@ -358,7 +420,7 @@ struct pp_token *pp_get_token(struct preproc *pp)
 
         // identifier
         pp_fetch_identifier(pp);
-        struct pp_token *token = pp_try_form_token(&pp_save, pp, pp_id);
+        token = pp_try_form_token(&pp_save, pp, pp_id);
         if (token == NULL)
                 *pp = pp_save;
         else
@@ -366,18 +428,23 @@ struct pp_token *pp_get_token(struct preproc *pp)
 
         /* pp-number */
         pp_fetch_number(pp);
-        struct pp_token *token = pp_try_form_token(&pp_save, pp, pp_number);
+        token = pp_try_form_token(&pp_save, pp, pp_number);
         if (token == NULL)
                 *pp = pp_save;
         else
                 return token;
+
+        pp_fetch_number(pp);
+        token = pp_try_form_token(&pp_save, pp, pp_punct);
+        if (token == NULL)
+                *pp = pp_save;
+        else
+                return token;
+
+        if (pp->pos[0] != '\0') {
+                pp_advance(pp, 1);
+                return pp_try_form_token(&pp_save, pp, pp_other);
+        }
         
-
         return NULL;
-}
-
-
-void pp_free(struct preproc *pp)
-{
-
 }

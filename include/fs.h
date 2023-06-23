@@ -48,31 +48,31 @@ struct filesys {
         enum mc_status last_error;
 };
 
-void fs_init(struct filesys *provider);
+void fs_init(struct filesys *fs);
 
-enum mc_status fs_lasterr(struct filesys *provider);
+enum mc_status fs_lasterr(struct filesys *fs);
 
 /* returns false if path is not valid */
-void fs_add_local(struct filesys *provider, 
+void fs_add_local(struct filesys *fs, 
 const char *dir_path);
 
-void fs_add_global(struct filesys *provider, 
+void fs_add_global(struct filesys *fs, 
 const char *dir_path);
 
 /* If multiple files with the same name without path specified could be 
  * found in global or local places - we will return first matching. */
 
 /* if failed to find in local, will the apply search in global places */
-struct fs_file *fs_get_local(struct filesys *prov, 
+struct fs_file *fs_get_local(struct filesys *fs, 
 const char *f_name);
 
 /* On the contrary, unlike get_local will search only in global places */
-struct fs_file *fs_get_global(struct filesys *prov, 
+struct fs_file *fs_get_global(struct filesys *fs, 
 const char *f_name);
 
-void fs_release_file(struct filesys *provider, 
+void fs_release_file(struct filesys *fs, 
 struct fs_file *file);
 
-void fs_free(struct filesys *provider);
+void fs_free(struct filesys *fs);
 
 #endif /* _SOURCE_PROVIDER_H_ */

@@ -119,99 +119,99 @@ static void dir_list_destroy(struct dir_list *head)
 }
 
 
-void fs_init(struct filesys *provider)
+void fs_init(struct filesys *fs)
 {
-        memset(provider, 0, sizeof(struct filesys));
+        memset(fs, 0, sizeof(struct filesys));
 }
 
 
-enum mc_status fs_lasterr(struct filesys *provider)
+enum mc_status fs_lasterr(struct filesys *fs)
 {
-        return provider->last_error;
+        return fs->last_error;
 }
 
 
-void fs_add_local(struct filesys *provider, 
+void fs_add_local(struct filesys *fs, 
 const char *dir_path)
 {
         char *full_path = malloc(strlen(dir_path));
         strcpy(full_path, dir_path);
         struct dir_list *new_dir = dir_list_create();
         strcpy(new_dir->entry.path, full_path);
-        if (provider->local_places == NULL)
-                provider->local_places = new_dir;
+        if (fs->local_places == NULL)
+                fs->local_places = new_dir;
         else
-                list_insert(provider->local_places, new_dir);
-        provider->last_error = MC_OK;
+                list_insert(fs->local_places, new_dir);
+        fs->last_error = MC_OK;
 }
 
 
-void fs_add_global(struct filesys *provider, 
+void fs_add_global(struct filesys *fs, 
 const char *dir_path)
 {
         char *full_path = malloc(strlen(dir_path));
         strcpy(full_path, dir_path);
         struct dir_list *new_dir = dir_list_create();
         strcpy(new_dir->entry.path, full_path);
-        if (provider->global_places == NULL)
-                provider->global_places = new_dir;
+        if (fs->global_places == NULL)
+                fs->global_places = new_dir;
         else
-                list_insert(provider->global_places, new_dir);
-        provider->last_error = MC_OK;
+                list_insert(fs->global_places, new_dir);
+        fs->last_error = MC_OK;
 }
 
 
-struct fs_file *fs_get_local(struct filesys *provider, 
+struct fs_file *fs_get_local(struct filesys *fs, 
 const char *f_name)
 {
         struct file_list *result = NULL;
 
-        result = file_list_search(provider->opened_local, f_name);
+        result = file_list_search(fs->opened_local, f_name);
         if (result != NULL) 
                 return &result->file;
 
-        result = dir_list_search(provider->local_places, f_name);
+        result = dir_list_search(fs->local_places, f_name);
         if (result != NULL) {
-                if (provider->opened_local == NULL)
-                        provider->opened_local = result;
+                if (fs->opened_local == NULL)
+                        fs->opened_local = result;
                 else
-                        list_append(provider->opened_local, result);
+                        list_append(fs->opened_local, result);
 
                 return &result->file;
         }
         
-        return fs_get_global(provider, f_name);
+        return fs_get_global(fs, f_name);
 }
 
 
-struct fs_file *fs_get_global(struct filesys *provider, 
+struct fs_file *fs_get_global(struct filesys *fs, 
 const char *f_name)
 {
         struct file_list *result = NULL;
-        result = file_list_search(provider->opened_global, f_name);
+        result = file_list_search(fs->opened_global, f_name);
         if (result != NULL)
                 return &result->file;
 
-        result = dir_list_search(provider->global_places, f_name);
+        result = dir_list_search(fs->global_places, f_name);
         if (result != NULL) {
-                if (provider->opened_global == NULL)
-                        provider->opened_global = result;
+                if (fs->opened_global == NULL)
+                        fs->opened_global = result;
                 else
-                        list_append(provider->opened_global, result);
+                        list_append(fs->opened_global, result);
                 return &result->file;
         }
 
         return NULL;
 }
 
-void fs_free(struct filesys *provider)
+void fs_free(struct filesys *fs)
 {
-        if (provider->opened_global != NULL)
-                list_destroy(provider->opened_global, free);
-        if (provider->opened_local != NULL)
-                list_destroy(provider->opened_local, free);
-        if (provider->local_places != NULL)
-                dir_list_destroy(provider->local_places);
-        if (provider->global_places != NULL)
-                dir_list_destroy(provider->global_places);
+        if (fs->opened_global != NULL)
+                list_destroy(fs->opened_global, free);
+        if (fs->opened_local != NULL)
+                list_destroy(fs->opened_local, free);
+        if (fs->local_places != NULL)
+                dir_list_destroy(fs->local_places);
+        if (fs->global_places != NULL)
+                dir_list_destroy(fs->global_places);
 }
