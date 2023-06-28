@@ -29,6 +29,8 @@ void list_append(void *position, void *new_head);
 
 void list_insert(void *position, void *new_head);
 
-void list_destroy(void *first_head, void (*call_free)(void*));
+typedef void (*list_free)(void*);
+
+void list_destroy(void *first_head, list_free call_free);
 
 #endif /* _LIST_H_ */

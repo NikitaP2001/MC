@@ -26,7 +26,7 @@ enum mc_status source_lasterr(const struct fs_file *file)
 const char *source_read(struct fs_file *file)
 {
         if (file->content == NULL) {
-                FILE *sfile = fopen(file->path, "rb");
+                FILE *sfile = fopen(file->path, "r");
 
                 if (sfile != NULL) {
                         int fsize = get_file_size(sfile);
@@ -34,7 +34,7 @@ const char *source_read(struct fs_file *file)
                         file->content = calloc(fsize + 2, sizeof(char));
                         int read = fread(file->content, sizeof(char), fsize, sfile);
 
-                        if (read != fsize) {
+                        if (read != fsize && !feof(sfile)) {
                                 free(file->content);
                                 file->content = NULL;
                                 TRACE("read file %s failed", file->path);

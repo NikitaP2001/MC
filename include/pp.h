@@ -18,7 +18,8 @@ enum pp_type {
 struct pp_token {
         struct list_head link;
 
-        const char *value;
+        _Bool _is_val_orig;
+        char *value;
         size_t length;
 
         enum pp_type type;
@@ -32,6 +33,10 @@ struct pp_token {
 
 int pp_token_valcmp(struct pp_token *left, const char *value);
 
+
+void pp_token_getval(struct pp_token *token, char *buffer);
+
+
 struct preproc {
         const char *pos;
         size_t line;
@@ -41,9 +46,13 @@ struct preproc {
 
         struct pp_token *first;
         struct pp_token *last;
+
+        _Bool _escape;
 };
 
 _Bool pp_init(struct preproc *pp, struct fs_file *file);
+
+void pp_add_token(struct preproc *pp, struct pp_token *token);
 
 _Bool pp_noerror(const struct preproc *pp);
 
