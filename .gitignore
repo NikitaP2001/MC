@@ -1,7 +1,10 @@
 *.exe
 *.o
 *.txt
+*.a
 *.swp
 obj
 doc
+env.bat
+build
 .vscode

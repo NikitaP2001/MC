@@ -2,7 +2,7 @@
 #define _RNDFILE_GEN_H
 #include <mc.h>
 
-#include "ttool.h"
+#include "testool.h"
 
 #define FSIZE_MIN 0x10
 #define FSIZE_MAX 0x100
@@ -14,7 +14,7 @@ struct txtgen_conf {
         size_t min_fsize;
         size_t max_fsize;
         size_t fcount;
-        char_t **content;
+        char **content;
         char **file_names;
         /* pass custom dir path if needed */
         char *dir_path;

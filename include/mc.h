@@ -13,8 +13,6 @@ enum mc_status {
         MC_UNKNOWN_CHAR = 7,
 };
 
-typedef char char_t;
-
 extern const char *mc_status_table[];
 
 #define MC_SUCC(status) (status == 0)
@@ -24,6 +22,17 @@ static inline const char *mc_str_status(int status)
         return mc_status_table[status];
 }
 
+#define MC_ERR(message) printf("error: %s", message);
+
 #define MC_WARN(message) printf("warning: %s", message);
+
+#define TRACE(...)                      \
+{                                               \
+        int mlen = snprintf(NULL, 0, __VA_ARGS__); \
+        char *message = malloc(mlen + 1); \
+        snprintf(message, mlen + 1, __VA_ARGS__); \
+        printf("[i] %s.%d: %s\n", __FILE__, __LINE__, message); \
+        free(message); \
+}
 
 #endif /* _MC_H_ */

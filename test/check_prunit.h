@@ -1,1 +1,0 @@
-Suite *prunit_suite(size_t power);

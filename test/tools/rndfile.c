@@ -1,13 +1,12 @@
 #include <stdlib.h>
 #include <stdbool.h>
+#include <assert.h>
+#include <string.h>
 #include <stdio.h>
-
-#include <check.h>
 
 #include <mc.h>
 #include <tools.h>
-
-#include "rndfile_gen.h"
+#include <rndfile.h>
 
 static inline int get_rand(int min, int max)
 {
@@ -36,7 +35,7 @@ static void gen_file_content(struct txtgen_conf *conf, size_t file_number)
         for (size_t i = 0; i < fsize; i++)
                 new_content[i] = get_rand_chr();
         conf->content[file_number] = new_content;
-        ck_assert(write_file(file_name, new_content, fsize + 1));
+        assert(write_file(file_name, new_content, fsize + 1));
 }
 
 #define STR_INT_SIZE 10
@@ -64,7 +63,7 @@ static char *form_prefix(struct txtgen_conf *conf)
                 prefix = malloc(pref_size);
                 strcpy(prefix, conf->dir_path);
         } else
-                prefix = calloc(sizeof(FILE_PREFIX), sizeof(char_t));
+                prefix = calloc(sizeof(FILE_PREFIX), sizeof(char));
         strcat(prefix, FILE_PREFIX);
         return prefix;
 }
@@ -76,7 +75,7 @@ void generator_init(struct txtgen_conf *conf, size_t file_count)
         conf->max_fsize = FSIZE_MAX * conf->power;
         conf->fcount = file_count;
         conf->dir_path = (conf->dir_path != NULL) ? fs_path(conf->dir_path) : NULL;
-        conf->content = calloc(file_count, sizeof(char_t*));
+        conf->content = calloc(file_count, sizeof(char*));
         conf->file_names = calloc(file_count, sizeof(char*));
 
         char *prefix = form_prefix(conf);

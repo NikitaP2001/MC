@@ -1,19 +1,6 @@
-TARGET = $(BIN_DIR)/mc.exe
-SRC = $(wildcard *.c)
+MODULE := mc.a
+DEPS := fs/fs.a pp/pp.a
 
-OBJ = $(SRC:%.c=$(OBJ_DIR)/%.o)
+SRC = list.c mc.c tools.c
 
-$(OBJ_DIR)/%.o: %.c
-	@echo CC $<
-	$(CC) $(CCFLAGS) $(C_OUT) $@ $<
-	
-all: $(TARGET)
-	
-$(TARGET): $(OBJ)
-	@echo LD $@
-	$(LD) $(LDFLAGS) $(C_OUT) $@ $^ $(LDLIBS)
-
-.PHONY: clean
-clean:
-	@$(RM) $(TARGET)
-	@$(RM) $(OBJ)
+include $(BLDRULES)

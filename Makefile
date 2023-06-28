@@ -1,56 +1,25 @@
-SRC_DIR = $(realpath mc)
-OBJ_DIR = $(realpath obj)
-BIN_DIR = $(realpath bin)
-INC_DIR = $(realpath include)
-LOG_DIR = $(realpath logs)
-TEST_DIR = $(realpath test)
+MODULE := mc.exe
+DEPS:= mc/mc.a test/test.exe
 
-# toolchain
-CC= @gcc -std=c99
-LD= @gcc
-DRMEM = drmemory.exe -suppress $(LOG_DIR)/custom.txt -batch -logdir
+SRC := main.c
 
-# compiler flags
-CCFLAGS = -c -pedantic -Wall -Wextra -Werror -I $(INC_DIR)
-DBG_CCFLAGS = -DDEBUG -g
-RLS_CCFLAGS = -s -fdata-sections -ffunction-sections -O3
+include config.mk
 
-LDLIBS =
-LDFLAGS = 
-TESTLIB = $(LDLIBS)
-TESTLIB += -lcheck
-
-# misc shortcuts
-C_OUT = -o 
-	
 export
-        
-SUBDIRS = $(SRC_DIR) $(TEST_DIR)
 
-TMPDIRS = obj logs bin
+LDFLAGS += -L $(CUR_BLDIR)/mc
+LDLIBS += -l:mc.a
 
-all: CCFLAGS += $(DBG_CCFLAGS)
-all: $(SUBDIRS)
+all: CFLAGS += $(DBG_CFLAGS)
+all: $(TMPDIRS) project
 
-release: CCFLAGS += $(RLS_CCFLAGS)
+release: CFLAGS += $(RLS_CFLAGS)
 release: LDFLAGS += $(RLS_LDFLAGS)
-release: $(SUBDIRS)
+release: $(TMPDIRS) project
+
+include $(BLDRULES)
+
+TMPDIRS = $(LOGDIR)
 
 $(TMPDIRS):	
-	@mkdir $@
-		
-.PHONY: $(SUBDIRS)
-$(SUBDIRS):	$(TMPDIRS)
-	@$(MAKE) -C $@ --no-print-directory
-
-.PHONY: runtest
-runtest: $(TMPDIRS)
-	@$(MAKE) -C test $@ --no-print-directory	
-
-.PHONY: memtest
-memtest: $(TMPDIRS)
-	@$(MAKE) -C test $@ --no-print-directory
-	
-.PHONY: clean
-clean:	
-	@$(MAKE) -C test $@ --no-print-directory
+	mkdir $@

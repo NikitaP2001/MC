@@ -1,13 +1,14 @@
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
 #include <mc.h>
 
-#include "ttool.h"
+#include "testool.h"
 
-size_t cont_len(char_t *content)
+size_t cont_len(char *content)
 {
         size_t length = strlen(content);
         if (content[length - 1] != '\n')
@@ -33,12 +34,33 @@ _Bool wordcmp(char *str1, char *str2)
 _Bool write_file(const char *file_name, const char *content, size_t length)
 {
         _Bool result = false;
-        FILE *fp = fopen(file_name, "w");
+        FILE *fp = fopen(file_name, "wb");
         if (fp != NULL) {
-                fwrite(content, sizeof(char_t), length, fp);
+                fwrite(content, sizeof(char), length, fp);
 
                 result = ferror(fp) == 0;
                 fclose(fp);
         }
         return result; 
+}
+
+
+void invoke_tests(const char *test_dirs)
+{        
+        char *subdir = NULL;
+        static const char *cmdpatt = "cd %s && test.exe --gtest_color=yes";
+        char *dirs = malloc(sizeof(test_dirs));
+        strcpy(dirs, test_dirs); 
+        
+        subdir = strtok(dirs, " ");
+        if (subdir != NULL) {                
+                do {         
+                        char *tcmd = malloc(snprintf(NULL, 0, cmdpatt, subdir));
+                        sprintf(tcmd, cmdpatt, subdir);
+                        system(tcmd);
+                        free(tcmd);
+                } while ((subdir = strtok(NULL, " ")));
+        }
+        
+        free(dirs);
 }

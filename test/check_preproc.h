@@ -1,1 +1,0 @@
-Suite *preproc_suite(size_t power);
