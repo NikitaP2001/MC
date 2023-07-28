@@ -1,5 +1,5 @@
 MODULE := test.exe
 
-SRC = test.cxx
+SRC = fs.c
 
 include $(BLDRULES)

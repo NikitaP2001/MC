@@ -8,12 +8,22 @@ BLDRULES = $(ROOTDIR)/rules.mk
 
 # toolchain
 CC = @gcc -std=c99
-CCX = @g++
-AR = @x86_64-w64-mingw32-ar
 LD = @gcc
-CXXLD = @g++
+
+ifeq ($(OS),Windows_NT)
+
+AR = @x86_64-w64-mingw32-ar -rcs --thin
 
 MKDIR = @mkdir_
+
+else
+
+AR = @ar -rcsT
+
+MKDIR = @mkdir
+
+endif
+
 
 # compiler flags
 CFLAGS = -c -pedantic -Wall -Wextra -Werror -I $(INCDIR)

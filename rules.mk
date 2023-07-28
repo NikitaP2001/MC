@@ -16,9 +16,7 @@ endif
 
 # Objests in build directories tree from sources in source tree
 CSRC := $(filter %.c,$(SRC))
-CXXSRC := $(filter %.cxx,$(SRC))
 OBJ := $(CSRC:.c=.o)
-OBJ += $(CXXSRC:.cxx=.o)
 OBJ := $(foreach file, $(OBJ), $(CUR_BLDIR)/$(file))
 
 # deps - modules in subdirectories of current module, we 
@@ -48,15 +46,6 @@ $(BLDIR)/%.o: $(ROOTDIR)/%.c
 	@echo CC $<
 	$(CC) $(CFLAGS) $(TESTS) $(C_OUT) $@ $<
 	
-$(BLDIR)/%.o: $(ROOTDIR)/%.cxx
-	@echo CC $<
-	$(CCX) $(CFLAGS) $(TESTS) $(C_OUT) $@ $<
-		
-		
-$(BLDIR)/%.o: $(ROOTDIR)/%.c
-	@echo CC $<
-	$(CC) $(CFLAGS) $(TESTS) $(C_OUT) $@ $<
-	
 $(CUR_BLDIR):
 	$(MKDIR) $@	
 
@@ -70,7 +59,7 @@ $(BLDEPS):
 %.a: $(OBJ) $(BLDEPS)
 	@echo AR $@		
 	@$(RM) $@
-	$(AR) -rcs --thin $@ $^
+	$(AR) $@ $^
 	
 
 BLDEXE := $(filter %.exe,$(BLDMOD))

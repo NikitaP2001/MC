@@ -11,6 +11,11 @@ static inline _Bool list_has_next(void *head)
         return ((struct list_head*)head)->next != NULL;
 }
 
+static inline _Bool list_has_prev(void *head)
+{
+        return ((struct list_head*)head)->prev != NULL;
+}
+
 static inline void *list_next(void *head)
 {
         return ((struct list_head*)head)->next;
