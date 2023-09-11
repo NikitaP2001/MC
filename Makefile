@@ -1,11 +1,10 @@
 MODULE := mc.exe
-DEPS:= mc/mc.a test/test.exe
-
-SRC := main.c
+DEPS:= mc/ test/
 
 include config.mk
-
 export
+
+SRC := main.c
 
 LDFLAGS += -L $(CUR_BLDIR)/mc
 LDLIBS += -l:mc.a
@@ -23,3 +22,4 @@ TMPDIRS = $(LOGDIR)
 
 $(TMPDIRS):	
 	mkdir $@
+

@@ -1,5 +1,5 @@
 MODULE := pp.a
 
-SRC := pp.c
+SRC := lexer.c node.c parser.c token.c
 
 include $(BLDRULES)

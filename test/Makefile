@@ -1,12 +1,6 @@
-MODULE := test.exe
-DEPS := tools/tools.a mc/test.exe
+MODULE := 
+DEPS := fs/test.exe pp/test.exe
 
-LD = $(CXXLD)
-
-LDLIBS += -lgtest -l:tools.a
-CFLAGS += -I $(realpath tools)
-LDFLAGS += -L $(CUR_BLDIR)/tools
-
-SRC = test.c
+SRC := 
 
 include $(BLDRULES)

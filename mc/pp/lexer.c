@@ -1,98 +1,24 @@
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
 
 #include <list.h>
-
-#include <pp.h>
+#include <pp/lexer.h>
+#include <pp/token.h>
 
 /* Todo:
- *      - replace *pp->pos... usage to pp-pos[x] 
- *      - change pp_is* functions to use pp instead of raw
- *      - replace pp-pos != '\0' with pp_eof inline */
+ * - replace pp->pos != '\0' with pp_eof inline */
 
 
-static void pp_token_set_value(struct pp_token *token, const struct preproc *before)
-{
-        _Bool no_skip_chr = true;
-        for (size_t i = 0; i < token->length; i++) {
-                if (before->pos[i] == '\\' && before->pos[i + 1] == '\n') {
-                        no_skip_chr = false;
-                        break;
-                }
-        }
-        if (!no_skip_chr) {
-                token->value = calloc(token->length, sizeof(char));
-                size_t ival = 0;
-                size_t iorig = 0;
-                while (iorig < token->length) {
-                        if (before->pos[iorig] == '\\' && before->pos[iorig + 1] == '\n') {
-                                iorig += 2;
-                                continue;
-                        }
-                        token->value[ival++] = before->pos[iorig++];
-                }
-                token->length = ival;
-        }
-}
 
-
-static struct pp_token *pp_token_create(const struct preproc *before, 
-const struct preproc *after, enum pp_type type)
-{
-        struct pp_token *token = NULL;
-
-        if (before->pos != after->pos && pp_noerror(after)) {
-
-                token = calloc(1, sizeof(struct pp_token));
-                token->file_line = after->file_line;
-                token->line = after->line;
-                token->length = after->pos - before->pos;
-                token->value = (char *)before->pos;
-                token->type = type;
-
-                pp_token_set_value(token, before);
-        }
-        return token;
-}
-
-
-static void pp_token_destroy(struct pp_token *token)
-{
-        if (!token->_is_val_orig)
-                free(token->value);
-        free(token);
-}
-
-
-int pp_token_valcmp(struct pp_token *left, const char *value)
-{
-        size_t r_len = strlen(value);
-        if (r_len > left->length)
-                return -1;
-        else if (r_len < left->length)
-                return 1;
-        else
-                return strncmp(left->value, value, left->length);
-}
-
-
-void pp_token_getval(struct pp_token *token, char *buffer)
-{
-        strncpy(buffer, token->value, token->length);
-        buffer[token->length] = '\0';
-}
-
-
-static void pp_seterror(struct preproc *pp)
+static void pp_seterror(struct pp_lexer *pp)
 {
         pp->state = false;
 }
 
 
-static void pp_advance(struct preproc *pp, size_t steps)
+static void pp_advance(struct pp_lexer *pp, size_t steps)
 {
         for ( ; steps > 0; pp->pos++, steps--) {
                 assert(pp->pos[0] != '\0');
@@ -109,24 +35,24 @@ static void pp_advance(struct preproc *pp, size_t steps)
 }
 
 
-static inline _Bool pp_newline(const struct preproc *pp)
+static inline _Bool pp_newline(const struct pp_lexer *pp)
 {
         return pp->pos[0] == '\n';
 }
 
-static inline _Bool pp_isspace(const struct preproc *pp)
+static inline _Bool pp_isspace(const struct pp_lexer *pp)
 {
         return isspace(pp->pos[0]) && !pp_newline(pp);
 }
 
 
-static inline _Bool pp_eof(const struct preproc *pp)
+static inline _Bool pp_eof(const struct pp_lexer *pp)
 {
         return pp->pos[0] == '\0';
 }
 
 
-static inline _Bool pp_isoctal(struct preproc *pp)
+static inline _Bool pp_isoctal(struct pp_lexer *pp)
 {
         return pp->pos[0] >= '0' && pp->pos[0] <= '7';
 }
@@ -144,7 +70,7 @@ static inline _Bool pp_nondigit(char chr)
 }
 
 
-static _Bool pp_isstr(struct preproc *pp, const char *str)
+static _Bool pp_isstr(struct pp_lexer *pp, const char *str)
 {
         int slen = strlen(str);
         _Bool result = true;
@@ -178,41 +104,49 @@ static _Bool pp_is_one_of(char one, const char *of)
 }
 
 
-static void pp_skipspace(struct preproc *pp)
+static _Bool pp_skipspace(struct pp_lexer *pp)
 {
+        _Bool was_found = false;
         while (pp->pos[0] != '\0') {
-                if (pp_isstr(pp, "\\\n"))
+                if (pp_isstr(pp, "\\\n")) {
                         pp_advance(pp, 2);
-
+                        was_found = true;
+                }
                 if (pp_isspace(pp)) {
                         pp_advance(pp, 1);
+                        was_found = true;
                         continue;
                 }
-
                 break;
         }
+        return was_found;
 }
 
 
-static void pp_skipcomment(struct preproc *pp)
+static _Bool pp_skipcomment(struct pp_lexer *pp)
 {
+        _Bool was_found = false;
         if (pp_isstr(pp, "//")) {
                 size_t curr_l = pp->line;
                 while (curr_l == pp->line) {
                         assert(!pp_eof(pp)); /* anyway file ends in newline */
                         pp_advance(pp, 1);
                 }
+                was_found = true;
         } else if (pp_isstr(pp, "/*")) {
                 pp_advance(pp, 2);
                 while (!pp_isstr(pp, "*/") && !pp_eof(pp))
                         pp_advance(pp, 1);
-                if (!pp_eof(pp))
+                if (!pp_eof(pp)) {
                         pp_advance(pp, 2);
+                        was_found = true;
+                }
         }
+        return was_found;
 }
 
 
-static void pp_header_name_unchecked(struct preproc *pp)
+static void pp_header_name_unchecked(struct pp_lexer *pp)
 {
         size_t start_l = pp->line;
         char last_tok = '\0';
@@ -232,7 +166,7 @@ static void pp_header_name_unchecked(struct preproc *pp)
 }
 
 
-static void pp_fetch_header_name(struct preproc *pp)
+static void pp_fetch_header_name(struct pp_lexer *pp)
 {
         if (*pp->pos == '<' || *pp->pos == '"') {
                 if (pp->last != NULL) {
@@ -253,7 +187,7 @@ static void pp_fetch_header_name(struct preproc *pp)
 }
 
 
-static void pp_fetch_univ_char_name(struct preproc *pp)
+static void pp_fetch_univ_char_name(struct pp_lexer *pp)
 {
         if (pp->pos[0] == '\\' && toupper(pp->pos[1]) == 'U') {
                 int ndigits = (pp->pos[1] == 'U') ? 8 : 4;
@@ -274,7 +208,7 @@ static void pp_fetch_univ_char_name(struct preproc *pp)
 }
 
 
-static void pp_fetch_id_ndigit(struct preproc *pp)
+static void pp_fetch_id_ndigit(struct pp_lexer *pp)
 {
 
         if (pp_nondigit(*pp->pos)) {
@@ -284,14 +218,14 @@ static void pp_fetch_id_ndigit(struct preproc *pp)
 
         /* universal char name */
         pp_fetch_univ_char_name(pp);
-        if (pp_noerror(pp))
+        if (pp_lexer_noerror(pp))
                 return;
                 
         pp_seterror(pp);
 }
 
 
-static void pp_fetch_number(struct preproc *pp)
+static void pp_fetch_number(struct pp_lexer *pp)
 {
         if (isdigit(*pp->pos) || (*pp->pos == '.' && isdigit(*(pp->pos + 1)))) {
                 pp_advance(pp, (*pp->pos == '.') ? 2 : 1);
@@ -309,9 +243,9 @@ static void pp_fetch_number(struct preproc *pp)
                                 continue;
                         }
 
-                        struct preproc pp_save = *pp;
+                        struct pp_lexer pp_save = *pp;
                         pp_fetch_id_ndigit(pp);
-                        if (pp_noerror(pp))
+                        if (pp_lexer_noerror(pp))
                                 continue;
                         else
                                 *pp = pp_save;
@@ -323,15 +257,15 @@ static void pp_fetch_number(struct preproc *pp)
 }
 
 
-static void pp_fetch_identifier(struct preproc *pp)
+static void pp_fetch_identifier(struct pp_lexer *pp)
 {
         pp_fetch_id_ndigit(pp);
-        if (pp_noerror(pp))
+        if (pp_lexer_noerror(pp))
                 while (*pp->pos != '\0') {
 
-                        struct preproc pp_save = *pp;
+                        struct pp_lexer pp_save = *pp;
                         pp_fetch_id_ndigit(pp);
-                        if (pp_noerror(pp))
+                        if (pp_lexer_noerror(pp))
                                 continue;
                         else
                                 *pp = pp_save;
@@ -348,7 +282,7 @@ static void pp_fetch_identifier(struct preproc *pp)
 }
 
 
-static void pp_fetch_escape_seq(struct preproc *pp)
+static void pp_fetch_escape_seq(struct pp_lexer *pp)
 {
         if (pp->pos[0] == '\\') {
                 pp_advance(pp, 1);
@@ -377,14 +311,14 @@ static void pp_fetch_escape_seq(struct preproc *pp)
         }
 
         pp_fetch_univ_char_name(pp);
-        if (pp_noerror(pp))
+        if (pp_lexer_noerror(pp))
                 return;
 
         pp_seterror(pp);
 }
 
 
-static void pp_fetch_quotation(struct preproc *pp, char qchar)
+static void pp_fetch_quotation(struct pp_lexer *pp, char qchar)
 {
         if (*pp->pos == qchar || (*pp->pos == 'L' && *(pp->pos + 1) == qchar)) {
                 pp_advance(pp, (*pp->pos == 'L') ? 2 : 1);
@@ -394,9 +328,9 @@ static void pp_fetch_quotation(struct preproc *pp, char qchar)
                         if (pp->pos[0] == '\\' && pp->pos[1] == '\n')
                                 pp_advance(pp, 2);
 
-                        struct preproc pp_save = *pp;
+                        struct pp_lexer pp_save = *pp;
                         pp_fetch_escape_seq(pp);
-                        if (pp_noerror(pp))
+                        if (pp_lexer_noerror(pp))
                                 continue;
                         else
                                 *pp = pp_save;
@@ -416,19 +350,19 @@ static void pp_fetch_quotation(struct preproc *pp, char qchar)
 }
 
 
-static inline void pp_fetch_strlit(struct preproc *pp)
+static inline void pp_fetch_strlit(struct pp_lexer *pp)
 {
         pp_fetch_quotation(pp, '"');
 }
 
 
-static inline void pp_fetch_chrconst(struct preproc *pp)
+static inline void pp_fetch_chrconst(struct pp_lexer *pp)
 {
         pp_fetch_quotation(pp, '\'');
 }
 
 
-static inline void pp_fetch_punctuator(struct preproc *pp)
+static inline void pp_fetch_punctuator(struct pp_lexer *pp)
 {
         if (pp_is_one_of(pp->pos[0], "[](){}~,;?")) {
                 pp_advance(pp, 1);
@@ -460,7 +394,7 @@ static inline void pp_fetch_punctuator(struct preproc *pp)
 }
 
 
-_Bool pp_init(struct preproc *pp, struct fs_file *file)
+_Bool pp_lexer_init(struct pp_lexer *pp, struct fs_file *file)
 {
         if (file->content == NULL)
                 pp->pos = source_read(file);
@@ -478,39 +412,39 @@ _Bool pp_init(struct preproc *pp, struct fs_file *file)
 }
 
 
-void pp_add_token(struct preproc *pp, struct pp_token *token)
+void pp_lexer_add_token(struct pp_lexer *pp, struct pp_token *token)
 {
         assert(token != NULL);
-        if (pp->last != NULL)
+        if (pp->last != NULL) {
                 list_append(pp->last, token);
-        else
                 pp->last = token;
-        pp->last = token;
+        } else {
+                pp->first = token;
+                pp->last = token;
+        }
 }
 
 
-_Bool pp_noerror(const struct preproc *pp)
+_Bool pp_lexer_noerror(const struct pp_lexer *pp)
 {
         return pp->state == true;
 }
 
 
 
-void pp_free(struct preproc *pp)
+void pp_lexer_free(struct pp_lexer *pp)
 {
         if (pp->first != NULL)
                 list_destroy(pp->first, (list_free)pp_token_destroy);
 }
 
 
-struct pp_token *pp_get_token(struct preproc *pp)
+struct pp_token *pp_lexer_get_token(struct pp_lexer *pp)
 {
         struct pp_token *token = NULL;
 
-        pp_skipspace(pp);
-        pp_skipcomment(pp);
-
-        struct preproc pp_save = *pp;
+        while (pp_skipspace(pp) && pp_skipcomment(pp));
+        struct pp_lexer pp_save = *pp;
 
         /* header name */
         pp_fetch_header_name(pp);

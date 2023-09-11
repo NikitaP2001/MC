@@ -1,5 +1,6 @@
 #ifndef _SOURCE_PROVIDER_H_
 #define _SOURCE_PROVIDER_H_
+#include <fs/tools.h>
 #include <list.h>
 #include <mc.h>
 
@@ -15,8 +16,9 @@
 /* note: source file and other fs places should be identified
  * by full path, which can be obtained using tools::fs_path */
 struct fs_file {
+        struct list_head link;
         char *content;
-        char path[_MAX_PATH];
+        char *path;
 
         enum mc_status last_error;
 };
@@ -27,23 +29,16 @@ const char *source_read(struct fs_file *file);
 
 const char *source_name(struct fs_file *file);
 
-struct dir_list {
+struct fs_dir {
         struct list_head link;
-        struct dir_entry {
-                char path[_MAX_PATH];
-        } entry;
-};
-
-struct file_list {
-        struct list_head link;
-        struct fs_file file;
+        char *path;
 };
 
 struct filesys {
 
-        struct dir_list *local_places, *global_places;
+        struct fs_dir *local_places, *global_places;
 
-        struct file_list *opened_local, *opened_global;
+        struct fs_file *opened_local, *opened_global;
 
         enum mc_status last_error;
 };

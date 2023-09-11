@@ -1,5 +1,10 @@
+#ifndef _FS_TOOLS_H_
+#define _FS_TOOLS_H_
 
-int get_file_size(FILE *fp);
+#include <stdbool.h>
+#include <stdio.h>
+
+int fs_file_size(FILE *fp);
 
 /* transform relative or abs. local system path to our internal path;
  * directory path should ends with '/' - when file path should not
@@ -16,3 +21,5 @@ _Bool fs_isdir(const char *path);
 _Bool fs_exist(const char *path);
 
 const char *fs_file_name(const char *path);
+
+#endif
