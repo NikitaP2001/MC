@@ -36,7 +36,7 @@ struct parser_production {
 };
 
 
-struct pasrser_production_list {
+struct parser_production_list {
         struct list_head link;
         struct parser_production *production;
 };
@@ -60,3 +60,5 @@ struct parser {
 };
 
 void parser_init(struct parser *ps, enum parser_symbol_type start_sym);
+
+void parser_free(struct parser *ps);
