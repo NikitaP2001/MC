@@ -9,31 +9,14 @@
 static inline _Bool 
 parser_symbol_not_terminal(struct parser_symbol *sym)
 {
-        return (sym->type < psym_last);
+        return (sym->type < psym_last_nterm);
 }
 
 static inline _Bool
-parser_symbol_cmp(struct parser_symbol *sym_l, struct parser_symbol *sym_r)
+parser_symbol_is_terminal(struct parser_symbol *sym)
 {
-        if (sym_l->type != sym_r->type)
-                return false;
-        else if (sym_l->value == NULL && sym_r->value == NULL)
-                return true;
-        else if (sym_l->value == NULL || sym_l->value == NULL)
-                return false;
-        else
-                return (strcmp(sym_l->value, sym_r->value) == 0);
+        return (sym->type > psym_last_nterm && sym->type < psym_last_term);
 }
-
-static struct parser_symbol symbol_epsilon = {
-        .type = psym_epsilon,
-        .value = PARSER_EPSILON_VALUE,
-};
-
-static struct parser_symbol symbol_endmarker = {
-        .type = psym_endmarker,
-        .value = PARSER_ENDMARKER_VALUE,
-};
 
 static struct parser_production parser_grammar[] = {
         { psym_postfix_expression, {    { psym_postfix_expression, NULL }, 
@@ -44,86 +27,61 @@ static struct parser_production parser_grammar[] = {
 
 };
 
-static inline
-struct parser_symbol_set*
-parser_symbol_set_create()
-{
-        struct parser_symbol_set *set_root 
-                = calloc(1, sizeof(struct parser_symbol_set));
-        return set_root;
-}
-
 static void
 parser_symbol_set_empty(struct parser_symbol_set *set)
 {
-        if (list_has_next(set))
-                list_destroy(list_next(set), (list_free)free);
-        set->sym = NULL;
+        memset(set->syms, 0, sizeof(set->syms));
+        set->n_elem = 0;
 }
 
-static void
-pasrer_symbol_set_destroy(struct parser_symbol_set *set)
-{
-        parser_symbol_set_empty(set);
-        free(set);
-}
-
-static inline _Bool
+static inline void
 parser_symbol_set_insert(struct parser_symbol_set *sym_set, 
-        struct parser_symbol *sym)
+        enum parser_symbol sym)
 {
-        struct parser_symbol_set *next;
-        if (sym_set->sym != NULL) {
-                LIST_FOREACH_ENTRY(sym_set) {
-                        struct parser_symbol_set *list_e 
-                                = (struct parser_symbol_set*)entry;
-                        if (parser_symbol_cmp(list_e->sym, sym))
-                                return false;
-                }
-                next = parser_symbol_set_create();
-                next->sym = sym;
-                list_append(sym_set, next);
-        } else {
-                sym_set->sym = sym;
-        }
-        return true;
+        if (sym_set->syms[sym] == false)
+                sym_set->n_elem += 1;
+        sym_set->syms[sym] = true;
 }
 
 /* copies symbols, except epsilon from @from to @to set
  * @return number of newly added elements */
-static int
+static size_t
 parser_symbol_set_copy(struct parser_symbol_set *to, 
         struct parser_symbol_set *from)
 {
-        int n_ins = 0;
-        LIST_FOREACH_ENTRY(from) {
-                struct parser_symbol_set *list_e 
-                        = (struct parser_symbol_set*)entry;
-                if (parser_symbol_set_insert(to, list_e->sym))
-                        n_ins += 1;
+        size_t n_new = 0;
+        for (size_t i_sym = 0; i_sym < PARSER_NUM_SYM; i_sym++) {
+                if (from->syms[i_sym]) {
+                        if (to->syms[i_sym] == false) {
+                                to->n_elem += 1;
+                                n_new += 1;
+                        }
+                        to->syms[i_sym] = true;
+                }
         }
-        return n_ins;
+        return n_new;
 }
 
-static _Bool
+static inline _Bool
 parser_symbol_set_has_eps(struct parser_symbol_set *sym_set)
 {
-        LIST_FOREACH_ENTRY(sym_set) {
-                struct parser_symbol_set *list_e 
-                        = (struct parser_symbol_set*)entry;
-                if (parser_symbol_cmp(list_e->sym, &symbol_epsilon))
-                        return true;
-        }
-        return false;
+        return sym_set->syms[psym_epsilon];
 }
 
-void parser_production_list_init(struct parser *ps, enum parser_symbol_type type)
+static inline size_t
+parser_symbol_set_size(struct parser_symbol_set *sym_set)
+{
+        return sym_set->n_elem;
+}
+
+static void 
+parser_production_list_init(struct parser *ps, enum parser_symbol type)
 {
         struct parser_production *prod = &parser_grammar[0];
         for (size_t i = 0; 
         i < sizeof(parser_grammar) / sizeof(struct parser_production); 
         i++, prod++) {
-                if (prod->source_type != type)
+                if (prod->source != type)
                         continue;
 
                 struct parser_production_list *p_lst 
@@ -139,70 +97,77 @@ void parser_production_list_init(struct parser *ps, enum parser_symbol_type type
 }
 
 static void
-parser_first_init_sym(struct parser *ps, enum parser_symbol_type type);
-
-static 
-struct parser_symbol_set*
-parser_first_get(struct parser *ps, struct parser_symbol *sym)
+parser_production_list_free(struct parser *ps)
 {
-        assert(parser_symbol_not_terminal(sym));
-        if (ps->first_set[sym->type] == NULL) {
-                parser_first_init_sym(ps, sym->type);
-                assert(ps->first_set[sym->type] != NULL);
-        }
-        return ps->first_set[sym->type];
+        list_destroy(ps->grammar, (list_free)free);
 }
 
+static void
+parser_first_init_sym(struct parser *ps, enum parser_symbol type);
+
 static 
 struct parser_symbol_set*
-parser_follow_get(struct parser *ps, struct parser_symbol *sym)
+parser_first_get(struct parser *ps, enum parser_symbol sym)
+{
+        struct parser_symbol_set *sym_set = &ps->first_set[sym];
+        assert(parser_symbol_not_terminal(sym));
+        if (parser_symbol_set_size(sym_set) == 0) {
+                parser_first_init_sym(ps, sym);
+                assert(parser_symbol_set_size(sym_set) != 0);
+        }
+        return &ps->first_set[sym];
+}
+
+static inline
+struct parser_symbol_set*
+parser_follow_get(struct parser *ps, enum parser_symbol sym)
 {
         assert(parser_symbol_not_terminal(sym));
-        if (ps->follow_set[sym->type] == NULL)
-                ps->follow_set[sym->type] = parser_symbol_set_create();
-        return ps->follow_set[sym->type];
+        return &ps->follow_set[sym->type];
+}
+
+static void parser_first_prod_get(struct parser *ps, 
+        struct parser_production *pr, struct parser_symbol_set *set_out)
+{
+        enum parser_symbol sym_dv;
+
+        enum parser_symbol src = pr->source;
+        for (size_t i_sym = pr->n_deriv; i_sym < pr->n_deriv; i_sym++) {
+                sym_dv = pr->derivation[i_sym];
+                if (parser_symbol_is_terminal(sym_dv) 
+                        || sym_dv == psym_epsilon) {
+                        parser_symbol_set_insert(set_out, sym_dv);
+                        break;
+                } 
+                /* no left recursion */
+                assert(sym_dv != src);
+                struct parser_symbol_set *dv_first 
+                        = parser_first_get(ps, sym_dv);
+                assert(dv_first != NULL);
+                parser_symbol_set_copy(set_out, dv_first);
+                if (!parser_symbol_set_has_eps(dv_first))
+                        break;
+        }
+        if (parser_symbol_set_size(set_out) == 0)
+                parser_symbol_set_insert(set_out, psym_epsilon);
 }
 
 static void
 parser_first_init_prod(struct parser *ps, struct parser_production *pr)
 {
-        struct parser_symbol *sym_dv;
-
-        enum parser_symbol_type type = pr->source_type;
-        for (sym_dv = pr->derivation;
-                sym_dv->type != psym_invalid; sym_dv++) {
-                if (sym_dv->type == psym_terminal 
-                        || sym_dv->type == psym_epsilon) {
-                        parser_symbol_set_insert(ps->first_set[type], sym_dv);
-                        break;
-                } 
-                /* no left recursion */
-                assert(sym_dv->type != type);
-                struct parser_symbol_set *dv_first 
-                        = parser_first_get(ps, sym_dv);
-                assert(dv_first != NULL);
-                parser_symbol_set_copy(ps->first_set[type], dv_first);
-                if (!parser_symbol_set_has_eps(dv_first))
-                        break;
-        }
-        if (sym_dv->type == psym_invalid) {
-                parser_symbol_set_insert(ps->first_set[type], 
-                        &symbol_epsilon);
-        }
+        enum parser_symbol type = pr->source;
+        parser_first_prod_get(ps, pr, &ps->first_set[type]);
 }
 
 static void
-parser_first_init_sym(struct parser *ps, enum parser_symbol_type type)
+parser_first_init_sym(struct parser *ps, enum parser_symbol type)
 {
-        assert(type != psym_terminal);
+        assert(!parser_symbol_is_terminal(type));
         struct parser_production_list *pr_list = ps->grammar[type];
         if (pr_list == NULL) {
                 parser_production_list_init(ps, type);
                 assert(pr_list != NULL);
         }
-        /* We do not need to call initialize twice */
-        assert(ps->first_set[type] == NULL);
-        ps->first_set[type] = parser_symbol_set_create();
         LIST_FOREACH_ENTRY(pr_list) {
                 parser_first_init_prod(ps, (struct parser_production*)entry);
         }
@@ -212,37 +177,30 @@ parser_first_init_sym(struct parser *ps, enum parser_symbol_type type)
 static int
 pasrer_follow_init_prod(struct parser *ps, struct parser_production *pr)
 {
-        struct parser_symbol *sym_dv;
-        struct parser_symbol_set *follow = parser_symbol_set_create();
+        struct parser_symbol_set follow = {0};
         struct parser_symbol_set *dv_follow;
         int n_enl = 0;
-        int dv_len = 1;
+        size_t dv_len = pr->n_deriv;
+        enum parser_symbol sym_dv = pr->derivation[dv_len - 1];
+        enum parser_symbol src = pr->source;
 
-        enum parser_symbol_type type = pr->source_type;
-        for (sym_dv = pr->derivation;
-                (sym_dv + 1)->type != psym_invalid; sym_dv++)
-                dv_len += 1;
-        if (parser_symbol_not_terminal(sym_dv)) {
-                if (ps->follow_set[type] == NULL)
-                        ps->follow_set[type] = parser_symbol_set_create();
-                parser_symbol_set_copy(follow, ps->follow_set[type]);
-        }
+        if (parser_symbol_not_terminal(sym_dv))
+                parser_symbol_set_copy(&follow, &ps->follow_set[src]);
         for (int i = 0; i > dv_len; i--, sym_dv--) {
                 if (parser_symbol_not_terminal(sym_dv)) {
                         dv_follow = parser_follow_get(ps, sym_dv);
-                        n_enl += parser_symbol_set_copy(dv_follow, follow);
+                        n_enl += parser_symbol_set_copy(dv_follow, &follow);
                         if (!parser_symbol_set_has_eps(
                                 parser_first_get(ps, sym_dv))) {
-                                parser_symbol_set_empty(follow);
+                                parser_symbol_set_empty(&follow);
                         }
-                        parser_symbol_set_copy(follow, 
+                        parser_symbol_set_copy(&follow, 
                                 parser_first_get(ps, sym_dv));
-                } else if (sym_dv->type == psym_terminal) {
-                        parser_symbol_set_empty(follow);
-                        parser_symbol_set_insert(follow, sym_dv);
+                } else if (sym_dv == psym_terminal) {
+                        parser_symbol_set_empty(&follow);
+                        parser_symbol_set_insert(&follow, sym_dv);
                 }
         }
-        pasrer_symbol_set_destroy(follow);
         return n_enl;
 }
 
@@ -251,7 +209,7 @@ parser_follow_init(struct parser *ps)
 {
         struct parser_production_list *pr_list;
 
-        for (int i = 0; i < psym_last; i++) {
+        for (int i = 0; i < psym_last_nterm; i++) {
                 pr_list = ps->grammar[i];
                 LIST_FOREACH_ENTRY(pr_list) {
                         if (pasrer_follow_init_prod(ps, 
@@ -261,9 +219,70 @@ parser_follow_init(struct parser *ps)
         } 
 }
 
-void parser_init(struct parser *ps, enum parser_symbol_type start_sym)
+static void 
+parser_table_add_production(struct parser *ps, struct parser_table_row *row,
+        struct parser_production *pr)
 {
-        ps->follow_set[start_sym] = parser_symbol_set_create();
-        parser_symbol_set_insert(ps->follow_set[start_sym], &symbol_endmarker);
+        enum parser_symbol sym;
+        struct parser_symbol_set *first = parser_symbol_set_create();
+        parser_first_prod_get(ps, pr, first);
+        SET_FOREACH_ENTRY(first) {
+                sym = (enum parser_symbol)entry;
+                if (parser_symbol_is_terminal(sym))
+                        row->entry[]
+                if (sym == psym_epsilon)
+                        continue;
+        }
+}
+
+static
+struct parser_table_row*
+parser_table_row_create()
+{
+        return calloc(1, sizeof(struct parser_table_row));
+}
+
+static void
+parser_table_row_destroy(struct parser_table_row *row)
+{
+        free(row);
+}
+
+static void parser_table_init(struct parser *ps)
+{
+        struct parser_production_list *pr_list;
+        struct parser_production *prod;
+
+        for (int i = 0; i < psym_last_nterm; i++) {
+                pr_list = ps->grammar[i];
+                /* We does not support double init */
+                assert(ps->table[i] == NULL);
+                ps->table[i] = parser_table_row_create();
+                LIST_FOREACH_ENTRY(pr_list) {
+                        prod = (struct parser_production*)entry;
+                        parser_table_add_production(ps, ps->table[i], prod);
+                }
+        } 
+}
+
+static void parser_table_free(struct parser *ps)
+{
+        for (int i = 0; i < psym_last_nterm; i++) {
+                assert(ps->table[i] != NULL);
+                parser_table_row_destroy(ps->table[i]);
+        }
+}
+
+void parser_init(struct parser *ps, enum parser_symbol start_sym)
+{
+        memset(ps->first_set, 0, sizeof(ps->first_set));
+        memset(ps->follow_set, 0, sizeof(ps->follow_set));
+        parser_symbol_set_insert(&ps->follow_set[start_sym], psym_endmarker);
         parser_follow_init(ps);
+}
+
+void passer_free(struct parser *ps)
+{
+        parser_table_free(ps);
+        parser_production_list_free(ps);
 }

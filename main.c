@@ -7,7 +7,7 @@
 
 int main()
 {
-        struct parser *ps = {0};
-        parser_init(ps, psym_constant);
+        struct parser ps = {0};
+        parser_init(&ps, psym_constant);
         puts("It`s not time yet");
 }
