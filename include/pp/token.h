@@ -44,4 +44,7 @@ void pp_token_getval(struct pp_token *token, char *buffer);
 
 void pp_token_destroy(struct pp_token *token);
 
+/* reading next characted from token list */
+char pp_token_read_next(struct pp_token **token, uint32_t *pos);
+
 #endif /* _PP_TOKEN_H_ */

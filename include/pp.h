@@ -6,5 +6,7 @@
 #include <pp/lexer.h>
 #include <pp/parser.h>
 
+pp_parse();
+
 
 #endif /* _PP_H_ */
