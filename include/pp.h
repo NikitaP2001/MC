@@ -6,7 +6,19 @@
 #include <pp/lexer.h>
 #include <pp/parser.h>
 
-pp_parse();
+struct pp_context {
+        struct filesys *fs;
+        struct pp_node *root_file;
+};
+
+const char* pp_get_log_fmt(enum MC_LOG_LEVEL loglevel);
+
+#define PP_MSG(msg_lvl, ...)                                            \
+{                                                                       \
+        printf(mc_get_log_fmt(msg_lvl));                                \
+        printf(__VA_ARGS__);                                            \
+        putchar('\n');                                                  \
+}
 
 
 #endif /* _PP_H_ */

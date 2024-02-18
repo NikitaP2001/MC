@@ -52,5 +52,9 @@ void pp_node_add_leaf(struct pp_node *node, struct pp_token *token);
 
 void pp_node_add_descendant(struct pp_node *node, struct pp_node *ch_node);
 
+struct pp_token *pp_node_leftmost_leaf(struct pp_node *node);
+
+struct pp_token *pp_node_rightmost_leaf(struct pp_node *node);
+
 _Bool
 pp_node_file_insert(struct pp_node *file, struct pp_node *node);

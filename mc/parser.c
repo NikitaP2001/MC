@@ -55,7 +55,7 @@ parser_symbol_set_empty(struct parser_symbol_set *set)
 
 static inline void
 parser_symbol_set_insert(struct parser_symbol_set *sym_set, 
-        enum parser_symbol sym)
+                         enum parser_symbol sym)
 {
         if (sym_set->syms[sym] == false)
                 sym_set->n_elem += 1;
@@ -152,7 +152,7 @@ static void parser_first_prod_get(struct parser *ps,
         enum parser_symbol sym_dv;
 
         enum parser_symbol src = pr->source;
-        for (int i_sym = 0; i_sym < pr->n_deriv; i_sym++) {
+        for (size_t i_sym = 0; i_sym < pr->n_deriv; i_sym++) {
                 sym_dv = pr->derivation[i_sym];
                 if (parser_symbol_is_terminal(sym_dv) 
                         || sym_dv == psym_epsilon) {
@@ -254,7 +254,6 @@ parser_table_add_production(struct parser *ps,
                             struct parser_production *table_row,
                             struct parser_production *pr)
 {
-        const uint16_t row_size = PARSER_NUM_SYM;
         enum parser_symbol sym;
         struct parser_symbol_set first = {0};
         struct parser_symbol_set *follow;
@@ -303,11 +302,26 @@ void parser_init(struct parser *ps, enum parser_symbol start_sym)
         memset(ps->first_set, 0, sizeof(ps->first_set));
         memset(ps->follow_set, 0, sizeof(ps->follow_set));
         memset(ps->table, 0, sizeof(ps->table));
+
+        ps->next_sym = NULL;
+        ps->get_curr_file = NULL;
+        ps->get_curr_line = NULL;
+
+        /* endmarker follows root level symbol - start_sym*/
         parser_symbol_set_insert(&ps->follow_set[start_sym], psym_endmarker);
         parser_follow_init(ps);
+        parser_table_init(ps);
 }
 
-void passer_free(struct parser *ps)
+void parser_free(struct parser *ps)
 {
         parser_production_list_free(ps);
 }
+
+/*
+_Bool parser_build_tree(struct parser *ps, void *pp_data)
+{
+}
+*/
+
+

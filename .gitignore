@@ -3,6 +3,7 @@
 *.txt
 *.a
 *.swp
+*.png
 obj
 doc
 env.bat

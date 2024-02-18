@@ -1,3 +1,4 @@
+#include <mc.h>
 
 const char *mc_status_table[] = {
         "no error",
@@ -9,3 +10,21 @@ const char *mc_status_table[] = {
         "the filesystem path is invalid",
         "unknown character found",
 };
+
+const char* mc_get_log_fmt(enum MC_LOG_LEVEL loglevel)
+{
+        switch (loglevel) {
+        case MC_FATAL:
+                return "[fatal] %s.%d: ";
+        case MC_CRIT:
+                return "[crit] %s.%d: ";
+        case MC_ERR:
+                return "[err] %s.%d: ";
+        case MC_WARN:
+                return "[warn] %s.%d: ";
+        case MC_DEBUG:
+                return "[trace] %s.%d: ";
+        default:
+                return "%s.%d: ";
+        }
+}

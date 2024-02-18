@@ -37,7 +37,7 @@ const char *source_read(struct fs_file *file)
                         if (read != fsize && !feof(sfile)) {
                                 free(file->content);
                                 file->content = NULL;
-                                MC_LOG(MC_LOGDEBUG, "read file %s failed", file->path);
+                                MC_LOG(MC_DEBUG, "read file %s failed", file->path);
                                 return NULL;
                         }
 
@@ -49,7 +49,7 @@ const char *source_read(struct fs_file *file)
                         for (int fp = 0; fp < read; fp++) {
                                 char chr = file->content[fp];
                                 if (!source_allowed_chr(chr)) {
-                                        MC_LOG(MC_LOGDEBUG, "invalid char 0x%02x", chr);
+                                        MC_LOG(MC_DEBUG, "invalid char 0x%02x", chr);
                                         file->last_error = MC_UNKNOWN_CHAR;
                                         free(file->content);
                                         file->content = NULL;
@@ -59,7 +59,7 @@ const char *source_read(struct fs_file *file)
 
                         fclose(sfile);
                 } else
-                        MC_LOG(MC_LOGDEBUG, "open file %s failed", file->path);
+                        MC_LOG(MC_DEBUG, "open file %s failed", file->path);
         }
         return file->content;
 }

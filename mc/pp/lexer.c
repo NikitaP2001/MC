@@ -393,6 +393,17 @@ static inline void pp_fetch_punctuator(struct pp_lexer *pp)
         pp_seterror(pp);
 }
 
+/* Take caution, we may leak ptr here */
+static void pp_lexer_reset(struct pp_lexer *pp)
+{
+        pp->first = NULL;
+        pp->last = NULL;
+        pp->line = 0;
+        pp->file_line = 0;
+        pp->state = true;
+        pp->_escape = false;
+}
+
 
 _Bool pp_lexer_init(struct pp_lexer *pp, struct fs_file *file)
 {
@@ -400,15 +411,17 @@ _Bool pp_lexer_init(struct pp_lexer *pp, struct fs_file *file)
                 pp->pos = source_read(file);
         if (pp->pos == NULL)
                 return false;
-
-        pp->first = NULL;
-        pp->last = NULL;
-        pp->line = 0;
-        pp->file_line = 0;
-        pp->state = true;
-        pp->_escape = false;
+        pp->src_file = file;
+        pp_lexer_reset(pp);
 
         return true;
+}
+
+struct pp_token *pp_lexer_result(struct pp_lexer *pp)
+{
+        struct pp_token *result = pp->first;
+        pp_lexer_reset(pp);
+        return result;
 }
 
 
@@ -435,7 +448,7 @@ _Bool pp_lexer_noerror(const struct pp_lexer *pp)
 void pp_lexer_free(struct pp_lexer *pp)
 {
         if (pp->first != NULL)
-                list_destroy(pp->first, (list_free)pp_token_destroy);
+                pp_token_list_destroy(pp->first);
 }
 
 

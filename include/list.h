@@ -34,8 +34,15 @@ void list_append(void *position, void *new_head);
 
 void list_insert(void *position, void *new_head);
 
+/* note: it did not preserve the integrity of the list, 
+ * containing second range, if any  */
+void list_replace_range(void *range1_first, void *range1_last,
+                        void *range2_first, void *range2_last);
+
 typedef void (*list_free)(void*);
 
 void list_destroy(void *first_head, list_free call_free);
+
+void list_destroy_range(void *first, void *last, list_free call_free);
 
 #endif /* _LIST_H_ */

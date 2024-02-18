@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include <pp/token.h>
 #include <pp/lexer.h>
@@ -44,6 +45,8 @@ const struct pp_lexer *after, enum pp_type type)
                 token->length = after->pos - before->pos;
                 token->value = (char *)before->pos;
                 token->type = type;
+                token->src_file = before->src_file;
+                assert(before->src_file == after->src_file);
 
                 pp_token_set_value(token, before);
         }

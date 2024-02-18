@@ -234,3 +234,17 @@ pp_node_file_insert(struct pp_node *file, struct pp_node *node)
                 status = pp_node_group_insert(file->first_descendant, node);
         return status;
 }
+
+struct pp_token *pp_node_leftmost_leaf(struct pp_node *node)
+{
+        while (node->type != pp_leaf)
+                node = node->first_descendant;
+        return node->leaf_tok;
+}
+
+struct pp_token *pp_node_rightmost_leaf(struct pp_node *node)
+{
+        while (node->type != pp_leaf)
+                node = node->last_descendant;
+        return node->leaf_tok;
+}

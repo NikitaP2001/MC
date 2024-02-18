@@ -23,40 +23,22 @@ static inline const char *mc_str_status(int status)
 }
 
 enum MC_LOG_LEVEL {
-        MC_LOGFATAL = 0,
-        MC_LOGCRIT = 1,
-        MC_LOGERR = 2,
-        MC_LOGWARN = 3,
-        MC_LOGDEBUG = 4,
+        MC_FATAL = 0,
+        MC_CRIT = 1,
+        MC_ERR = 2,
+        MC_WARN = 3,
+        MC_DEBUG = 4,
 };
 
 #ifdef DEBUG
 
-static inline const char* mc_get_log_fmt(enum MC_LOG_LEVEL loglevel)
-{
-        switch (loglevel) {
-        case MC_LOGFATAL:
-                return "[fatal] %s.%d: %s\n";
-        case MC_LOGCRIT:
-                return "[crit] %s.%d: %s\n";
-        case MC_LOGERR:
-                return "[err] %s.%d: %s\n";
-        case MC_LOGWARN:
-                return "[warn] %s.%d: %s\n";
-        case MC_LOGDEBUG:
-                return "[trace] %s.%d: %s\n";
-        default:
-                return "%s.%d: %s\n";
-        }
-}
+const char* mc_get_log_fmt(enum MC_LOG_LEVEL loglevel);
 
 #define MC_LOG(loglevel, ...)                                           \
 {                                                                       \
-        int mlen = snprintf(NULL, 0, __VA_ARGS__);                      \
-        char *message = malloc(mlen + 1);                               \
-        snprintf(message, mlen + 1, __VA_ARGS__);                       \
-        printf(mc_get_log_fmt(loglevel), __FILE__, __LINE__, message);  \
-        free(message);                                                  \
+        printf(mc_get_log_fmt(loglevel), __FILE__, __LINE__);           \
+        printf(__VA_ARGS__);                                            \
+        putchar('\n');                                                  \
 }
 
 #else /* DEBUG */

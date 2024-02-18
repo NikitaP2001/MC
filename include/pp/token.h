@@ -1,6 +1,7 @@
 #ifndef _PP_TOKEN_H_
 #define _PP_TOKEN_H_
 #include <stddef.h>
+#include <stdint.h>
 #include <stdbool.h>
 
 #include <list.h>
@@ -21,16 +22,21 @@ enum pp_type {
 struct pp_token {
         struct list_head link;
 
+        /* value is allocated while reading a source file
+         * using the fs module, and residue in mem, until we 
+         * free the fs module */
         char *value;
         size_t length;
 
         enum pp_type type;
 
-        /* counts backslashes also */
+        /* counts backslashes also, for internal use */
         size_t line;
 
-        /* only counts new line chars */
+        /* only counts new line chars, a real line */
         size_t file_line;
+
+        struct fs_file *src_file;
 };
 
 struct pp_lexer;
@@ -43,6 +49,12 @@ int pp_token_valcmp(struct pp_token *left, const char *value);
 void pp_token_getval(struct pp_token *token, char *buffer);
 
 void pp_token_destroy(struct pp_token *token);
+
+static inline void
+pp_token_list_destroy(struct pp_token *token)
+{
+        list_destroy(token, (list_free)pp_token_destroy);
+}
 
 /* reading next characted from token list */
 char pp_token_read_next(struct pp_token **token, uint32_t *pos);

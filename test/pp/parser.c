@@ -102,6 +102,26 @@ static void pp_parser_multiline_macro()
         pp_parser_test_free(&lex, &fs);
 }
 
+static void pp_parser_func_def()
+{
+        struct pp_parser parser = {0};
+        struct pp_lexer lex = {0};
+        struct filesys fs = {0};
+        const char *t_text = "pp_parser_get_pos(struct pp_parser *parser)\n"
+                             "{\n"
+                             "return parser->pos;\n"
+                             "}";
+
+        pp_parser_test_init(&parser, &lex, &fs, t_text);
+        for (int i = 0; i < 4; i++) {
+                struct pp_node *node = pp_parser_fetch_node(&parser);
+                assert(node != NULL);
+                pp_node_destroy(node);
+        }
+        
+        pp_parser_test_free(&lex, &fs);
+}
+
 static void pp_parser_macro_if_elif()
 {
         struct pp_parser parser = {0};
@@ -151,5 +171,6 @@ void run_pp_parser()
         puts("PP PARSER TESTS STARTED");
         pp_parser_multiline_macro();
         pp_parser_macro_if_elif();
+        pp_parser_func_def();
         puts("PP PARSER TESTS FINISHED OK");
 }

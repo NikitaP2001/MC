@@ -53,17 +53,25 @@ struct parser_symbol_set {
         _Bool syms[PARSER_NUM_SYM];
 };
 
+typedef char (*next_symbol_clb)(void *pp_data);
+/* file name for last symbol read */
+typedef char *(*current_file_clb)(void *pp_data);
+typedef size_t *(*current_line_clb)(void *pp_data);
+
 struct parser {
 
+        next_symbol_clb next_sym;
+        current_file_clb get_curr_file;
+        current_line_clb get_curr_line;
+
         struct parser_production_list *grammar[PARSER_NUM_NONTERM];
-        
         struct parser_symbol_set first_set[PARSER_NUM_NONTERM];
-
         struct parser_symbol_set follow_set[PARSER_NUM_NONTERM];
-
         struct parser_production table[PARSER_NUM_NONTERM][PARSER_NUM_SYM];
 };
 
 void parser_init(struct parser *ps, enum parser_symbol start_sym);
 
 void parser_free(struct parser *ps);
+
+_Bool parser_build_tree(struct parser *ps, void *pp_data);
