@@ -1,21 +1,19 @@
 #include <pp.h>
 
-#define PP_MODULE_NAME "preprocessor"
-
 const char* pp_get_log_fmt(enum MC_LOG_LEVEL loglevel)
 {
         switch (loglevel) {
         case MC_FATAL:
-                return PP_MODULE_NAME " fatal: ";
+                return "%s fatal: ";
         case MC_CRIT:
-                return PP_MODULE_NAME " critical: ";
+                return "%s critical: ";
         case MC_ERR:
-                return PP_MODULE_NAME " error: ";
+                return "%s error: ";
         case MC_WARN:
-                return PP_MODULE_NAME " warning: ";
+                return "%s warning: ";
         case MC_DEBUG:
-                return PP_MODULE_NAME " trace: ";
+                return "%s trace: ";
         default:
-                return PP_MODULE_NAME " : ";
+                return "%s : ";
         }
 }
