@@ -19,6 +19,19 @@ pp_node_create(enum pp_node_type type)
         return node;
 }
 
+void pp_node_move(struct pp_node *dest, struct pp_node *src)
+{
+        *dest = *src;
+        list_setnext(dest, list_next(src));
+        list_setprev(dest, list_prev(src));
+        struct pp_node *prev = list_prev(src);
+        if (prev)
+                list_setnext(prev, dest);
+        struct pp_node *next = list_next(src);
+        if (next)
+                list_setprev(next, dest);
+}
+
 void
 pp_node_destroy(struct pp_node *node)
 {

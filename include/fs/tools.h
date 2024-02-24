@@ -20,6 +20,6 @@ _Bool fs_isdir(const char *path);
 
 _Bool fs_exist(const char *path);
 
-const char *fs_file_name(const char *path);
+const char *fs_path_name(const char *path);
 
 #endif

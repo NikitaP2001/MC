@@ -33,7 +33,7 @@ _Bool fs_exist(const char *path)
         return stat(path, &st) != -1;
 }
 
-const char *fs_file_name(const char *path)
+const char *fs_path_name(const char *path)
 {
         const char *n_pos = NULL;
         if (fs_isfile(path)) {

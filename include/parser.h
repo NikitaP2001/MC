@@ -32,7 +32,7 @@ enum parser_symbol {
 
 #define PARSER_NUM_TERM  (psym_last_term - PARSER_FIRST_TERM + 1)
 #define PARSER_NUM_NONTERM (psym_last_nonterm - PARSER_FIRST_NONTERM + 1)
-#define PARSER_NUM_SYM   (psym_last - PARSER_FIRST_TERM)
+#define PARSER_NUM_SYM   (psym_last)
 
 #define PARSER_PROD_LEN_LIMIT 10
 

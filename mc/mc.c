@@ -9,6 +9,9 @@ const char *mc_status_table[] = {
         "failed to open a file",
         "the filesystem path is invalid",
         "unknown character found",
+        "syntax error",
+        "file not found",
+        "parse error"
 };
 
 const char* mc_get_log_fmt(enum MC_LOG_LEVEL loglevel)

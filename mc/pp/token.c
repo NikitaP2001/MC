@@ -45,7 +45,7 @@ const struct pp_lexer *after, enum pp_type type)
                 token->length = after->pos - before->pos;
                 token->value = (char *)before->pos;
                 token->type = type;
-                token->src_file = before->src_file;
+                token->src_file = fs_share_file(before->src_file);
                 assert(before->src_file == after->src_file);
 
                 pp_token_set_value(token, before);
@@ -75,6 +75,7 @@ void pp_token_getval(struct pp_token *token, char *buffer)
 
 void pp_token_destroy(struct pp_token *token)
 {
+        fs_release_file(token->src_file);
         free(token);
 }
 

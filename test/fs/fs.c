@@ -50,9 +50,11 @@ static void fs_read_unk_charset()
         fs_init(&pr);
         fs_add_local(&pr, "./");
         struct fs_file *src = fs_get_local(&pr, file_name);
-        const char *srctext = source_read(src);
+        const char *srctext = fs_file_read(src);
         assert(srctext == NULL);
-        assert(source_lasterr(src) == MC_UNKNOWN_CHAR);
+        UNUSED(srctext);
+        assert(fs_file_lasterr(src) == MC_UNKNOWN_CHAR);
+        fs_release_file(src);
         fs_free(&pr);
         remove(file_name);
 }
@@ -67,8 +69,9 @@ static void fs_read_no_end_newline()
         fs_init(&pr);
         fs_add_local(&pr, "./");
         struct fs_file *src = fs_get_local(&pr, file_name);
-        const char *srctext = source_read(src);
+        const char *srctext = fs_file_read(src);
         assert(strcmp(exp_test, srctext) == 0);
+        fs_release_file(src);
         fs_free(&pr);
         remove(file_name);
 }
@@ -83,8 +86,9 @@ static void fs_read_end_newline()
         fs_init(&pr);
         fs_add_local(&pr, "./");
         struct fs_file *src = fs_get_local(&pr, file_name);
-        const char *srctext = source_read(src);
+        const char *srctext = fs_file_read(src);
         assert(strcmp(exp_test, srctext) == 0);
+        fs_release_file(src);
         fs_free(&pr);
         remove(file_name);
 }
@@ -99,8 +103,9 @@ static void fs_read_empty()
         fs_init(&pr);
         fs_add_local(&pr, "./");
         struct fs_file *src = fs_get_local(&pr, file_name);
-        const char *srctext = source_read(src);
+        const char *srctext = fs_file_read(src);
         assert(strcmp(exp_test, srctext) == 0);
+        fs_release_file(src);
         fs_free(&pr);
         remove(file_name);
 }
@@ -130,11 +135,12 @@ static void fs_get_file_local()
         assert(found == NULL);
         found = fs_get_local(&pr, TFILE_NAME);
         assert(found != NULL);
+        fs_release_file(found);
         fs_free(&pr);
         remove(TFILE_NAME);
 }
 
-static void fs_get_file_two_dirs()
+static void fs_two_local_dirs()
 {
         struct filesys pr = {0};
         fs_init(&pr);
@@ -145,6 +151,21 @@ static void fs_get_file_two_dirs()
         assert(found == NULL);
         found = fs_get_local(&pr, TFILE_NAME);
         assert(found != NULL);
+        fs_release_file(found);
+        fs_free(&pr);
+        remove(TFILE_NAME);
+}
+
+static void fs_two_global_dirs()
+{
+        struct filesys pr = {0};
+        fs_init(&pr);
+        write_file(TFILE_NAME, "", sizeof(""));
+        fs_add_global(&pr, DIR_NAME);
+        fs_add_global(&pr, "./");
+        struct fs_file *found = fs_get_global(&pr, TFILE_NAME);
+        assert(found != NULL);
+        fs_release_file(found);
         fs_free(&pr);
         remove(TFILE_NAME);
 }
@@ -157,8 +178,10 @@ static void fs_get_file_global()
         write_file(TFILE_NAME, "", sizeof(""));
         struct fs_file *found = fs_get_global(&pr, TFILE_NAME);
         assert(found != NULL);
+        fs_release_file(found);
         found = fs_get_local(&pr, TFILE_NAME);
         assert(found != NULL);
+        fs_release_file(found);
         fs_free(&pr);
         remove(TFILE_NAME);
 }
@@ -182,7 +205,8 @@ int main()
         fs_read_empty();
         fs_add_dir();
         fs_get_file_local();
-        fs_get_file_two_dirs();
+        fs_two_local_dirs();
+        fs_two_global_dirs();
         fs_get_file_global();
         fs_get_file_notexist();
         puts("FS TESTS FINISHED OK");

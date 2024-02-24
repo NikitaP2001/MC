@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 #include <list.h>
+#include <mc.h>
 
 enum pp_type {
         pp_hdr_name,
@@ -19,24 +20,28 @@ enum pp_type {
 #define PP_VAL_INCLUDE "include"
 #define PP_VAL_HASH "#"
 
+typedef file_size_t line_num_t;
+
 struct pp_token {
         struct list_head link;
 
         /* value is allocated while reading a source file
          * using the fs module, and residue in mem, until we 
-         * free the fs module */
+         * free the fs module 
+         * TODO: store file pos instead of pointer */
         char *value;
         size_t length;
 
-        enum pp_type type;
 
         /* counts backslashes also, for internal use */
-        size_t line;
+        line_num_t line;
 
         /* only counts new line chars, a real line */
         size_t file_line;
 
         struct fs_file *src_file;
+
+        enum pp_type type;
 };
 
 struct pp_lexer;
@@ -47,6 +52,13 @@ const struct pp_lexer *after, enum pp_type type);
 int pp_token_valcmp(struct pp_token *left, const char *value);
 
 void pp_token_getval(struct pp_token *token, char *buffer);
+
+static inline 
+line_num_t
+pp_token_line(struct pp_token *token)
+{
+        return token->line;
+}
 
 void pp_token_destroy(struct pp_token *token);
 

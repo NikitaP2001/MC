@@ -45,6 +45,11 @@ struct pp_node {
 struct pp_node*
 pp_node_create(enum pp_node_type type);
 
+/* all node resources are transited to @dest,
+ * @dest is inserted into the list, instead @src 
+ * @dest original list integrity is not preserved */ 
+void pp_node_move(struct pp_node *dest, struct pp_node *src);
+
 void 
 pp_node_destroy(struct pp_node *node);
 

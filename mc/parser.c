@@ -151,7 +151,6 @@ static void parser_first_prod_get(struct parser *ps,
 {
         enum parser_symbol sym_dv;
 
-        enum parser_symbol src = pr->source;
         for (size_t i_sym = 0; i_sym < pr->n_deriv; i_sym++) {
                 sym_dv = pr->derivation[i_sym];
                 if (parser_symbol_is_terminal(sym_dv) 
@@ -160,7 +159,7 @@ static void parser_first_prod_get(struct parser *ps,
                         break;
                 } 
                 /* no left recursion */
-                assert(sym_dv != src);
+                assert(sym_dv != pr->source);
                 struct parser_symbol_set *dv_first 
                         = parser_first_get(ps, sym_dv);
                 assert(dv_first != NULL);

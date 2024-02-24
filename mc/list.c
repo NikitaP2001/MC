@@ -35,14 +35,16 @@ static inline
 void _list_replace_range(struct list_head *r1_f, struct list_head *r1_l,
                         struct list_head *r2_f, struct list_head *r2_l)
 {
-        struct list_head *r1_pre = r1_f->prev;
-        struct list_head *r1_post = r1_l->next;
+        struct list_head *r1_pre = list_prev(r1_f);
+        struct list_head *r1_post = list_next(r1_l);
         if (r1_pre)
-                r1_pre->next = r2_f;
-        r2_f->prev = r1_pre;
+                list_setnext(r1_pre, r2_f);
+        list_setprev(r1_f, NULL);
+        list_setprev(r2_f, r1_pre);
         if (r1_post)
-                r1_post->prev = r2_l;
-        r2_l->next = r1_post; 
+                list_setprev(r1_post, r2_l);
+        list_setnext(r1_l, NULL);
+        list_setnext(r2_l, r1_post);
 }
 
 void list_replace_range(void *range1_first, void *range1_last,

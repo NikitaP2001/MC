@@ -4,6 +4,7 @@
 *.a
 *.swp
 *.png
+*.cc
 obj
 doc
 env.bat

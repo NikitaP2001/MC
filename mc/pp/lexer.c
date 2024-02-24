@@ -408,7 +408,7 @@ static void pp_lexer_reset(struct pp_lexer *pp)
 _Bool pp_lexer_init(struct pp_lexer *pp, struct fs_file *file)
 {
         if (file->content == NULL)
-                pp->pos = source_read(file);
+                pp->pos = fs_file_read(file);
         if (pp->pos == NULL)
                 return false;
         pp->src_file = file;
@@ -449,6 +449,7 @@ void pp_lexer_free(struct pp_lexer *pp)
 {
         if (pp->first != NULL)
                 pp_token_list_destroy(pp->first);
+        fs_release_file(pp->src_file);
 }
 
 

@@ -11,16 +11,25 @@ enum mc_status {
         MC_OPEN_FILE_FAIL = 5,
         MC_INVALID_PATH = 6,
         MC_UNKNOWN_CHAR = 7,
+        MC_SYNTAX_ERR   = 8,
+        MC_FILE_NOT_FOUND = 9,
+        MC_PARSE_ERROR = 10,
 };
 
 extern const char *mc_status_table[];
 
-#define MC_SUCC(status) (status == 0)
+static inline _Bool __mc_succ(enum mc_status status)
+{
+        return (status == 0);
+}
+#define MC_SUCC(status) __mc_succ(status)
 
 static inline const char *mc_str_status(int status)
 {
         return mc_status_table[status];
 }
+
+typedef size_t file_size_t;
 
 enum MC_LOG_LEVEL {
         MC_FATAL = 0,
@@ -46,5 +55,7 @@ const char* mc_get_log_fmt(enum MC_LOG_LEVEL loglevel);
 #define MC_LOG(...) do {} while (0)
 
 #endif /* DEBUG */
+
+#define UNUSED(var) (void)(var)
 
 #endif /* _MC_H_ */
