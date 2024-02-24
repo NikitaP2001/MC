@@ -104,7 +104,7 @@ static void fs_file_destroy(struct fs_file *file)
                 free(file->content);
         if (file->use_count != 0)
                 MC_LOG(MC_WARN, "file %s was not released", file->path);
-        assert(file->use_count != 0);
+        assert(file->use_count == 0);
         free(file->path);
         free(file);
 }

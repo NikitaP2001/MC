@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 #include <time.h>
 #include <assert.h>
 
@@ -8,6 +7,7 @@
 #include <sys/stat.h>
 
 #include <fs.h>
+#include <test_common.h>
 
 #define DIR_NAME "testdir"
 #define TFILE_NAME "file.cc"
@@ -27,25 +27,12 @@ void rm_dir(const char *name)
 {
         rmdir(name);
 }
-static _Bool 
-write_file(const char *file_name, const char *content, size_t length)
-{
-        _Bool result = false;
-        FILE *fp = fopen(file_name, "wb");
-        if (fp != NULL) {
-                fwrite(content, sizeof(char), length, fp);
-
-                result = ferror(fp) == 0;
-                fclose(fp);
-        }
-        return result; 
-}
 
 static void fs_read_unk_charset()
 {
         const char file_name[] = "src.ctt";
         const char test_text[] = "This is - \x02 an unknown char!\n";
-        write_file(file_name, test_text, sizeof(test_text) - 1);
+        write_file(file_name, test_text, LEN_OF(test_text));
         struct filesys pr = {0};
         fs_init(&pr);
         fs_add_local(&pr, "./");
@@ -64,7 +51,7 @@ static void fs_read_no_end_newline()
         const char *file_name = "src.ctt";
         const char test_text[] = "No newline \nthere";
         const char exp_test[] = "No newline \nthere\n";
-        write_file(file_name, test_text, sizeof(test_text) - 1);
+        write_file(file_name, test_text, LEN_OF(test_text));
         struct filesys pr = {0};
         fs_init(&pr);
         fs_add_local(&pr, "./");
@@ -81,7 +68,7 @@ static void fs_read_end_newline()
         const char *file_name = "src.ctt";
         const char test_text[] = "There is a newline \nthere\n";
         const char exp_test[] = "There is a newline \nthere\n";
-        write_file(file_name, test_text, sizeof(test_text) - 1);
+        write_file(file_name, test_text, LEN_OF(test_text));
         struct filesys pr = {0};
         fs_init(&pr);
         fs_add_local(&pr, "./");
@@ -98,7 +85,7 @@ static void fs_read_empty()
         const char *file_name = "src.ctt";
         const char test_text[] = "";
         const char exp_test[] = "";
-        write_file(file_name, test_text, sizeof(test_text) - 1);
+        write_file(file_name, test_text, LEN_OF(test_text));
         struct filesys pr = {0};
         fs_init(&pr);
         fs_add_local(&pr, "./");

@@ -56,7 +56,7 @@ pp_file_parse(struct pp_context *pp, char *file_name, bool is_global)
                 return NULL;
         }
 
-        pp_lexer_init(&lex, src);
+        assert(pp_lexer_init(&lex, src));
         struct pp_token *token = NULL;
         while ((token = pp_lexer_get_token(&lex)))
                 pp_lexer_add_token(&lex, token);
@@ -115,8 +115,6 @@ static void pp_include_on_node(struct pp_context *pp,
         struct pp_node *last_gr_part = new_gr->last_descendant;
         new_gr->last_descendant = NULL;
 
-        //_Bool is_single_node = list_has_next(first_gr_part);
-
         /* for translation unit root structure */
         struct pp_node *pp_root = pp->root_file;
         struct pp_node *pp_gr = pp_root->first_descendant;
@@ -133,21 +131,9 @@ static void pp_include_on_node(struct pp_context *pp,
         struct pp_token *new_leftmost = pp_node_leftmost_leaf(first_gr_part);
         struct pp_token *new_rightmost = pp_node_rightmost_leaf(last_gr_part);
         
-        //struct pp_token *n_prev = list_prev(gr_part);
-        //struct pp_token *n_next = list_next(gr_part);
         assert(!list_has_prev(first_gr_part) && !list_has_next(last_gr_part));
         list_replace_range(gr_part, gr_part, first_gr_part, last_gr_part);
         pp_set_pos(pp, first_gr_part);
-
-        //pp_node_move(gr_part, first_gr_part);
-        //pp_node_destroy(first_gr_part);
-        /* restore copied from firt_gr_part link prev*/
-        //list_setprev(gr_part, n_prev);
-
-        /* are not first and last group part a single node 
-         * in other case next link is already set on move */
-        //if (is_single_node) 
-                //list_setnext(last_gr_part, n_next);
 
         list_replace_range(leftmost, rightmost, new_leftmost, new_rightmost);
         list_destroy_range(leftmost, rightmost, (list_free)pp_token_destroy);

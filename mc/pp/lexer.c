@@ -7,10 +7,8 @@
 #include <pp/lexer.h>
 #include <pp/token.h>
 
-/* Todo:
+/* TODO:
  * - replace pp->pos != '\0' with pp_eof inline */
-
-
 
 static void pp_seterror(struct pp_lexer *pp)
 {
