@@ -1,6 +1,7 @@
 #ifndef _MC_H_
 #define _MC_H_
 #include <stdio.h>
+#include <stdint.h>
 
 enum mc_status {
         MC_OK = 0,
@@ -29,7 +30,7 @@ static inline const char *mc_str_status(int status)
         return mc_status_table[status];
 }
 
-typedef size_t file_size_t;
+typedef long unsigned int file_size_t;
 
 enum MC_LOG_LEVEL {
         MC_FATAL = 0,
