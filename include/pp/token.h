@@ -30,7 +30,7 @@ struct pp_token {
          * free the fs module 
          * TODO: store file pos instead of pointer */
         char *value;
-        size_t length;
+        file_size_t length;
 
 
         /* counts backslashes also, for internal use */

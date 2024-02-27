@@ -380,7 +380,7 @@ static inline void pp_fetch_punctuator(struct pp_lexer *pp)
                 "<", ">", "^", "|", ":", "=",
                 "#", ","
         };
-
+        /* TODO: speed up this search */
         for (size_t pi = 0; pi < sizeof(str_punct) / sizeof(char *); pi++) {
                 if (pp_isstr(pp, str_punct[pi])) {
                         pp_advance(pp, strlen(str_punct[pi]));
@@ -455,7 +455,7 @@ struct pp_token *pp_lexer_get_token(struct pp_lexer *pp)
 {
         struct pp_token *token = NULL;
 
-        while (pp_skipspace(pp) && pp_skipcomment(pp));
+        while (pp_skipspace(pp) || pp_skipcomment(pp));
         struct pp_lexer pp_save = *pp;
 
         /* header name */

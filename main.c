@@ -6,21 +6,7 @@
 #include <mc.h>
 #include <pp.h>
 #include <parser.h>
-
-enum token_type {
-        tok_keyword,
-        tok_identifier,
-        tok_constant,
-        tok_strlit,
-        tok_punctuator
-};
-
-struct token {
-        struct list_head link;
-        enum token_type type;
-
-
-};
+#include <token.h>
 
 static inline 
 struct pp_node*
@@ -284,6 +270,8 @@ int main()
         fs_add_global(&fs, "/usr/include"); 
         fs_add_global(&fs, "./include"); 
         fs_add_global(&fs, "/usr/lib/gcc/x86_64-linux-gnu/9/include/"); 
+        fs_add_global(&fs, "B:/Install/MinGW/mingw64/x86_64-w64-mingw32/include"); 
+        fs_add_global(&fs, "B:/Install/MinGW/mingw64/lib/gcc/x86_64-w64-mingw32/12.1.0/include"); 
 
         pp_init(&pp, &fs);
 

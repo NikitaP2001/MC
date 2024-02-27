@@ -1,3 +1,5 @@
+#ifndef _PP_NODE_H_
+#define _PP_NODE_H_
 #include <stdbool.h>
 
 #include <list.h>
@@ -63,3 +65,5 @@ struct pp_token *pp_node_rightmost_leaf(struct pp_node *node);
 
 _Bool
 pp_node_file_insert(struct pp_node *file, struct pp_node *node);
+
+#endif

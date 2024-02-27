@@ -1,6 +1,6 @@
 MODULE := mc.a
 DEPS := fs/fs.a pp/pp.a
 
-SRC = list.c mc.c parser.c
+SRC = list.c mc.c parser.c token.c
 
 include $(BLDRULES)
