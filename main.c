@@ -262,6 +262,7 @@ void pp_free(struct pp_context *pp)
 
 int main()
 {
+        mc_init();
         struct filesys fs;
         struct pp_context pp;
 

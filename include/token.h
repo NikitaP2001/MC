@@ -47,6 +47,8 @@ enum token_type {
         tok_punctuator
 };
 
+
+
 enum keyword_type {
         keyw_auto,
         keyw_enum,
@@ -84,7 +86,9 @@ enum keyword_type {
         keyw_typedef,
         keyw_else,
         keyw_register,
-        keyw_union
+        keyw_union,
+        keyw_last = keyw_union,
+        keyw_invalid
 };
 
 union token_value {
@@ -115,10 +119,6 @@ struct token {
 
 };
 
-/* creates token, which value is based on preprocessing token range 
- * Also, convertation to execution character is performed */
-struct token *token_create(struct pp_token *first, struct pp_token *last);
-
 void token_destroy(struct token *tok);
 
 /* this implements convertation described in C99 standart 
@@ -136,5 +136,8 @@ void token_destroy(struct token *tok);
  * White-space characters separating tokens are no longer significant. Each 
  * preprocessing token is converted into a token. */
 struct token *token_convert(struct pp_context *pp);
+
+/* one time initialization of the token module */
+void token_init();
 
 #endif /* _TOKEN_H_ */

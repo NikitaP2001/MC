@@ -59,4 +59,13 @@ const char* mc_get_log_fmt(enum MC_LOG_LEVEL loglevel);
 
 #define UNUSED(var) (void)(var)
 
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+#endif
+
+/* one time initialization of the compiler module */
+void mc_init();
+
+_Bool mc_isinit();
+
 #endif /* _MC_H_ */

@@ -1,4 +1,5 @@
 #include <mc.h>
+#include <token.h>
 
 const char *mc_status_table[] = {
         "no error",
@@ -30,4 +31,20 @@ const char* mc_get_log_fmt(enum MC_LOG_LEVEL loglevel)
         default:
                 return "%s.%d: ";
         }
+}
+
+static _Bool mc_is_init = false;
+
+void mc_init()
+{
+        if (!mc_is_init) {
+                token_init();
+                mc_is_init = true;
+        }
+        
+}
+
+_Bool mc_isinit()
+{
+        return mc_is_init;
 }
