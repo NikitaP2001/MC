@@ -3,6 +3,24 @@
 #include <mc.h>
 #include <pp.h>
 
+/* escape type do not match expected, but, in general,
+ * is valid. */
+#define TOKEN_ESCAPE_UNMATCH -2
+/* general parse error, we will abort translation*/
+#define TOKEN_ERROR -1
+
+#define TOKEN_SUCC(status) (status >= 0)
+
+#define TOKEN_STRL_MIN_LEN 2
+#define TOKEN_WSTRL_MIN_LEN 3
+
+#define TOKEN_OCTAL_BASE 8
+#define TOKEN_OCTAL_ESC_LEN 3
+#define TOKEN_HEX_BASE 0xF
+#define TOKEN_HEX_ESC_LEN 8
+/* maximum characters for single escape chars */
+#define TOKEN_ESC_VAL_MAX_LEN 4
+
 enum constant_type {
 
         /* integer-constant */
@@ -96,7 +114,6 @@ union token_value {
         enum keyword_type var_keyw;
 
         struct {
-                _Bool alloc_value;
                 char *value;
                 file_size_t length;
         } var_raw;

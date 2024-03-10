@@ -71,4 +71,6 @@ pp_token_list_destroy(struct pp_token *token)
 /* reading next characted from token list */
 char pp_token_read_next(struct pp_token **token, uint32_t *pos);
 
+void token_error(struct pp_token *pp, const char *format, ...);
+
 #endif /* _PP_TOKEN_H_ */

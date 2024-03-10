@@ -17,6 +17,10 @@ enum mc_status {
         MC_PARSE_ERROR = 10,
 };
 
+#define _IN
+#define _OUT
+#define _INOUT
+
 extern const char *mc_status_table[];
 
 static inline _Bool __mc_succ(enum mc_status status)

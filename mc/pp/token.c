@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <stdarg.h>
 
 #include <pp/token.h>
 #include <pp/lexer.h>
@@ -79,4 +80,12 @@ void pp_token_destroy(struct pp_token *token)
         free(token);
 }
 
-
+void token_error(struct pp_token *pp, const char *format, ...)
+{
+        UNUSED(pp);
+        va_list args;
+        va_start(args, format);
+        vprintf(format, args);
+        putchar('\n');
+        va_end(args);
+}
