@@ -16,7 +16,7 @@
 
 #define TOKEN_OCTAL_BASE 8
 #define TOKEN_OCTAL_ESC_LEN 3
-#define TOKEN_HEX_BASE 0xF
+#define TOKEN_HEX_BASE 0x10
 #define TOKEN_HEX_ESC_LEN 8
 /* maximum characters for single escape chars */
 #define TOKEN_ESC_VAL_MAX_LEN 4
@@ -45,6 +45,8 @@ enum constant_type {
         const_wchar_t
 
 };
+
+extern const char token_simple_esc_chars[];
 
 struct constant_value {
         enum constant_type type;

@@ -4,8 +4,8 @@
 #include <assert.h>
 
 #include <list.h>
-#include <pp/lexer.h>
-#include <pp/token.h>
+#include <pp.h>
+#include <token.h>
 
 /* TODO:
  * - replace pp->pos != '\0' with pp_eof inline */
@@ -86,8 +86,7 @@ static _Bool pp_isstr(struct pp_lexer *pp, const char *str)
         return result; 
 }
 
-
-static _Bool pp_is_one_of(char one, const char *of)
+int pp_is_one_of(char one, const char *of)
 {
         int of_len = strlen(of);
         _Bool result = false;
@@ -284,7 +283,7 @@ static void pp_fetch_escape_seq(struct pp_lexer *pp)
 {
         if (pp->pos[0] == '\\') {
                 pp_advance(pp, 1);
-                if (pp_is_one_of(*pp->pos, "'\"?\\abfnrtv")) {
+                if (pp_is_one_of(*pp->pos, token_simple_esc_chars)) {
                         pp_advance(pp, 1);
                         return;
                 }
@@ -299,20 +298,16 @@ static void pp_fetch_escape_seq(struct pp_lexer *pp)
                 }
 
                 if (pp->pos[0] == 'x') {
-                        if (pp_ishex(*pp->pos)) {
+                        if (pp_ishex(pp->pos[1])) {
                                 pp_advance(pp, 1);
                                 while (pp_ishex(*pp->pos))
                                         pp_advance(pp, 1);
                                 return;
                         }
                 }
-        }
-
-        pp_fetch_univ_char_name(pp);
-        if (pp_lexer_noerror(pp))
-                return;
-
-        pp_seterror(pp);
+                pp_seterror(pp);
+        } else
+                pp_seterror(pp);
 }
 
 
@@ -330,8 +325,12 @@ static void pp_fetch_quotation(struct pp_lexer *pp, char qchar)
                         pp_fetch_escape_seq(pp);
                         if (pp_lexer_noerror(pp))
                                 continue;
-                        else
-                                *pp = pp_save;
+
+                        *pp = pp_save;
+                        pp_fetch_univ_char_name(pp);
+                        if (pp_lexer_noerror(pp))
+                                continue;
+                        *pp = pp_save;
 
                         if (pp->pos[0] == '\\' || pp->pos[0] == '\0') {
                                 pp_seterror(pp);
