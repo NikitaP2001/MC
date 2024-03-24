@@ -89,13 +89,12 @@ static _Bool pp_isstr(struct pp_lexer *pp, const char *str)
 int pp_is_one_of(char one, const char *of)
 {
         int of_len = strlen(of);
-        _Bool result = false;
+        int result = 0;
         for (int i = 0; i < of_len; i++) {
                 if (one == of[i]) {
-                        result = true;
+                        result = i + 1;
                         break;
                 }
-                        
         }
         return result;
 }

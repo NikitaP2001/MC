@@ -105,7 +105,7 @@ TEST_CASE(lexer, str_lit_oneline)
         CHECK_NEXT_TOKEN(lex, pp_str_lit, "\"1 line\"");
         CHECK_NEXT_TOKEN(lex, pp_other, "\n");
         CHECK_NEXT_TOKEN(lex, pp_str_lit, "\"2 line\"");
-        CHECK_NEXT_TOKEN(lex, pp_str_lit, "\\U00023456");
+        CHECK_NEXT_TOKEN(lex, pp_str_lit, "\"\\U00023456\"");
 
         pp_lexer_free(&lex);
         fs_free(&fs);

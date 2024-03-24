@@ -99,7 +99,7 @@ static inline _Bool token_is_wstr(struct pp_token *strlit)
 }
 
 const char token_simple_esc_chars[] = "'\"?\\abfnrtv";
-const char token_simple_esc_vals[] = "\'\"\?\a\b\f\n\r\t\v";
+const char token_simple_esc_vals[] = "\'\"\?\\\a\b\f\n\r\t\v";
 
 static int64_t token_simple_esc_value(const char *value, size_t *pos)
 {

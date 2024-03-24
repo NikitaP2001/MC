@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <assert.h>
 
 #include <unistd.h>
 #include <sys/stat.h>
@@ -10,7 +9,6 @@
 #include <test_common.h>
 
 #define DIR_NAME "testdir"
-#define TFILE_NAME "file.cc"
 
 static inline 
 void create_dir(const char *name)
@@ -28,7 +26,7 @@ void rm_dir(const char *name)
         rmdir(name);
 }
 
-static void fs_read_unk_charset()
+TEST_CASE(fs, read_unk_charset)
 {
         const char file_name[] = "src.ctt";
         const char test_text[] = "This is - \x02 an unknown char!\n";
@@ -38,15 +36,15 @@ static void fs_read_unk_charset()
         fs_add_local(&pr, "./");
         struct fs_file *src = fs_get_local(&pr, file_name);
         const char *srctext = fs_file_read(src);
-        assert(srctext == NULL);
+        ASSERT_EQ(srctext, NULL);
         UNUSED(srctext);
-        assert(fs_file_lasterr(src) == MC_UNKNOWN_CHAR);
+        ASSERT_EQ(fs_file_lasterr(src), MC_UNKNOWN_CHAR);
         fs_release_file(src);
         fs_free(&pr);
         remove(file_name);
 }
 
-static void fs_read_no_end_newline()
+TEST_CASE(fs, read_no_end_newline)
 {
         const char *file_name = "src.ctt";
         const char test_text[] = "No newline \nthere";
@@ -57,13 +55,13 @@ static void fs_read_no_end_newline()
         fs_add_local(&pr, "./");
         struct fs_file *src = fs_get_local(&pr, file_name);
         const char *srctext = fs_file_read(src);
-        assert(strcmp(exp_test, srctext) == 0);
+        ASSERT_EQ(strcmp(exp_test, srctext), 0);
         fs_release_file(src);
         fs_free(&pr);
         remove(file_name);
 }
 
-static void fs_read_end_newline()
+TEST_CASE(fs, read_end_newline)
 {
         const char *file_name = "src.ctt";
         const char test_text[] = "There is a newline \nthere\n";
@@ -74,13 +72,13 @@ static void fs_read_end_newline()
         fs_add_local(&pr, "./");
         struct fs_file *src = fs_get_local(&pr, file_name);
         const char *srctext = fs_file_read(src);
-        assert(strcmp(exp_test, srctext) == 0);
+        ASSERT_EQ(strcmp(exp_test, srctext), 0);
         fs_release_file(src);
         fs_free(&pr);
         remove(file_name);
 }
 
-static void fs_read_empty()
+TEST_CASE(fs, read_empty)
 {
         const char *file_name = "src.ctt";
         const char test_text[] = "";
@@ -91,43 +89,43 @@ static void fs_read_empty()
         fs_add_local(&pr, "./");
         struct fs_file *src = fs_get_local(&pr, file_name);
         const char *srctext = fs_file_read(src);
-        assert(strcmp(exp_test, srctext) == 0);
+        ASSERT_EQ(strcmp(exp_test, srctext), 0);
         fs_release_file(src);
         fs_free(&pr);
         remove(file_name);
 }
 
-static void fs_add_dir()
+TEST_CASE(fs, add_dir)
 {
         create_dir(DIR_NAME);
         struct filesys pr = {0};
         fs_init(&pr);
 
         fs_add_local(&pr, DIR_NAME);
-        assert(MC_SUCC(fs_lasterr(&pr)));
+        ASSERT_TRUE(MC_SUCC(fs_lasterr(&pr)));
         fs_add_global(&pr, DIR_NAME);
-        assert(MC_SUCC(fs_lasterr(&pr)));
+        ASSERT_TRUE(MC_SUCC(fs_lasterr(&pr)));
 
         fs_free(&pr);
         rm_dir(DIR_NAME);
 }
 
-static void fs_get_file_local()
+TEST_CASE(fs, get_file_local)
 {
         struct filesys pr = {0};
         fs_init(&pr);
         fs_add_local(&pr, "./");
         write_file(TFILE_NAME, "", sizeof(""));
         struct fs_file *found = fs_get_global(&pr, "no_such_file.c");
-        assert(found == NULL);
+        ASSERT_EQ(found, NULL);
         found = fs_get_local(&pr, TFILE_NAME);
-        assert(found != NULL);
+        ASSERT_NE(found, NULL);
         fs_release_file(found);
         fs_free(&pr);
         remove(TFILE_NAME);
 }
 
-static void fs_two_local_dirs()
+TEST_CASE(fs, two_local_dirs)
 {
         struct filesys pr = {0};
         fs_init(&pr);
@@ -135,15 +133,15 @@ static void fs_two_local_dirs()
         fs_add_local(&pr, DIR_NAME);
         fs_add_local(&pr, "./");
         struct fs_file *found = fs_get_global(&pr, TFILE_NAME);
-        assert(found == NULL);
+        ASSERT_EQ(found, NULL);
         found = fs_get_local(&pr, TFILE_NAME);
-        assert(found != NULL);
+        ASSERT_NE(found, NULL);
         fs_release_file(found);
         fs_free(&pr);
         remove(TFILE_NAME);
 }
 
-static void fs_two_global_dirs()
+TEST_CASE(fs, two_global_dirs)
 {
         struct filesys pr = {0};
         fs_init(&pr);
@@ -151,50 +149,48 @@ static void fs_two_global_dirs()
         fs_add_global(&pr, DIR_NAME);
         fs_add_global(&pr, "./");
         struct fs_file *found = fs_get_global(&pr, TFILE_NAME);
-        assert(found != NULL);
+        ASSERT_NE(found, NULL);
         fs_release_file(found);
         fs_free(&pr);
         remove(TFILE_NAME);
 }
 
-static void fs_get_file_global()
+TEST_CASE(fs, get_file_global)
 {
         struct filesys pr = {0};
         fs_init(&pr);
         fs_add_global(&pr, "./");
         write_file(TFILE_NAME, "", sizeof(""));
         struct fs_file *found = fs_get_global(&pr, TFILE_NAME);
-        assert(found != NULL);
+        ASSERT_NE(found, NULL);
         fs_release_file(found);
         found = fs_get_local(&pr, TFILE_NAME);
-        assert(found != NULL);
+        ASSERT_NE(found, NULL);
         fs_release_file(found);
         fs_free(&pr);
         remove(TFILE_NAME);
 }
 
-static void fs_get_file_notexist()
+TEST_CASE(fs, get_file_notexist)
 {
         struct filesys pr = {0};
         fs_init(&pr);
         fs_add_local(&pr, "./");
         struct fs_file *src = fs_get_local(&pr, TFILE_NAME);
-        assert(src == NULL);
+        ASSERT_EQ(src, NULL);
         fs_free(&pr);
 }
 
 int main()
 {
-        puts("FS TESTS STARTED");
-        fs_read_unk_charset();
-        fs_read_no_end_newline();
-        fs_read_end_newline();
-        fs_read_empty();
-        fs_add_dir();
-        fs_get_file_local();
-        fs_two_local_dirs();
-        fs_two_global_dirs();
-        fs_get_file_global();
-        fs_get_file_notexist();
-        puts("FS TESTS FINISHED OK");
+        TEST_RUN(fs, read_unk_charset);
+        TEST_RUN(fs, read_no_end_newline);
+        TEST_RUN(fs, read_end_newline);
+        TEST_RUN(fs, read_empty);
+        TEST_RUN(fs, add_dir);
+        TEST_RUN(fs, get_file_local);
+        TEST_RUN(fs, two_local_dirs);
+        TEST_RUN(fs, two_global_dirs);
+        TEST_RUN(fs, get_file_global);
+        TEST_RUN(fs, get_file_notexist);
 }
