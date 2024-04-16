@@ -2,6 +2,8 @@
 #define _TOKEN_H_
 #include <mc.h>
 #include <pp.h>
+#include <tools.h>
+#include <token/convert.h>
 
 /* escape type do not match expected, but, in general,
  * is valid. */
@@ -37,8 +39,6 @@ enum constant_type {
         const_double,
         const_long_double,
 
-        const_enum,
-
         /* int type */
         const_char,
         /* could be represented by int */
@@ -66,8 +66,6 @@ enum token_type {
         tok_strlit,
         tok_punctuator
 };
-
-
 
 enum keyword_type {
         keyw_auto,
@@ -111,13 +109,81 @@ enum keyword_type {
         keyw_invalid
 };
 
+#define TOKEN_MAX_PUNC_LEN 3
+
+extern uint8_t token_punc_table[PEARSON_TABLE_SIZE];
+extern const char *token_punctuators[];
+
+enum punc_type {
+        punc_digraph_double_hash,
+        punc_dots,
+        punc_shl_assign,
+        punc_shr_assigh,
+        
+        punc_right_arrow,
+        punc_increment,
+        punc_decrement,
+        punc_shl,
+        punc_shr,
+        punc_less_eq,
+        punc_greater_eq,
+        punc_equal,
+        punc_not_equal,
+        punc_logical_and,
+        punc_logical_or,
+        punc_mul_assign,
+        punc_div_assign,
+        punc_mod_assign,
+        punc_add_assign,
+        punc_sub_assign,
+        punc_and_assign,
+        punc_xor_assign,
+        punc_or_assign,
+        punc_double_hash,
+        punc_digraph_left_sq_br,
+        punc_digraph_right_sq_br,
+        punc_digraph_left_ql_br,
+        punc_digraph_right_ql_br,
+        punc_digraph_hash,
+
+        punc_dot,
+        punc_exclamation,
+        punc_sub,
+        punc_add,
+        punc_mul,
+        punc_bit_and,
+        punc_less,
+        punc_greater,
+        punc_xor,
+        punc_bar,
+        punc_colon,
+        punc_assign,
+        punc_hash,
+        punc_comma,
+        punc_semicolon,
+        punc_question,
+        punc_left_sq_br,
+        punc_right_sq_br,
+        punc_right_rnd_br,
+        punc_left_rnd_br,
+        punc_left_ql_br,
+        punc_right_ql_br,
+        punc_tilde,
+        punc_forward_slash,
+        punc_percent,
+
+        punc_invalid,
+};
+
 union token_value {
 
         enum keyword_type var_keyw;
+        enum punc_type var_punc;
 
         struct {
                 char *value;
                 file_size_t length;
+                _Bool is_alloc;
         } var_raw;
 
         struct constant_value var_const;
@@ -140,21 +206,7 @@ struct token {
 
 void token_destroy(struct token *tok);
 
-/* this implements convertation described in C99 standart 
- * with the following steps:
- *
- * Each source character set member and escape sequence 
- * in character constants and string literals is converted 
- * to the corresponding member of the execution character 
- * set; if there is no corresponding member, it is converted
- * to an implementation-defined member other than the null 
- * (wide) character.
- *
- * Adjacent string literal tokens are concatenated. 
- * 
- * White-space characters separating tokens are no longer significant. Each 
- * preprocessing token is converted into a token. */
-struct token *token_convert(struct pp_context *pp);
+struct token* token_convert_next(struct convert_context *ctx);
 
 /* one time initialization of the token module */
 void token_init();

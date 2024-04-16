@@ -5,11 +5,129 @@
 #include <token.h>
 #include <test_common.h>
 
+#define RAW_VAL_CMP(token, t_val)                             \
+{                                                             \
+     EXPECT_EQ(token->type, tok_identifier);                  \
+     EXPECT_EQ(token->value.var_raw.length, LEN_OF(t_val));   \
+     EXPECT_EQ(memcmp(token->value.var_raw.value, t_val,      \
+          LEN_OF(t_val)), 0);                                 \
+}
+
+TEST_CASE(token, punct_seq)
+{
+     mc_init();
+     struct filesys fs;
+     struct pp_context pp;
+     struct convert_context ctx;
+     fs_init(&fs);
+     fs_add_local(&fs, "./");
+     pp_init(&pp, &fs);
+
+     const char test[] = "; [] <<= ; +=";
+     ASSERT_TRUE(write_file(TFILE_NAME, test, LEN_OF(test)));
+     enum mc_status status = pp_run(&pp, TFILE_NAME);
+     ASSERT_TRUE(MC_SUCC(status));
+
+     convert_init(&ctx, &pp);
+     ASSERT_TRUE(MC_SUCC(convert_run(&ctx)));
+     struct token *tok = convert_get_token(&ctx);
+     ASSERT_EQ(tok->type, tok_punctuator);
+     ASSERT_EQ(tok->value.var_punc, punc_semicolon)
+
+     tok = list_next(tok);
+     ASSERT_EQ(tok->type, tok_punctuator);
+     ASSERT_EQ(tok->value.var_punc, punc_left_sq_br);
+
+     tok = list_next(tok);
+     ASSERT_EQ(tok->type, tok_punctuator);
+     ASSERT_EQ(tok->value.var_punc, punc_right_sq_br);
+
+     tok = list_next(tok);
+     ASSERT_EQ(tok->type, tok_punctuator);
+     ASSERT_EQ(tok->value.var_punc, punc_shl_assign);
+
+     tok = list_next(tok);
+     ASSERT_EQ(tok->type, tok_punctuator);
+     ASSERT_EQ(tok->value.var_punc, punc_semicolon);
+
+     tok = list_next(tok);
+     ASSERT_EQ(tok->type, tok_punctuator);
+     ASSERT_EQ(tok->value.var_punc, punc_add_assign);
+     
+     convert_free(&ctx);
+     pp_free(&pp);
+     fs_free(&fs);
+     remove(TFILE_NAME);
+}
+
+TEST_CASE(token, invalid_token_identifier)
+{
+     mc_init();
+     struct filesys fs;
+     struct pp_context pp;
+     struct convert_context ctx;
+     fs_init(&fs);
+     fs_add_local(&fs, "./");
+
+     pp_init(&pp, &fs);
+
+     const char test[] = "\\u0032ident";
+     ASSERT_TRUE(write_file(TFILE_NAME, test, LEN_OF(test)));
+     enum mc_status status = pp_run(&pp, TFILE_NAME);
+     ASSERT_TRUE(MC_SUCC(status));
+
+     convert_init(&ctx, &pp);
+     ASSERT_FALSE(MC_SUCC(convert_run(&ctx)));
+     struct token *tok = convert_get_token(&ctx);
+     ASSERT_EQ(tok, NULL);
+     
+     convert_free(&ctx);
+     pp_free(&pp);
+     fs_free(&fs);
+     remove(TFILE_NAME);
+}
+
+TEST_CASE(token, valid_token_sequence)
+{
+     mc_init();
+     struct filesys fs;
+     struct pp_context pp;
+     struct convert_context ctx;
+     fs_init(&fs);
+     fs_add_local(&fs, "./");
+
+     pp_init(&pp, &fs);
+
+     const char test[] = "ident1 char ident\\u0032";
+     ASSERT_TRUE(write_file(TFILE_NAME, test, LEN_OF(test)));
+     enum mc_status status = pp_run(&pp, TFILE_NAME);
+     ASSERT_TRUE(MC_SUCC(status));
+
+     convert_init(&ctx, &pp);
+     ASSERT_FALSE(MC_SUCC(convert_run(&ctx)));
+     struct token *tok = convert_get_token(&ctx);
+     ASSERT_NE(tok, NULL);
+     RAW_VAL_CMP(tok, "ident1");
+
+     tok = (struct token *)list_next(tok);
+     EXPECT_EQ(tok->type, tok_keyword);
+     EXPECT_EQ(tok->value.var_keyw, keyw_char);
+
+     tok = (struct token *)list_next(tok);
+     RAW_VAL_CMP(tok, "ident\x32");
+
+     convert_free(&ctx);
+     pp_free(&pp);
+     fs_free(&fs);
+     remove(TFILE_NAME);
+}
+
 TEST_CASE(token, wstrl_uchr_names)
 {
      mc_init();
      struct filesys fs;
      struct pp_context pp;
+     struct convert_context ctx;
      fs_init(&fs);
      fs_add_local(&fs, "./");
 
@@ -24,11 +142,15 @@ TEST_CASE(token, wstrl_uchr_names)
      enum mc_status status = pp_run(&pp, TFILE_NAME);
      ASSERT_TRUE(MC_SUCC(status));
 
-     struct token *tok = token_convert(&pp);
+     convert_init(&ctx, &pp);
+     ASSERT_FALSE(MC_SUCC(convert_run(&ctx)));
+     struct token *tok = convert_get_token(&ctx);
      ASSERT_NE(tok, NULL);
      EXPECT_EQ(tok->type, tok_strlit);
      EXPECT_EQ(tok->value.var_raw.length, sizeof(res));
      EXPECT_STR_EQ(tok->value.var_raw.value, (char*)res);
+
+     convert_free(&ctx);
      pp_free(&pp);
      fs_free(&fs);
      remove(TFILE_NAME);
@@ -39,6 +161,7 @@ TEST_CASE(token, strl_uchr_names)
      mc_init();
      struct filesys fs;
      struct pp_context pp;
+     struct convert_context ctx;
      fs_init(&fs);
      fs_add_local(&fs, "./");
 
@@ -53,11 +176,15 @@ TEST_CASE(token, strl_uchr_names)
      enum mc_status status = pp_run(&pp, TFILE_NAME);
      ASSERT_TRUE(MC_SUCC(status));
 
-     struct token *tok = token_convert(&pp);
+     convert_init(&ctx, &pp);
+     ASSERT_FALSE(MC_SUCC(convert_run(&ctx)));
+     struct token *tok = convert_get_token(&ctx);
      ASSERT_NE(tok, NULL);
      EXPECT_EQ(tok->type, tok_strlit);
      EXPECT_EQ(tok->value.var_raw.length, sizeof(res));
      EXPECT_STR_EQ(tok->value.var_raw.value, (char*)res);
+
+     convert_free(&ctx);
      pp_free(&pp);
      fs_free(&fs);
      remove(TFILE_NAME);
@@ -68,6 +195,7 @@ TEST_CASE(token, winteger_esc_seq)
      mc_init();
      struct filesys fs;
      struct pp_context pp;
+     struct convert_context ctx;
      fs_init(&fs);
      fs_add_local(&fs, "./");
 
@@ -81,12 +209,15 @@ TEST_CASE(token, winteger_esc_seq)
      enum mc_status status = pp_run(&pp, TFILE_NAME);
      ASSERT_TRUE(MC_SUCC(status));
 
-     struct token *tok = token_convert(&pp);
+     convert_init(&ctx, &pp);
+     ASSERT_FALSE(MC_SUCC(convert_run(&ctx)));
+     struct token *tok = convert_get_token(&ctx);
      ASSERT_NE(tok, NULL);
      EXPECT_EQ(tok->type, tok_strlit);
      EXPECT_EQ(tok->value.var_raw.length, sizeof(res));
      EXPECT_STR_EQ(tok->value.var_raw.value, (char*)res);
 
+     convert_free(&ctx);
      pp_free(&pp);
      fs_free(&fs);
      remove(TFILE_NAME);
@@ -97,6 +228,7 @@ TEST_CASE(token, integer_esc_seq)
      mc_init();
      struct filesys fs;
      struct pp_context pp;
+     struct convert_context ctx;
      fs_init(&fs);
      fs_add_local(&fs, "./");
 
@@ -109,12 +241,15 @@ TEST_CASE(token, integer_esc_seq)
      enum mc_status status = pp_run(&pp, TFILE_NAME);
      ASSERT_TRUE(MC_SUCC(status));
 
-     struct token *tok = token_convert(&pp);
+     convert_init(&ctx, &pp);
+     ASSERT_FALSE(MC_SUCC(convert_run(&ctx)));
+     struct token *tok = convert_get_token(&ctx);
      ASSERT_NE(tok, NULL);
      EXPECT_EQ(tok->type, tok_strlit);
      EXPECT_EQ(tok->value.var_raw.length, sizeof(res));
      EXPECT_STR_EQ(tok->value.var_raw.value, (char*)res);
 
+     convert_free(&ctx);
      pp_free(&pp);
      fs_free(&fs);
      remove(TFILE_NAME);
@@ -125,6 +260,7 @@ TEST_CASE(token, wsimple_esc_seq)
      mc_init();
      struct filesys fs;
      struct pp_context pp;
+     struct convert_context ctx;
      fs_init(&fs);
      fs_add_local(&fs, "./");
 
@@ -140,12 +276,15 @@ TEST_CASE(token, wsimple_esc_seq)
      enum mc_status status = pp_run(&pp, TFILE_NAME);
      ASSERT_TRUE(MC_SUCC(status));
 
-     struct token *tok = token_convert(&pp);
+     convert_init(&ctx, &pp);
+     ASSERT_FALSE(MC_SUCC(convert_run(&ctx)));
+     struct token *tok = convert_get_token(&ctx);
      ASSERT_NE(tok, NULL);
      EXPECT_EQ(tok->type, tok_strlit);
      EXPECT_EQ(tok->value.var_raw.length, sizeof(res));
      EXPECT_STR_EQ(tok->value.var_raw.value, (char*)res);
 
+     convert_free(&ctx);
      pp_free(&pp);
      fs_free(&fs);
      remove(TFILE_NAME);
@@ -156,6 +295,7 @@ TEST_CASE(token, simple_esc_seq)
      mc_init();
      struct filesys fs;
      struct pp_context pp;
+     struct convert_context ctx;
      fs_init(&fs);
      fs_add_local(&fs, "./");
 
@@ -170,12 +310,15 @@ TEST_CASE(token, simple_esc_seq)
      enum mc_status status = pp_run(&pp, TFILE_NAME);
      ASSERT_TRUE(MC_SUCC(status));
 
-     struct token *tok = token_convert(&pp);
+     convert_init(&ctx, &pp);
+     ASSERT_FALSE(MC_SUCC(convert_run(&ctx)));
+     struct token *tok = convert_get_token(&ctx);
      ASSERT_NE(tok, NULL);
      EXPECT_EQ(tok->type, tok_strlit);
      EXPECT_EQ(tok->value.var_raw.length, sizeof(res));
      EXPECT_STR_EQ(tok->value.var_raw.value, (char*)res);
 
+     convert_free(&ctx);
      pp_free(&pp);
      fs_free(&fs);
      remove(TFILE_NAME);
@@ -186,6 +329,7 @@ TEST_CASE(token, concat_strlit)
      mc_init();
      struct filesys fs;
      struct pp_context pp;
+     struct convert_context ctx;
      fs_init(&fs);
      fs_add_local(&fs, "./");
 
@@ -202,11 +346,15 @@ TEST_CASE(token, concat_strlit)
      enum mc_status status = pp_run(&pp, TFILE_NAME);
      ASSERT_TRUE(MC_SUCC(status));
 
-     struct token *tok = token_convert(&pp);
+     convert_init(&ctx, &pp);
+     ASSERT_FALSE(MC_SUCC(convert_run(&ctx)));
+     struct token *tok = convert_get_token(&ctx);
      ASSERT_NE(tok, NULL);
      EXPECT_EQ(tok->type, tok_strlit);
      EXPECT_EQ(tok->value.var_raw.length, sizeof(res));
      EXPECT_STR_EQ(tok->value.var_raw.value, (char*)res);
+
+     convert_free(&ctx);
      pp_free(&pp);
      fs_free(&fs);
      remove(TFILE_NAME);
@@ -217,6 +365,7 @@ TEST_CASE(token, concat_wstrlit)
      mc_init();
      struct filesys fs;
      struct pp_context pp;
+     struct convert_context ctx;
      fs_init(&fs);
      fs_add_local(&fs, "./");
 
@@ -236,12 +385,15 @@ TEST_CASE(token, concat_wstrlit)
      enum mc_status status = pp_run(&pp, TFILE_NAME);
      ASSERT_TRUE(MC_SUCC(status));
 
-     struct token *tok = token_convert(&pp);
+     convert_init(&ctx, &pp);
+     ASSERT_FALSE(MC_SUCC(convert_run(&ctx)));
+     struct token *tok = convert_get_token(&ctx);
      ASSERT_NE(tok, NULL);
      EXPECT_EQ(tok->type, tok_strlit);
      EXPECT_EQ(tok->value.var_raw.length, sizeof(res));
      EXPECT_STR_EQ(tok->value.var_raw.value, (char*)res);
 
+     convert_free(&ctx);
      pp_free(&pp);
      fs_free(&fs);
      remove(TFILE_NAME);
@@ -250,6 +402,9 @@ TEST_CASE(token, concat_wstrlit)
 
 int main()
 {
+     TEST_RUN(token, punct_seq);
+     TEST_RUN(token, invalid_token_identifier);
+     TEST_RUN(token, valid_token_sequence);
      TEST_RUN(token, wstrl_uchr_names);
      TEST_RUN(token, strl_uchr_names);
      TEST_RUN(token, integer_esc_seq);

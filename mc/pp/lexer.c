@@ -6,6 +6,7 @@
 #include <list.h>
 #include <pp.h>
 #include <token.h>
+#include <tools.h>
 
 /* TODO:
  * - replace pp->pos != '\0' with pp_eof inline */
@@ -360,32 +361,21 @@ static inline void pp_fetch_chrconst(struct pp_lexer *pp)
 
 static inline void pp_fetch_punctuator(struct pp_lexer *pp)
 {
-        if (pp_is_one_of(pp->pos[0], "[](){}~,;?")) {
-                pp_advance(pp, 1);
-                return;
+        int max_punc_len;
+        for (max_punc_len = 0; max_punc_len < TOKEN_MAX_PUNC_LEN; 
+                max_punc_len++) {
+                if (pp->pos[max_punc_len] == '\0')
+                        break;
         }
-
-        static const char *str_punct[] = {
-                "%:%:", "...", "<<=", ">>=",
-
-                "->", "++", "--", "<<", ">>",
-                "<=", ">=", "==", "!=", "&&",
-                "||", "*=", "/=", "%=", "+=",
-                "-=", "&=", "^=", "|=", "##",
-                "<:", ">:", "<%", "%>", "%:",
-                
-                ".", "!", "-", "+", "*", "&",
-                "<", ">", "^", "|", ":", "=",
-                "#", ","
-        };
-        /* TODO: speed up this search */
-        for (size_t pi = 0; pi < sizeof(str_punct) / sizeof(char *); pi++) {
-                if (pp_isstr(pp, str_punct[pi])) {
-                        pp_advance(pp, strlen(str_punct[pi]));
+        for (int i = TOKEN_MAX_PUNC_LEN; i > 0; i--) {
+                uint8_t hash = pearson_hash(&pp->pos[0], i);
+                int punc_num = token_punc_table[hash];
+                if (punc_num != punc_invalid && pp_isstr(pp, 
+                        token_punctuators[punc_num])) {
+                        pp_advance(pp, i);
                         return;
                 }
         }
-
         pp_seterror(pp);
 }
 
@@ -403,6 +393,7 @@ static void pp_lexer_reset(struct pp_lexer *pp)
 
 _Bool pp_lexer_init(struct pp_lexer *pp, struct fs_file *file)
 {
+        assert(mc_isinit());
         if (file->content == NULL)
                 pp->pos = fs_file_read(file);
         if (pp->pos == NULL)

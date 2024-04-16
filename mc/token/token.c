@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <locale.h>
 #include <stdbool.h>
+#include <math.h>
 
 #include <tools.h>
 #include <token.h>
@@ -23,7 +24,7 @@ static struct token *token_create(struct pp_token *first)
 
 void token_destroy(struct token *tok)
 {
-        if (tok->type == tok_strlit && tok->value.var_raw.value != NULL)
+        if (tok->value.var_raw.is_alloc)
                 free(tok->value.var_raw.value);
         free(tok);
 }
@@ -71,27 +72,6 @@ static const char* keywords[] = {
 
 static uint8_t keyw_table[PEARSON_TABLE_SIZE];
 
-static struct token*
-token_identifier(struct pp_token *unit_pos)
-{
-        struct token *tok = token_create(unit_pos);
-        char *id_val = unit_pos->value;
-        if (tok == NULL)
-                return NULL;
-
-        uint8_t hash = pearson_hash(id_val, unit_pos->length);
-        int keyw_num = keyw_table[hash];
-        /* TODO: handle universal char name */
-        if (keyw_num != keyw_invalid && pp_token_valcmp(unit_pos, 
-                keywords[keyw_num]) == 0) {
-                tok->type = tok_keyword;
-                tok->value.var_keyw = keyw_num;
-        } else {
-                tok->type = tok_identifier;
-                tok->value.var_raw.value = unit_pos->value;
-        }
-        return tok;
-}
 
 static inline _Bool token_is_wstr(struct pp_token *strlit)
 {
@@ -201,13 +181,8 @@ _Bool token_univ_chrname_valid(int64_t value)
 int64_t token_utf8_pt_code_units(int64_t point)
 {
         int64_t result;
-        if (point <= 0x007F) {
-                if (point == 0x24 || point == 0x40 || point == 0x60)
-                        result = point;
-                else
-                        result = TOKEN_ERROR;
-        } else if (point < 0xA0) {
-                point = TOKEN_ERROR;
+        if (point < 0xA0) {
+                result = point;
         } else if (point <= 0x07FF) {
                 result = (0xC0 | (point >> 6)) << 8;
                 result |= 0x80 | (point & 0x3F);
@@ -235,12 +210,9 @@ int64_t token_utf8_pt_code_units(int64_t point)
 int64_t token_utf16_pt_code_units(int64_t point)
 {
         int64_t result;
-        if (point <= 0x007F) {
-                if (point == 0x24 || point == 0x40 || point == 0x60)
-                        result = point;
-                else
-                        result = TOKEN_ERROR;
-        } else if (point < 0xA0 || (point >= 0xD800 && point <= 0xDFFF)) {
+        if (point < 0xA0) {
+                result = point;
+        } else if (point >= 0xD800 && point <= 0xDFFF) {
                 result = TOKEN_ERROR;
         } else if (point <= 0xFFFF) {
                 assert(point < 0xD800 || point > 0xDFFF);
@@ -438,32 +410,34 @@ _Bool token_is_space(struct pp_token *tok)
 }
 
 static struct token*
-token_wchar_strlit(struct pp_token *pos, size_t length)
+token_wchar_strlit(struct convert_context *ctx, size_t length)
 {
         size_t wstr_len = length + 1;
         size_t raw_len = wstr_len * sizeof(wchar_t);
         wchar_t value[TOKEN_ESC_VAL_MAX_LEN];
-        struct token *tok = token_create(pos);
+        struct token *tok = token_create(convert_pos(ctx));
+        struct pp_token *pos;
         size_t buf_pos = 0;
+        _Bool not_last = true;
 
         /* TODO: estimate maximum possible size, to not to use realloc */
         wchar_t *buffer = calloc(raw_len, sizeof(wchar_t));
         tok->type = tok_strlit;
 
-        size_t val_pos = token_strlit_start(pos);
-        while (buf_pos < wstr_len && pos != NULL) {
+        size_t val_pos = token_strlit_start(convert_pos(ctx));
+        while (buf_pos < wstr_len && not_last) {
+                pos = convert_pos(ctx);
                 if (pos->type != pp_str_lit) {
-                        if (!token_is_space(pos))
+                        if (!token_is_space(convert_pos(ctx)))
                                 break;
-                        pos = list_next(pos);
-                        if (pos != NULL)
-                                val_pos = token_strlit_start(pos);
+                        if ((not_last = convert_advance(ctx)))
+                                val_pos = token_strlit_start(convert_pos(ctx));
                         continue;
                 }
                 
                 int offset = token_wescape_sequence(pos, &val_pos, value);
                 if (offset == TOKEN_ERROR) {
-                        token_error(pos, "non-ISO-standart escape sequence");
+                        convert_error(ctx, "non-ISO-standart escape sequence");
                         goto fail;
                 } else if (offset == TOKEN_ESCAPE_UNMATCH) {
                         offset = 1;
@@ -479,8 +453,8 @@ token_wchar_strlit(struct pp_token *pos, size_t length)
                 buf_pos += offset;
 
                 if (val_pos >= pos->length - 1) {
-                        pos = list_next(pos);
-                        val_pos = token_strlit_start(pos);
+                        not_last = convert_advance(ctx);
+                        val_pos = token_strlit_start(convert_pos(ctx));
                 }
         }
         tok->value.var_raw.value = (char *)buffer;
@@ -493,29 +467,32 @@ fail:
 }
 
 static struct token*
-token_char_strlit(struct pp_token *pos, size_t length)
+token_char_strlit(struct convert_context *ctx, size_t length)
 {
         char value[TOKEN_ESC_VAL_MAX_LEN];
         size_t raw_len = (length + 1) * sizeof(char);
-        struct token *tok = token_create(pos);
+        struct token *tok = token_create(convert_pos(ctx));
+        struct pp_token *pos;
         size_t val_pos = STRLIT_START_OFFSET;
         size_t buf_pos = 0;
+        _Bool not_last = true;
 
         /* TODO: estimate maximum possible size, to not to use realloc */
         char *buffer = calloc(raw_len, sizeof(char));
         tok->type = tok_strlit;
 
-        while (buf_pos < raw_len && pos != NULL) {
+        while (buf_pos < raw_len && not_last) {
+                pos = convert_pos(ctx);
                 if (pos->type != pp_str_lit) {
                         if (!token_is_space(pos))
                                 break;
-                        pos = list_next(pos);
+                        not_last = convert_advance(ctx);
                         val_pos = STRLIT_START_OFFSET;
                         continue;
                 }
                 int offset = token_escape_sequence(pos, &val_pos, value);
                 if (offset == TOKEN_ERROR) {
-                        token_error(pos, "invalid escape sequence");
+                        convert_error(ctx, "invalid escape sequence");
                         goto fail;
                 } else if (offset == TOKEN_ESCAPE_UNMATCH) {
                         offset = 1;
@@ -530,7 +507,7 @@ token_char_strlit(struct pp_token *pos, size_t length)
                 buf_pos += offset;
 
                 if (val_pos >= pos->length - 1) {
-                        pos = list_next(pos);
+                        convert_advance(ctx);
                         val_pos = STRLIT_START_OFFSET;
                 }
         }
@@ -548,16 +525,16 @@ fail:
  * string literal tokens are concatenated into a single multibyte
  * character sequence. */
 static struct token*
-token_str_literal(struct pp_token **first)
+token_str_literal(struct convert_context *ctx)
 {
         struct token *tok;
-        struct pp_token* pos;
-        struct pp_token* last = *first;
+        struct pp_token* pos = convert_pos(ctx);
+        struct pp_token* first = pos;
         _Bool is_wide = false;
         size_t length = 0;
 
-        LIST_FOREACH_ENTRY(*first) {
-                pos = (struct pp_token*)entry;
+        do {
+                pos = convert_pos(ctx);
                 _Bool is_pos_wstr = token_is_wstr(pos);
                 /* If any of the tokens are wide string literal tokens,
                  * the resulting multibyte character sequence is treated 
@@ -577,59 +554,159 @@ token_str_literal(struct pp_token **first)
                         assert(pos->length >= TOKEN_STRL_MIN_LEN);
                         length += pos->length - TOKEN_STRL_MIN_LEN;
                 }
-                last = pos;
-        }
+        } while (convert_advance(ctx) && convert_continue(ctx));
+        convert_setpos(ctx, first);
         if (is_wide)
-                tok = token_wchar_strlit(*first, length);
+                tok = token_wchar_strlit(ctx, length);
         else
-                tok = token_char_strlit(*first, length);
-        if (tok != NULL)
-                *first = last; 
+                tok = token_char_strlit(ctx, length);
         return tok;
 }
 
-struct token *token_convert(struct pp_context *pp)
+const char *token_punctuators[] = {
+        "%:%:", "...", "<<=", ">>=",
+
+        "->", "++", "--", "<<", ">>",
+        "<=", ">=", "==", "!=", "&&",
+        "||", "*=", "/=", "%=", "+=",
+        "-=", "&=", "^=", "|=", "##",
+        "<:", ">:", "<%", "%>", "%:",
+        
+        ".", "!", "-", "+", "*", "&",
+        "<", ">", "^", "|", ":", "=",
+        "#", ",", ";", "?", "[", "]",
+        "(", ")", "{", "}", "~", "/",
+        "%"
+};
+
+uint8_t token_punc_table[PEARSON_TABLE_SIZE];
+
+static enum punc_type token_punctuator_type(struct pp_token *punct)
 {
-        struct token *result = NULL, *head = NULL;
-        assert(mc_isinit());
-        LIST_FOREACH_ENTRY(pp_node_leftmost_leaf(pp->root_file)) {
-                struct pp_token* unit_pos = (struct pp_token*)entry;
-                struct token* new_tok = NULL;
-                switch (unit_pos->type) {
-                        case pp_id:
-                                new_tok = token_identifier(unit_pos);
-                                break;
-                        case pp_number:
-                                break;
-                        case pp_chr_const:
-                                break;
-                        case pp_str_lit:
-                                new_tok = token_str_literal(&unit_pos);
-                                break;
-                        case pp_punct:
-                                break;
-                        case pp_other:
-                                if (pp_token_valcmp(unit_pos, "\n") != 0)
-                                        goto fail;
-                                break;
-                        default:
-                                MC_LOG(MC_CRIT, "unexpected token");
-                                goto fail;
-                }
-                if (new_tok != NULL) {
-                        if (result == NULL)
-                                head = result = new_tok;
-                        else {
-                                list_append(head, new_tok);
-                                head = new_tok;
-                        }
-                }
-                entry = (struct list_head *)unit_pos;
+        uint8_t hash = pearson_hash(punct->value, punct->length);
+        int punc_num = token_punc_table[hash];
+        if (punc_num != punc_invalid && pp_token_valcmp(punct, 
+                token_punctuators[punc_num]))
+                punc_num = punc_invalid;
+        return punc_num;
+}
+
+static struct token*
+token_punctuator(struct convert_context *ctx)
+{
+        struct token *tok;
+        struct pp_token *pos = convert_pos(ctx);
+        enum punc_type type = token_punctuator_type(pos);
+        assert(type != punc_invalid);
+        tok = token_create(pos);
+        tok->type = tok_punctuator;
+        tok->value.var_punc = type;
+        return tok;
+}
+
+static void
+token_value_raw_realloc(_INOUT struct token *tok, size_t new_size)
+{
+        size_t buffer_size = max(new_size, tok->value.var_raw.length);
+        if (tok->value.var_raw.is_alloc == false) {
+                char *old_val = tok->value.var_raw.value;
+                tok->value.var_raw.value = calloc(buffer_size, sizeof(char *));
+                memcpy(tok->value.var_raw.value, old_val, buffer_size);
+                tok->value.var_raw.is_alloc = true;
+        } else {
+                tok->value.var_raw.value = realloc(tok->value.var_raw.value, 
+                        buffer_size);
         }
-        return result;
-fail:
-        list_destroy(result, (list_free)token_destroy);
-        return NULL;
+        tok->value.var_raw.length = new_size;
+}
+
+static _Bool
+token_identifier_setvalue(_OUT struct token *tok, struct pp_token *id)
+{
+        char value[TOKEN_ESC_VAL_MAX_LEN];
+        size_t offset = 0;
+        int64_t esc_val;
+
+        tok->type = tok_identifier;
+        tok->value.var_raw.value = id->value;
+        tok->value.var_raw.length = id->length;
+        for (size_t i = 0, buffer_pos = 0; 
+                i < id->length; i++) {
+                if (id->value[i] != '\\') {
+                        buffer_pos += 1;
+                        continue;
+                }
+                esc_val = token_chrname_esc_value(id->value, &i);
+                if (!TOKEN_SUCC(esc_val))
+                        goto fail;
+
+                if (buffer_pos == 0 && esc_val < INT_MAX && 
+                        isdigit((int)esc_val))
+                        goto fail;
+                esc_val = token_utf8_pt_code_units(esc_val);
+                if (!TOKEN_SUCC(esc_val))
+                        goto fail;
+
+                offset += token_esc_val_to_chars(esc_val, value);
+                token_value_raw_realloc(tok, buffer_pos + offset);
+
+                memcpy(&tok->value.var_raw.value[buffer_pos], value, offset);
+                buffer_pos += offset;
+        }
+        return true;
+fail: 
+        return false;
+}
+
+static struct token*
+token_identifier(struct convert_context *ctx)
+{
+        struct pp_token *pos = convert_pos(ctx);
+        struct token *tok = token_create(pos);
+        char *id_val = pos->value;
+
+        uint8_t hash = pearson_hash(id_val, pos->length);
+        int keyw_num = keyw_table[hash];
+        /* TODO: handle universal char name */
+        if (keyw_num != keyw_invalid && pp_token_valcmp(pos, 
+                keywords[keyw_num]) == 0) {
+                tok->type = tok_keyword;
+                tok->value.var_keyw = keyw_num;
+        } else if (!token_identifier_setvalue(tok, pos)) {
+                token_destroy(tok);
+                tok = NULL;
+        }
+        return tok;
+}
+
+struct token* token_convert_next(struct convert_context *ctx)
+{
+        struct token* new_tok = NULL;
+        switch (convert_pos(ctx)->type) {
+                case pp_id:
+                        new_tok = token_identifier(ctx);
+                        if (new_tok == NULL)
+                                convert_error(ctx, "invalid identifier");
+                        break;
+                case pp_number:
+                        break;
+                case pp_chr_const:
+                        break;
+                case pp_str_lit:
+                        new_tok = token_str_literal(ctx);
+                        break;
+                case pp_punct:
+                        new_tok = token_punctuator(ctx);
+                        break;
+                case pp_other:
+                        if (pp_token_valcmp(convert_pos(ctx), "\n") != 0)
+                                MC_LOG(MC_CRIT, "Should be new-ln only");
+                        break;
+                default:
+                        MC_LOG(MC_CRIT, "unexpected token");
+                        break;
+        }
+        return new_tok;
 }
 
 void token_init()
@@ -642,4 +719,10 @@ void token_init()
                 keyw_table[hash] = n_kw;
         }
 
+        memset(token_punc_table, punc_invalid, sizeof(token_punc_table));
+        for (size_t n_p = 0; n_p < ARRAY_SIZE(token_punctuators); n_p++) {
+                const char *punc = token_punctuators[n_p];
+                uint8_t hash = pearson_hash(punc, strlen(punc));
+                token_punc_table[hash] = n_p;
+        }
 }

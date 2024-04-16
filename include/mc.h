@@ -50,6 +50,7 @@ const char* mc_get_log_fmt(enum MC_LOG_LEVEL loglevel);
 
 #define MC_LOG(loglevel, ...)                                           \
 {                                                                       \
+        if (loglevel <= MC_CRIT) exit(loglevel);                        \
         printf(mc_get_log_fmt(loglevel), __FILE__, __LINE__);           \
         printf(__VA_ARGS__);                                            \
         putchar('\n');                                                  \

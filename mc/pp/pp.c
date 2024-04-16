@@ -34,9 +34,18 @@ pp_print_tokens(struct pp_token *tok_beg, struct pp_token *tok_end)
                         pp_print_line_number(file_line++);
 
         }
-        if (*chr_beg != '\n')
+        if (*chr_end != '\n')
                 putchar('\n');
 
+}
+
+void pp_print_token_line(struct pp_token *token)
+{
+        struct pp_token *tok_end = token;
+        while (!pp_token_is_newline(tok_end) && list_has_next(tok_end)) {
+                tok_end = list_next(tok_end);
+        }
+        pp_print_tokens(token, tok_end);
 }
 
 void pp_print_node(struct pp_node *node)

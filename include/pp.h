@@ -43,6 +43,8 @@ const char *pp_str_status(struct pp_context *pp)
         return mc_str_status(pp_get_status(pp));
 }
 
+void pp_print_token_line(struct pp_token *token);
+
 void pp_print_node(struct pp_node *node);
 
 void pp_error(struct pp_context *pp, const char *format, ...);

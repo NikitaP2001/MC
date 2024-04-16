@@ -21,6 +21,7 @@ TEST_CASE(lexer, header_name)
 {
         struct filesys fs = {0};
         struct pp_lexer lex = {0};
+        mc_init();
         fs_init(&fs);
         fs_add_local(&fs, "./");
 
@@ -44,6 +45,7 @@ TEST_CASE(lexer, header_name_multiline)
 {
         struct filesys fs = {0};
         struct pp_lexer lex = {0};
+        mc_init();
         fs_init(&fs);
         fs_add_local(&fs, "./");
 
@@ -51,7 +53,7 @@ TEST_CASE(lexer, header_name_multiline)
         ASSERT_TRUE(write_file(TFILE_NAME, t_text, LEN_OF(t_text)));
 
         struct fs_file *src = fs_get_local(&fs, TFILE_NAME);
-        ASSERT_TRUE((pp_lexer_init(&lex, src)));
+        ASSERT_TRUE(pp_lexer_init(&lex, src));
         CHECK_NEXT_TOKEN(lex, pp_punct, "#");
         CHECK_NEXT_TOKEN(lex, pp_id, "include");
         CHECK_NEXT_TOKEN(lex, pp_punct, "<");
@@ -69,6 +71,7 @@ TEST_CASE(lexer, header_name_escline)
 {
         struct filesys fs = {0};
         struct pp_lexer lex = {0};
+        mc_init();
         fs_init(&fs);
         fs_add_local(&fs, "./");
 
@@ -92,6 +95,7 @@ TEST_CASE(lexer, str_lit_oneline)
 { 
         struct filesys fs = {0};
         struct pp_lexer lex = {0};
+        mc_init();
         fs_init(&fs);
         fs_add_local(&fs, "./");
 
@@ -116,6 +120,7 @@ TEST_CASE(lexer, str_lit_multline)
 {
         struct filesys fs = {0};
         struct pp_lexer lex = {0};
+        mc_init();
         fs_init(&fs);
         fs_add_local(&fs, "./");
 
@@ -136,6 +141,7 @@ TEST_CASE(lexer, comment_star_oneline)
 {
         struct filesys fs = {0};
         struct pp_lexer lex = {0};
+        mc_init();
         fs_init(&fs);
         fs_add_local(&fs, "./");
 

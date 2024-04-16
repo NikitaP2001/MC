@@ -1,7 +1,7 @@
-MODULE := test.exe
-DEPS := fs/test.exe pp/test.exe
+MODULE :=
+DEPS := fs/test.exe pp/test.exe token/test.exe
 
-SRC := token.c
+SRC :=
 CFLAGS += -I $(realpath .)/include
 
 include $(BLDRULES)

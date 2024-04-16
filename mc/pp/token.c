@@ -79,13 +79,3 @@ void pp_token_destroy(struct pp_token *token)
         fs_release_file(token->src_file);
         free(token);
 }
-
-void token_error(struct pp_token *pp, const char *format, ...)
-{
-        UNUSED(pp);
-        va_list args;
-        va_start(args, format);
-        vprintf(format, args);
-        putchar('\n');
-        va_end(args);
-}

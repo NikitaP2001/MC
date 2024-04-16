@@ -20,6 +20,13 @@ if (!arg) {                                                                     
         *result = false;                                                        \
         return;                                                                 \
 }
+#define ASSERT_FALSE(arg)                                                       \
+if (!arg) {                                                                     \
+        TEST_ASSERT_INFO;                                                       \
+        printf(#arg" (%llx) <=> true\n", (uint64_t)arg);                        \
+        *result = false;                                                        \
+        return;                                                                 \
+}
 #define ASSERT_EQ(arg1, arg2)                                                   \
 if (arg1 != arg2) {                                                             \
         TEST_ASSERT_INFO;                                                       \
