@@ -68,8 +68,39 @@ pp_token_list_destroy(struct pp_token *token)
         list_destroy(token, (list_free)pp_token_destroy);
 }
 
-/* reading next characted from token list */
-char pp_token_read_next(struct pp_token **token, uint32_t *pos);
+enum pp_num_size {
+        pp_num_size_no,
+        pp_num_size_float,
+        pp_num_size_long,
+        pp_num_size_long_long
+};
+
+enum pp_num_sign {
+        pp_num_signed,
+        pp_num_unsigned
+};
+
+enum pp_num_base {
+        pp_num_octal = 8,
+        pp_num_decimal = 10,
+        pp_num_hex = 16
+};
+
+enum pp_num_type {
+        pp_num_float,
+        pp_num_integer
+};
+
+struct pp_num_info {
+        enum pp_num_type type;
+        enum pp_num_base base;
+        enum pp_num_size size;
+        enum pp_num_sign sign;
+};
+
+/* in one quick pass tries to induce type of num constatnt 
+ * note: it does not validate const format */
+struct pp_num_info pp_token_num_parse(struct pp_token *tok);
 
 static inline
 _Bool

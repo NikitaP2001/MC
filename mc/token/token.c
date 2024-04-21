@@ -679,6 +679,138 @@ token_identifier(struct convert_context *ctx)
         return tok;
 }
 
+static void token_const_value_type(_IN struct pp_num_info info,
+                                   _INOUT struct constant_value *val)
+{ 
+        static const int long_long_flags = const_long_long_int 
+                | const_ulong_long_int;
+        static const int long_flags = const_long_int | const_ulong_int 
+                | long_long_flags;
+        if (info.sign == pp_num_signed) {
+                int64_t i_val = val->data.var_int;
+                if (i_val <= INT_MAX && i_val >= INT_MIN)
+                        val->type |= const_int;
+                else if (i_val <= LONG_MAX && i_val >= LONG_MIN)
+                        val->type |= const_long_int;
+                else if (i_val <= LONG_LONG_MAX && i_val >= LONG_LONG_MIN)
+                        val->type |= const_long_long_int;
+        }
+        
+        if (info.sign == pp_num_unsigned || info.base != pp_num_decimal) {
+                if (val->data.var_uint <= UINT_MAX)
+                        val->type |= const_uint;
+                else if (val->data.var_uint <= ULONG_MAX)
+                        val->type |= const_ulong_int;
+                else 
+                        val->type |= const_ulong_long_int;
+        }
+        if (info.size == pp_num_size_long) {
+                val->type &= long_flags;
+                /* value is less the explictely specified size */
+                if (val->type == 0) {
+                        if (info.sign == pp_num_signed)
+                                val->type = const_long_int;
+                        else 
+                                val->type = const_ulong_int;
+                }
+        } else if (info.size == pp_num_size_long_long) {
+                val->type &= long_long_flags;
+                if (val->type == 0) {
+                        if (info.sign == pp_num_signed)
+                                val->type = const_long_long_int;
+                        else 
+                                val->type = const_ulong_long_int;
+                }
+        }
+        int bit_n = -1;
+        while (val->type != 0) {
+                val->type >>= 1;
+                bit_n += 1;
+        }
+        val->type = (1 << bit_n);
+}
+
+static _Bool token_parse_signed_int(_IN const char *restrict buffer,
+                                    _IN struct pp_num_info info,
+                                    _OUT struct constant_value *val)
+{
+        int nret = sscanf(buffer, "%lli", &val->data.var_int);
+        if (nret != 1)
+                return false;
+        token_const_value_type(info, val);
+        return true;
+}
+
+static _Bool token_parse_unsigned_int(_IN const char *restrict buffer,
+                                      _IN struct pp_num_info info,
+                                      _OUT struct constant_value *val)
+{
+        int nret;
+        switch (info.base) {
+                case pp_num_octal:
+                        nret = sscanf(buffer, "%llo", &val->data.var_uint);
+                        break;
+                case pp_num_decimal:
+                        nret = sscanf(buffer, "%llu", &val->data.var_uint);
+                        break;
+                case pp_num_hex:
+                        nret = sscanf(buffer, "%llx", &val->data.var_uint);
+                        break;
+        }
+        if (nret != 1)
+                return false;
+        token_const_value_type(info, val);
+        return true;
+}
+
+static _Bool token_parse_float(_IN const char *restrict buffer,
+                               _IN struct pp_num_info info,
+                               _OUT struct constant_value *val)
+{
+        int nret = sscanf(buffer, "%LF", &val->data.var_long_double);
+        if (nret != 1)
+                return false;
+        if (info.size == pp_num_size_float)
+                val->type = const_float;
+        else if (info.size == pp_num_size_long)
+                val->type = const_long_double;
+        else if (info.size == pp_num_size_no)
+                val->type = const_double;
+        else /* long long is invalid here */
+                return false; 
+        return true; 
+}
+
+static struct token*
+token_number(struct convert_context *ctx)
+{
+        struct pp_token *pos = convert_pos(ctx);
+        struct token *tok = token_create(pos);
+        struct constant_value *val_const = &tok->value.var_const;
+        char *buffer = calloc(pos->length + 1, sizeof(char));
+        memcpy(buffer, pos->value, pos->length);
+        _Bool status = false;
+
+        tok->type = tok_constant;
+        struct pp_num_info info = pp_token_num_parse(pos);
+        if (info.type == pp_num_integer) {
+                if (info.sign == pp_num_signed)
+                        status = token_parse_signed_int(buffer, info, 
+                                val_const);
+                else
+                        status = token_parse_unsigned_int(buffer, info, 
+                                val_const);
+        } else {
+                status = token_parse_float(buffer, info, val_const);
+        }
+        if (!status) {
+                token_destroy(tok);
+                tok = NULL;
+        }
+        free(buffer);
+        return tok;
+}
+
 struct token* token_convert_next(struct convert_context *ctx)
 {
         struct token* new_tok = NULL;
@@ -689,6 +821,9 @@ struct token* token_convert_next(struct convert_context *ctx)
                                 convert_error(ctx, "invalid identifier");
                         break;
                 case pp_number:
+                        new_tok = token_number(ctx);
+                        if (new_tok == NULL)
+                                convert_error(ctx, "invalid number");
                         break;
                 case pp_chr_const:
                         break;

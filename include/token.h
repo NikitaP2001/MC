@@ -26,13 +26,15 @@
 enum constant_type {
 
         /* integer-constant */
-        const_short_int,
-        const_ushort_int,
+        const_invalid = 0,
 
-        const_int,
-        const_long_int,
-        const_uint,
-        const_ulong_int,
+        const_int = 1,
+        const_long_int = (1 << 3),
+        const_long_long_int = (1 << 5),
+
+        const_uint = (1 << 2),
+        const_ulong_int = (1 << 4),
+        const_ulong_long_int = (1 << 6),
 
         /* floating-constant */
         const_float,
@@ -51,10 +53,8 @@ extern const char token_simple_esc_chars[];
 struct constant_value {
         enum constant_type type;
         union {
-                uint64_t var_uint;
                 int64_t var_int;
-                float var_float;
-                double var_double;
+                uint64_t var_uint;
                 long double var_long_double;
         } data;
 };
