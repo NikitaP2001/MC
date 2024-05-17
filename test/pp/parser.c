@@ -11,14 +11,12 @@ static void
 pp_parser_test_init(struct pp_parser *parser, struct pp_lexer *lex, 
         struct filesys *fs, const char *t_text)
 {
-        size_t result = 0;
         fs_init(fs);
         fs_add_local(fs, "./mc/pp/");
         fs_add_local(fs, "./");
 
         FILE *t_file = fopen(TFILE_NAME, "w");
-        result = fwrite(t_text, sizeof(char), strlen(t_text), t_file);
-        assert(result != 0);
+        fwrite(t_text, sizeof(char), strlen(t_text), t_file);
         fclose(t_file);
 
         struct fs_file *src = fs_get_local(fs, TFILE_NAME);

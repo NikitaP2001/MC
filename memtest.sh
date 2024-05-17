@@ -1,1 +1,1 @@
-drmemory.exe -suppress $(LOGDIR)/custom.txt -batch -logdir $(1) -- $(2)
+drmemory.exe -suppress ./logs/custom.txt -batch -logdir ./logs -- 

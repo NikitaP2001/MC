@@ -318,6 +318,10 @@ void parser_free(struct parser *ps)
 }
 
 /*
+        create callbacks, call on node parse
+        seperate callback for error
+        that we could define some unneded callbacks to
+        error handler when parsing const expr, for example
 _Bool parser_build_tree(struct parser *ps, void *pp_data)
 {
 }

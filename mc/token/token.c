@@ -722,8 +722,8 @@ static void token_const_value_type(_IN struct pp_num_info info,
                                 val->type = const_ulong_long_int;
                 }
         }
-        int bit_n = -1;
-        while (val->type != 0) {
+        int bit_n = 0;
+        while (!(val->type & 1)) {
                 val->type >>= 1;
                 bit_n += 1;
         }

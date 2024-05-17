@@ -24,8 +24,7 @@ int main()
 
         pp_init(&pp, &fs);
 
-        enum mc_status status = pp_run(&pp, "parser.c");
-        assert(MC_SUCC(status));
+        pp_run(&pp, "parser.c");
 
         pp_free(&pp);
         fs_free(&fs);

@@ -393,15 +393,21 @@ static void pp_lexer_reset(struct pp_lexer *pp)
 
 _Bool pp_lexer_init(struct pp_lexer *pp, struct fs_file *file)
 {
-        assert(mc_isinit());
-        if (file->content == NULL)
-                pp->pos = fs_file_read(file);
-        if (pp->pos == NULL)
-                return false;
-        pp->src_file = file;
-        pp_lexer_reset(pp);
-
-        return true;
+        _Bool status = true;
+        if (mc_isinit()) {
+                if (file->content == NULL)
+                        pp->pos = fs_file_read(file);
+                if (pp->pos != NULL) {
+                        pp->src_file = file;
+                        pp_lexer_reset(pp);
+                } else {
+                        status = false;
+                }
+        } else {
+                MC_LOG(MC_ERR, "mc global init failed");
+                status = false;
+        }
+        return status;
 }
 
 struct pp_token *pp_lexer_result(struct pp_lexer *pp)

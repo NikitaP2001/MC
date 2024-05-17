@@ -13,6 +13,99 @@
           LEN_OF(t_val)), 0);                                 \
 }
 
+TEST_CASE(token, int_suffix_invalid)
+{
+     mc_init();
+     struct filesys fs;
+     struct pp_context pp;
+     struct convert_context ctx;
+     fs_init(&fs);
+     fs_add_local(&fs, "./");
+     pp_init(&pp, &fs);
+
+     const char test[] = " 1234lll ";
+     ASSERT_TRUE(write_file(TFILE_NAME, test, LEN_OF(test)));
+     enum mc_status status = pp_run(&pp, TFILE_NAME);
+     ASSERT_TRUE(MC_SUCC(status));
+
+     convert_init(&ctx, &pp);
+     ASSERT_FALSE(MC_SUCC(convert_run(&ctx)));
+     
+     convert_free(&ctx);
+     pp_free(&pp);
+     fs_free(&fs);
+     remove(TFILE_NAME);
+}
+
+TEST_CASE(token, numbers_int_valid)
+{
+     mc_init();
+     struct filesys fs;
+     struct pp_context pp;
+     struct convert_context ctx;
+     fs_init(&fs);
+     fs_add_local(&fs, "./");
+     pp_init(&pp, &fs);
+
+     const char test[] = " 1234 1234l 1234LL 0x125 0x125L 0x125LL"
+                         " 113u 113ul 113ull";
+     ASSERT_TRUE(write_file(TFILE_NAME, test, LEN_OF(test)));
+     enum mc_status status = pp_run(&pp, TFILE_NAME);
+     ASSERT_TRUE(MC_SUCC(status));
+
+     convert_init(&ctx, &pp);
+     ASSERT_TRUE(MC_SUCC(convert_run(&ctx)));
+     struct token *tok = convert_get_token(&ctx);
+     ASSERT_EQ(tok->type, tok_constant);
+     ASSERT_EQ(tok->value.var_const.type, const_int)
+     ASSERT_EQ(tok->value.var_const.data.var_int, 1234);
+
+     tok = list_next(tok);
+     ASSERT_EQ(tok->type, tok_constant);
+     ASSERT_EQ(tok->value.var_const.type, const_long_int);
+     ASSERT_EQ(tok->value.var_const.data.var_int, 1234);
+
+     tok = list_next(tok);
+     ASSERT_EQ(tok->type, tok_constant);
+     ASSERT_EQ(tok->value.var_const.type, const_long_long_int);
+     ASSERT_EQ(tok->value.var_const.data.var_int, 1234);
+
+     tok = list_next(tok);
+     ASSERT_EQ(tok->type, tok_constant);
+     ASSERT_EQ(tok->value.var_const.type, const_int);
+     ASSERT_EQ(tok->value.var_const.data.var_int, 0x125);
+
+     tok = list_next(tok);
+     ASSERT_EQ(tok->type, tok_constant);
+     ASSERT_EQ(tok->value.var_const.type, const_long_int);
+     ASSERT_EQ(tok->value.var_const.data.var_int, 0x125);
+
+     tok = list_next(tok);
+     ASSERT_EQ(tok->type, tok_constant);
+     ASSERT_EQ(tok->value.var_const.type, const_long_long_int);
+     ASSERT_EQ(tok->value.var_const.data.var_int, 0x125);
+
+     tok = list_next(tok);
+     ASSERT_EQ(tok->type, tok_constant);
+     ASSERT_EQ(tok->value.var_const.type, const_uint);
+     ASSERT_EQ(tok->value.var_const.data.var_uint, 113);
+
+     tok = list_next(tok);
+     ASSERT_EQ(tok->type, tok_constant);
+     ASSERT_EQ(tok->value.var_const.type, const_ulong_int);
+     ASSERT_EQ(tok->value.var_const.data.var_uint, 113);
+
+     tok = list_next(tok);
+     ASSERT_EQ(tok->type, tok_constant);
+     ASSERT_EQ(tok->value.var_const.type, const_ulong_long_int);
+     ASSERT_EQ(tok->value.var_const.data.var_uint, 113);   
+     
+     convert_free(&ctx);
+     pp_free(&pp);
+     fs_free(&fs);
+     remove(TFILE_NAME);
+}
+
 TEST_CASE(token, punct_seq)
 {
      mc_init();
@@ -402,6 +495,8 @@ TEST_CASE(token, concat_wstrlit)
 
 int main()
 {
+     TEST_RUN(token, int_suffix_invalid);
+     TEST_RUN(token, numbers_int_valid);
      TEST_RUN(token, punct_seq);
      TEST_RUN(token, invalid_token_identifier);
      TEST_RUN(token, valid_token_sequence);
