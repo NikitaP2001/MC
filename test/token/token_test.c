@@ -13,6 +13,39 @@
           LEN_OF(t_val)), 0);                                 \
 }
 
+TEST_CASE(token, numbers_float_valid)
+{
+     mc_init();
+     struct filesys fs;
+     struct pp_context pp;
+     struct convert_context ctx;
+     fs_init(&fs);
+     fs_add_local(&fs, "./");
+     pp_init(&pp, &fs);
+
+     const char test[] = " 123.12 123.f ";
+     ASSERT_TRUE(write_file(TFILE_NAME, test, LEN_OF(test)));
+     enum mc_status status = pp_run(&pp, TFILE_NAME);
+     ASSERT_TRUE(MC_SUCC(status));
+
+     convert_init(&ctx, &pp);
+     ASSERT_TRUE(MC_SUCC(convert_run(&ctx)));
+     struct token *tok = convert_get_token(&ctx);
+     ASSERT_EQ(tok->type, tok_constant);
+     ASSERT_EQ(tok->value.var_const.type, const_double)
+     ASSERT_EQ(tok->value.var_const.data.var_long_double, 123.12L);
+
+     tok = list_next(tok);
+     ASSERT_EQ(tok->type, tok_constant);
+     ASSERT_EQ(tok->value.var_const.type, const_float)
+     ASSERT_EQ(tok->value.var_const.data.var_long_double, 123.L);
+     
+     convert_free(&ctx);
+     pp_free(&pp);
+     fs_free(&fs);
+     remove(TFILE_NAME);
+}
+
 TEST_CASE(token, int_suffix_invalid)
 {
      mc_init();
@@ -492,9 +525,59 @@ TEST_CASE(token, concat_wstrlit)
      remove(TFILE_NAME);
 }
 
+TEST_CASE(token, char_literal)
+{
+     mc_init();
+     struct filesys fs;
+     struct pp_context pp;
+     struct convert_context ctx;
+     fs_init(&fs);
+     fs_add_local(&fs, "./");
+
+     pp_init(&pp, &fs);
+
+     char test[] =  "'1' '\\a' '1234' L'1' L'\\x12'";
+     ASSERT_TRUE(write_file(TFILE_NAME, test, LEN_OF(test)));
+     enum mc_status status = pp_run(&pp, TFILE_NAME);
+     ASSERT_TRUE(MC_SUCC(status));
+
+     convert_init(&ctx, &pp);
+     ASSERT_FALSE(MC_SUCC(convert_run(&ctx)));
+     struct token *tok = convert_get_token(&ctx);
+     EXPECT_EQ(tok->type, tok_constant);
+     EXPECT_EQ(tok->value.var_const.type, const_char);
+     EXPECT_EQ(tok->value.var_const.data.var_int, '1');
+
+     tok = list_next(tok);
+     EXPECT_EQ(tok->type, tok_constant);
+     EXPECT_EQ(tok->value.var_const.type, const_char);
+     EXPECT_EQ(tok->value.var_const.data.var_int, '\a');
+
+     tok = list_next(tok);
+     EXPECT_EQ(tok->type, tok_constant);
+     EXPECT_EQ(tok->value.var_const.type, const_char);
+     EXPECT_EQ(tok->value.var_const.data.var_int, '1234');
+
+     tok = list_next(tok);
+     EXPECT_EQ(tok->type, tok_constant);
+     EXPECT_EQ(tok->value.var_const.type, const_wchar_t);
+     EXPECT_EQ(tok->value.var_const.data.var_int, L'1');
+
+     tok = list_next(tok);
+     EXPECT_EQ(tok->type, tok_constant);
+     EXPECT_EQ(tok->value.var_const.type, const_wchar_t);
+     EXPECT_EQ(tok->value.var_const.data.var_int, L'\x12');
+
+     convert_free(&ctx);
+     pp_free(&pp);
+     fs_free(&fs);
+     remove(TFILE_NAME);
+}
 
 int main()
 {
+     TEST_RUN(token, char_literal);
+     TEST_RUN(token, numbers_float_valid);
      TEST_RUN(token, int_suffix_invalid);
      TEST_RUN(token, numbers_int_valid);
      TEST_RUN(token, punct_seq);

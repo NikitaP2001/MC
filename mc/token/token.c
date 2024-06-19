@@ -811,6 +811,86 @@ token_number(struct convert_context *ctx)
         return tok;
 }
 
+static _Bool token_wchr_literal_value(struct pp_token* tok, int64_t *lit_val)
+{
+        wchar_t esc_val[TOKEN_ESC_VAL_MAX_LEN];
+        size_t val_pos = WSTRLIT_START_OFFSET;
+        int64_t const_val = 0;
+        int char_bsize = CHAR_BIT * sizeof(wchar_t);
+
+        while (val_pos < tok->length - 1) {
+                int offset = token_wescape_sequence(tok, &val_pos, esc_val);
+                if (offset == TOKEN_ESCAPE_UNMATCH) {
+                        const_val <<= char_bsize;
+                        char char_val = tok->value[val_pos++];
+                        wchar_t wchar_val = token_char_to_wchar(char_val);
+                        const_val |= wchar_val;
+                } else if (TOKEN_SUCC(offset)) {
+                        for (int esc_pos = 0; esc_pos < offset; esc_pos++) {
+                                const_val <<= char_bsize;
+                                const_val |= esc_val[esc_pos];
+                        }
+                } else {
+                        return false;
+                }
+        }
+        *lit_val = const_val;
+        return true;
+}
+
+static _Bool token_chr_literal_value(struct pp_token* tok, int64_t *lit_val)
+{
+        char esc_val[TOKEN_ESC_VAL_MAX_LEN];
+        size_t val_pos = STRLIT_START_OFFSET;
+        int64_t const_val = 0;
+        int char_bsize = CHAR_BIT * sizeof(char);
+
+        while (val_pos < tok->length - 1) {
+                int offset = token_escape_sequence(tok, &val_pos, esc_val);
+                if (offset == TOKEN_ESCAPE_UNMATCH) {
+                        const_val <<= char_bsize;
+                        const_val |= tok->value[val_pos++];
+                } else if (TOKEN_SUCC(offset)) {
+                        for (int esc_pos = 0; esc_pos < offset; esc_pos++) {
+                                const_val <<= char_bsize;
+                                const_val |= esc_val[esc_pos];
+                        }
+                } else {
+                        return false;
+                }
+        }
+        *lit_val = const_val;
+        return true;
+}
+
+static struct token*
+token_chr_literal(struct convert_context *ctx)
+{
+        struct pp_token* tok = convert_pos(ctx);
+        struct token *const_tok = token_create(tok);
+        int64_t const_val;
+        _Bool status;
+
+        const_tok->type = tok_constant;
+        if (token_is_wstr(tok)) {
+                status = token_wchr_literal_value(tok, &const_val);
+                const_tok->value.var_const.type = const_wchar_t;
+        } else {
+                status = token_chr_literal_value(tok, &const_val);
+                const_tok->value.var_const.type = const_char;
+        }
+        if (!status) {
+                convert_error(ctx, "invalid escape sequence");
+                goto fail;
+        }
+
+        const_tok->value.var_const.data.var_int = const_val;
+        return const_tok;
+fail:
+        token_destroy(const_tok);
+        return NULL;
+}
+
 struct token* token_convert_next(struct convert_context *ctx)
 {
         struct token* new_tok = NULL;
@@ -826,12 +906,19 @@ struct token* token_convert_next(struct convert_context *ctx)
                                 convert_error(ctx, "invalid number");
                         break;
                 case pp_chr_const:
+                        new_tok = token_chr_literal(ctx);
+                        if (new_tok == NULL)
+                                convert_error(ctx, "invalid number");
                         break;
                 case pp_str_lit:
                         new_tok = token_str_literal(ctx);
+                        if (new_tok == NULL)
+                                convert_error(ctx, "invalid string literal");
                         break;
                 case pp_punct:
                         new_tok = token_punctuator(ctx);
+                        if (new_tok == NULL)
+                                convert_error(ctx, "invalid punctuator");
                         break;
                 case pp_other:
                         if (pp_token_valcmp(convert_pos(ctx), "\n") != 0)
