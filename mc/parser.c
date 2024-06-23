@@ -6,16 +6,16 @@
 
 #include <parser.h>
 
-static inline _Bool 
-parser_symbol_not_terminal(enum parser_symbol sym)
-{
-        return (sym < psym_last_nonterm);
-}
-
 static inline _Bool
 parser_symbol_is_terminal(enum parser_symbol sym)
 {
-        return (sym > psym_last_nonterm && sym < psym_last_term);
+        return (sym >= psym_first_term && sym <= psym_last_term);
+}
+
+static inline _Bool 
+parser_symbol_not_terminal(enum parser_symbol sym)
+{
+        return (sym >= psym_first_nonterm && sym <= psym_last_nonterm);
 }
 
 static struct parser_production parser_grammar[] = {
@@ -93,6 +93,25 @@ parser_symbol_set_size(struct parser_symbol_set *sym_set)
         return sym_set->n_elem;
 }
 
+static void
+parser_grammar_add(struct parser *ps, struct parser_production_list *p_lst)
+{
+        enum parser_symbol type = p_lst->production->source;
+        int gram_pos = psym_first_nonterm - type;
+        if (ps->grammar[type] == NULL)
+                ps->grammar[gram_pos] = p_lst;
+        else
+                list_append(ps->grammar[gram_pos], p_lst);
+}
+
+static inline 
+struct parser_production_list* 
+parser_grammar_get(struct parser *ps, enum parser_symbol type)
+{
+        int gram_pos = psym_first_nonterm - type;
+        return ps->grammar[gram_pos];
+}
+
 static void 
 parser_production_list_init(struct parser *ps, enum parser_symbol type)
 {
@@ -106,13 +125,16 @@ parser_production_list_init(struct parser *ps, enum parser_symbol type)
                 struct parser_production_list *p_lst 
                         = calloc(1, sizeof(struct parser_production_list *));
                 p_lst->production = prod;
-                if (ps->grammar[type] == NULL)
-                        ps->grammar[type] = p_lst;
-                else
-                        list_append(ps->grammar[type], p_lst);
+                parser_grammar_add(ps, p_lst);
         }
         /* grammar may be incorrect */
-        assert(ps->grammar[type] == NULL);
+        assert(parser_grammar_get(ps, type) == NULL);
+}
+
+static inline _Bool
+parser_production_is_invalid(struct parser_production prod)
+{
+        return prod.source == psym_invalid;
 }
 
 static void
@@ -182,7 +204,7 @@ static void
 parser_first_init_sym(struct parser *ps, enum parser_symbol type)
 {
         assert(!parser_symbol_is_terminal(type));
-        struct parser_production_list *pr_list = ps->grammar[type];
+        struct parser_production_list *pr_list = parser_grammar_get(ps, type);
         if (pr_list == NULL) {
                 parser_production_list_init(ps, type);
                 assert(pr_list != NULL);
@@ -228,8 +250,8 @@ parser_follow_init(struct parser *ps)
 {
         struct parser_production_list *pr_list;
 
-        for (int i = 0; i < psym_last_nonterm; i++) {
-                pr_list = ps->grammar[i];
+        for (int i = psym_first_nonterm; i < psym_last_nonterm; i++) {
+                pr_list = parser_grammar_get(ps, i);
                 LIST_FOREACH_ENTRY(pr_list) {
                         if (pasrer_follow_init_prod(ps, 
                         (struct parser_production*)entry) != 0) {
@@ -245,7 +267,7 @@ parser_table_row_addentry(struct parser_production *table_row,
                          enum parser_symbol position,
                          struct parser_production entry)
 {
-        table_row[position - PARSER_FIRST_TERM] = entry;
+        table_row[position - psym_first_term] = entry;
 }
 
 static void 
@@ -281,17 +303,25 @@ parser_table_add_production(struct parser *ps,
         }
 }
 
+struct parser_production*
+parser_table_get(struct parser *ps, enum parser_symbol type)
+{
+        int row_pos = psym_first_nonterm - type;
+        return ps->table[row_pos];
+}
+
 static void parser_table_init(struct parser *ps)
 {
         struct parser_production_list *pr_list;
         struct parser_production *prod;
 
-        for (int i = PARSER_NUM_NONTERM; i < psym_last_nonterm; i++) {
-                pr_list = ps->grammar[i];
+        for (int i = psym_first_nonterm; i < psym_last_nonterm; i++) {
+                pr_list = parser_grammar_get(ps, i);
 
                 LIST_FOREACH_ENTRY(pr_list) {
                         prod = (struct parser_production*)entry;
-                        parser_table_add_production(ps, ps->table[i], prod);
+                        parser_table_add_production(ps, 
+                                parser_table_get(ps, i), prod);
                 }
         } 
 }
@@ -305,6 +335,7 @@ void parser_init(struct parser *ps, enum parser_symbol start_sym)
         ps->next_sym = NULL;
         ps->get_curr_file = NULL;
         ps->get_curr_line = NULL;
+        ps->start_sym = start_sym;
 
         /* endmarker follows root level symbol - start_sym*/
         parser_symbol_set_insert(&ps->follow_set[start_sym], psym_endmarker);
@@ -317,14 +348,102 @@ void parser_free(struct parser *ps)
         parser_production_list_free(ps);
 }
 
+#define PARSER_STACK_SIZE_INIT 1000
+#define PARSER_STACK_GR_FACTOR 2
+
+struct parser_stack {
+        enum parser_symbol *data;
+        size_t capacity;
+        size_t size;
+};
+
+static void 
+parser_stack_init(struct parser *ps, struct parser_stack *stack)
+{
+        stack->data = calloc(PARSER_STACK_SIZE_INIT, 
+                sizeof(enum parser_symbol));
+        stack->capacity = PARSER_STACK_SIZE_INIT;
+        stack->size = 1;
+        stack->data[0] = ps->start_sym;
+}
+
+static void parser_stack_free(struct parser_stack *stack)
+{
+        free(stack->data);
+}
+
+static enum parser_symbol parser_stack_top(struct parser_stack *stack)
+{
+        if (stack->size > 0)
+                return stack->data[stack->size - 1];
+        else
+                return psym_endmarker;
+}
+
+static void 
+parser_stack_push(struct parser_stack *stack, enum parser_symbol sym)
+{
+        assert(stack->size <= stack->capacity);
+        if (stack->size == stack->capacity) {
+                stack->capacity *= PARSER_STACK_GR_FACTOR;
+                stack->data = realloc(stack->data, stack->capacity
+                        * sizeof(enum parser_symbol));
+        }
+        stack->data[stack->size++] = sym;
+}
+
+static void parser_stack_pop(struct parser_stack *stack)
+{
+        assert(stack->size > 0);
+        stack->size -= 1;
+}
+
+enum parser_symbol parser_token_tosymbol(struct token *tok)
+{
+        UNUSED(tok);
+        return psym_invalid;
+}
+
 /*
         create callbacks, call on node parse
         seperate callback for error
         that we could define some unneded callbacks to
         error handler when parsing const expr, for example
-_Bool parser_build_tree(struct parser *ps, void *pp_data)
-{
-}
 */
+enum mc_status parser_process(struct parser *ps, void *pp_data)
+{
+        enum parser_symbol top_sym;
+        struct token *curr_tok = ps->next_sym(pp_data);
+        struct parser_stack ps_stack;
+        enum mc_status status = MC_OK;
 
+        UNUSED(curr_tok);
+        parser_stack_init(ps, &ps_stack);
+        parser_stack_push(&ps_stack, ps->start_sym);
 
+        while ((top_sym = parser_stack_top(&ps_stack)) 
+                && top_sym != psym_endmarker
+                && curr_tok != NULL && MC_SUCC(status)) {
+                enum parser_symbol tok_sym = parser_token_tosymbol(curr_tok);
+                if (tok_sym == top_sym) {
+                        parser_stack_pop(&ps_stack);
+                        curr_tok = ps->next_sym(pp_data);
+                } else if (parser_symbol_is_terminal(top_sym)
+                        || parser_production_is_invalid(
+                        parser_table_get(ps, top_sym)[tok_sym])) {
+                        status = ps->error(pp_data, top_sym);
+                } else {
+                        struct parser_production prod 
+                                = parser_table_get(ps, top_sym)[tok_sym];
+                        ps->output(pp_data, prod);
+                        parser_stack_pop(&ps_stack);
+                        for (size_t i_sym = 0; i_sym < prod.n_deriv; i_sym++) {
+                                parser_stack_push(&ps_stack, 
+                                        prod.derivation[i_sym]);
+                        }
+                }
+        }
+
+        parser_stack_free(&ps_stack);
+        return status;
+}
