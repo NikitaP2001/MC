@@ -106,6 +106,7 @@ enum keyword_type {
         keyw_register,
         keyw_union,
         keyw_last = keyw_union,
+
         keyw_invalid
 };
 
@@ -171,6 +172,7 @@ enum punc_type {
         punc_tilde,
         punc_forward_slash,
         punc_percent,
+        punc_last = punc_percent,
 
         punc_invalid,
 };

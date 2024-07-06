@@ -5,6 +5,7 @@
 #include <assert.h>
 
 #include <parser.h>
+#include "grammar.h"
 
 static inline _Bool
 parser_symbol_is_terminal(enum parser_symbol sym)
@@ -17,15 +18,6 @@ parser_symbol_not_terminal(enum parser_symbol sym)
 {
         return (sym >= psym_first_nonterm && sym <= psym_last_nonterm);
 }
-
-static struct parser_production parser_grammar[] = {
-        { psym_postfix_expression, 4, { psym_postfix_expression,
-                                        psym_left_square_bracket, 
-                                        psym_expression,
-                                        psym_right_square_bracket }
-        },
-
-};
 
 /* @return next symbol present in set, ordered after @sym_num, 
  * psym_invalid in case no more symbols present */
@@ -117,7 +109,7 @@ parser_production_list_init(struct parser *ps, enum parser_symbol type)
 {
         struct parser_production *prod = &parser_grammar[0];
         for (size_t i = 0; 
-        i < sizeof(parser_grammar) / sizeof(struct parser_production); 
+        i < parser_grammar_size(); 
         i++, prod++) {
                 if (prod->source != type)
                         continue;
@@ -398,7 +390,7 @@ static void parser_stack_pop(struct parser_stack *stack)
         stack->size -= 1;
 }
 
-enum parser_symbol parser_token_tosymbol(struct token *tok)
+static enum parser_symbol parser_token_tosymbol(struct token *tok)
 {
         UNUSED(tok);
         return psym_invalid;
