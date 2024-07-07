@@ -15,7 +15,6 @@
 
 TEST_CASE(token, numbers_float_valid)
 {
-     mc_init();
      struct filesys fs;
      struct pp_context pp;
      struct convert_context ctx;
@@ -48,7 +47,6 @@ TEST_CASE(token, numbers_float_valid)
 
 TEST_CASE(token, int_suffix_invalid)
 {
-     mc_init();
      struct filesys fs;
      struct pp_context pp;
      struct convert_context ctx;
@@ -72,7 +70,6 @@ TEST_CASE(token, int_suffix_invalid)
 
 TEST_CASE(token, numbers_int_valid)
 {
-     mc_init();
      struct filesys fs;
      struct pp_context pp;
      struct convert_context ctx;
@@ -141,7 +138,6 @@ TEST_CASE(token, numbers_int_valid)
 
 TEST_CASE(token, punct_seq)
 {
-     mc_init();
      struct filesys fs;
      struct pp_context pp;
      struct convert_context ctx;
@@ -188,7 +184,6 @@ TEST_CASE(token, punct_seq)
 
 TEST_CASE(token, invalid_token_identifier)
 {
-     mc_init();
      struct filesys fs;
      struct pp_context pp;
      struct convert_context ctx;
@@ -215,7 +210,6 @@ TEST_CASE(token, invalid_token_identifier)
 
 TEST_CASE(token, valid_token_sequence)
 {
-     mc_init();
      struct filesys fs;
      struct pp_context pp;
      struct convert_context ctx;
@@ -250,7 +244,6 @@ TEST_CASE(token, valid_token_sequence)
 
 TEST_CASE(token, wstrl_uchr_names)
 {
-     mc_init();
      struct filesys fs;
      struct pp_context pp;
      struct convert_context ctx;
@@ -284,7 +277,6 @@ TEST_CASE(token, wstrl_uchr_names)
 
 TEST_CASE(token, strl_uchr_names)
 {
-     mc_init();
      struct filesys fs;
      struct pp_context pp;
      struct convert_context ctx;
@@ -318,7 +310,6 @@ TEST_CASE(token, strl_uchr_names)
 
 TEST_CASE(token, winteger_esc_seq)
 {
-     mc_init();
      struct filesys fs;
      struct pp_context pp;
      struct convert_context ctx;
@@ -351,7 +342,6 @@ TEST_CASE(token, winteger_esc_seq)
 
 TEST_CASE(token, integer_esc_seq)
 {
-     mc_init();
      struct filesys fs;
      struct pp_context pp;
      struct convert_context ctx;
@@ -383,7 +373,6 @@ TEST_CASE(token, integer_esc_seq)
 
 TEST_CASE(token, wsimple_esc_seq)
 {
-     mc_init();
      struct filesys fs;
      struct pp_context pp;
      struct convert_context ctx;
@@ -418,7 +407,6 @@ TEST_CASE(token, wsimple_esc_seq)
 
 TEST_CASE(token, simple_esc_seq)
 {
-     mc_init();
      struct filesys fs;
      struct pp_context pp;
      struct convert_context ctx;
@@ -452,7 +440,6 @@ TEST_CASE(token, simple_esc_seq)
 
 TEST_CASE(token, concat_strlit)
 {
-     mc_init();
      struct filesys fs;
      struct pp_context pp;
      struct convert_context ctx;
@@ -488,7 +475,6 @@ TEST_CASE(token, concat_strlit)
 
 TEST_CASE(token, concat_wstrlit)
 {
-     mc_init();
      struct filesys fs;
      struct pp_context pp;
      struct convert_context ctx;
@@ -527,7 +513,6 @@ TEST_CASE(token, concat_wstrlit)
 
 TEST_CASE(token, char_literal)
 {
-     mc_init();
      struct filesys fs;
      struct pp_context pp;
      struct convert_context ctx;
@@ -576,6 +561,7 @@ TEST_CASE(token, char_literal)
 
 int main()
 {
+     mc_init();
      TEST_RUN(token, char_literal);
      TEST_RUN(token, numbers_float_valid);
      TEST_RUN(token, int_suffix_invalid);
@@ -591,4 +577,5 @@ int main()
      TEST_RUN(token, wsimple_esc_seq);
      TEST_RUN(token, concat_strlit);
      TEST_RUN(token, concat_wstrlit);
+     mc_free();
 }

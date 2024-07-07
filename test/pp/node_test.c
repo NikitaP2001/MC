@@ -10,7 +10,6 @@ TEST_CASE(pp_node, insert_macro)
         struct pp_lexer lex = {0};
         struct filesys fs = {0};
         _Bool status = true;
-        fs_init(&fs);
         fs_add_local(&fs, "./mc/pp/");
         fs_add_local(&fs, "./");
         const char t_text[] = "#if ! _LIB_ \n"
@@ -120,5 +119,7 @@ TEST_CASE(pp_node, insert_macro)
 
 void run_pp_node()
 {
+        mc_init();
         TEST_RUN(pp_node, insert_macro);
+        mc_free();
 }

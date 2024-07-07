@@ -48,5 +48,6 @@ int main()
         convert_free(&ctx);
         pp_free(&pp);
         fs_free(&fs);
+        mc_free();
         puts("It`s not time yet");
 }

@@ -21,7 +21,6 @@ TEST_CASE(lexer, header_name)
 {
         struct filesys fs = {0};
         struct pp_lexer lex = {0};
-        mc_init();
         fs_init(&fs);
         fs_add_local(&fs, "./");
 
@@ -45,7 +44,6 @@ TEST_CASE(lexer, header_name_multiline)
 {
         struct filesys fs = {0};
         struct pp_lexer lex = {0};
-        mc_init();
         fs_init(&fs);
         fs_add_local(&fs, "./");
 
@@ -71,7 +69,6 @@ TEST_CASE(lexer, header_name_escline)
 {
         struct filesys fs = {0};
         struct pp_lexer lex = {0};
-        mc_init();
         fs_init(&fs);
         fs_add_local(&fs, "./");
 
@@ -95,7 +92,6 @@ TEST_CASE(lexer, str_lit_oneline)
 { 
         struct filesys fs = {0};
         struct pp_lexer lex = {0};
-        mc_init();
         fs_init(&fs);
         fs_add_local(&fs, "./");
 
@@ -120,7 +116,6 @@ TEST_CASE(lexer, str_lit_multline)
 {
         struct filesys fs = {0};
         struct pp_lexer lex = {0};
-        mc_init();
         fs_init(&fs);
         fs_add_local(&fs, "./");
 
@@ -141,7 +136,6 @@ TEST_CASE(lexer, comment_star_oneline)
 {
         struct filesys fs = {0};
         struct pp_lexer lex = {0};
-        mc_init();
         fs_init(&fs);
         fs_add_local(&fs, "./");
 
@@ -166,7 +160,6 @@ TEST_CASE(lexer, punctuators)
 {
         struct filesys fs = {0};
         struct pp_lexer lex = {0};
-        mc_init();
         fs_init(&fs);
         fs_add_local(&fs, "./");
 
@@ -254,6 +247,7 @@ TEST_CASE(lexer, punctuators)
 
 void run_pp_lexer()
 {
+        mc_init();
         TEST_RUN(lexer, header_name);
         TEST_RUN(lexer, header_name_multiline);
         TEST_RUN(lexer, header_name_escline);
@@ -261,4 +255,5 @@ void run_pp_lexer()
         TEST_RUN(lexer, str_lit_multline);
         TEST_RUN(lexer, comment_star_oneline);
         TEST_RUN(lexer, punctuators);
+        mc_free();
 }

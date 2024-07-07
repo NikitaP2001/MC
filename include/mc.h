@@ -71,6 +71,8 @@ const char* mc_get_log_fmt(enum MC_LOG_LEVEL loglevel);
 /* one time initialization of the compiler module */
 void mc_init();
 
+void mc_free();
+
 _Bool mc_isinit();
 
 #endif /* _MC_H_ */
