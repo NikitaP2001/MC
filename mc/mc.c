@@ -38,10 +38,18 @@ static _Bool mc_is_init = false;
 void mc_init()
 {
         if (!mc_is_init) {
-                token_init();
+                token_global_init();
                 mc_is_init = true;
         }
         
+}
+
+void mc_free()
+{
+        if (mc_is_init) {
+                token_global_free();
+                mc_is_init = false;
+        }
 }
 
 _Bool mc_isinit()

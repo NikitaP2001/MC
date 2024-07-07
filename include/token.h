@@ -212,6 +212,8 @@ void token_destroy(struct token *tok);
 struct token* token_convert_next(struct convert_context *ctx);
 
 /* one time initialization of the token module */
-void token_init();
+void token_global_init();
+
+void token_global_free();
 
 #endif /* _TOKEN_H_ */

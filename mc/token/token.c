@@ -929,7 +929,7 @@ struct token* token_convert_next(struct convert_context *ctx)
         return new_tok;
 }
 
-void token_init()
+void token_global_init()
 {
         assert(keyw_invalid < TRIE_ALPHABET_SIZE);
         trie_init(&token_keyw_trie, punc_invalid);
@@ -943,4 +943,10 @@ void token_init()
                 const char *punc = token_punctuators[n_p];
                 trie_insert(&token_punc_trie, punc, n_p);
         }
+}
+
+void token_global_free()
+{
+        trie_free(&token_keyw_trie);
+        trie_free(&token_punc_trie);
 }
