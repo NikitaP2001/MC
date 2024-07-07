@@ -162,6 +162,96 @@ TEST_CASE(lexer, comment_star_oneline)
         remove(TFILE_NAME);
 }
 
+TEST_CASE(lexer, punctuators)
+{
+        struct filesys fs = {0};
+        struct pp_lexer lex = {0};
+        mc_init();
+        fs_init(&fs);
+        fs_add_local(&fs, "./");
+
+        const char t_text[] = "<= >= == != && || -> ++ -- << >> "
+                "*= /= %= += -= <<= >>= &= ^= |= ## "
+                "... %:%: <: :> <% %> "
+                "[ ] ( ) { } . & * + - ~ ! / % < > ^ | ? : ; = , # "
+                "<=> <!=> <===> ";
+        ASSERT_TRUE(write_file(TFILE_NAME, t_text, LEN_OF(t_text)));
+
+        struct fs_file *src = fs_get_local(&fs, TFILE_NAME);
+
+        ASSERT_TRUE(pp_lexer_init(&lex, src));
+        CHECK_NEXT_TOKEN(lex, pp_punct, "<=");
+        CHECK_NEXT_TOKEN(lex, pp_punct, ">=");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "==");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "!=");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "&&");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "||");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "->");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "++");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "--");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "<<");
+        CHECK_NEXT_TOKEN(lex, pp_punct, ">>");
+
+        CHECK_NEXT_TOKEN(lex, pp_punct, "*=");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "/=");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "%=");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "+=");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "-=");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "<<=");
+        CHECK_NEXT_TOKEN(lex, pp_punct, ">>=");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "&=");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "^=");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "|=");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "##");
+
+        CHECK_NEXT_TOKEN(lex, pp_punct, "...");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "%:%:");
+
+        CHECK_NEXT_TOKEN(lex, pp_punct, "<:");
+        CHECK_NEXT_TOKEN(lex, pp_punct, ":>");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "<%");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "%>");
+
+        CHECK_NEXT_TOKEN(lex, pp_punct, "[");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "]");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "(");
+        CHECK_NEXT_TOKEN(lex, pp_punct, ")");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "{");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "}");
+        CHECK_NEXT_TOKEN(lex, pp_punct, ".");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "&");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "*");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "+");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "-");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "~");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "!");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "/");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "%");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "<");
+        CHECK_NEXT_TOKEN(lex, pp_punct, ">");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "^");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "|");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "?");
+        CHECK_NEXT_TOKEN(lex, pp_punct, ":");
+        CHECK_NEXT_TOKEN(lex, pp_punct, ";");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "=");
+        CHECK_NEXT_TOKEN(lex, pp_punct, ",");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "#");
+
+        CHECK_NEXT_TOKEN(lex, pp_punct, "<=");
+        CHECK_NEXT_TOKEN(lex, pp_punct, ">");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "<");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "!=");
+        CHECK_NEXT_TOKEN(lex, pp_punct, ">");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "<=");
+        CHECK_NEXT_TOKEN(lex, pp_punct, "==");
+        CHECK_NEXT_TOKEN(lex, pp_punct, ">");
+
+        pp_lexer_free(&lex);
+        fs_free(&fs);
+        remove(TFILE_NAME);
+}
+
 void run_pp_lexer()
 {
         TEST_RUN(lexer, header_name);
@@ -170,4 +260,5 @@ void run_pp_lexer()
         TEST_RUN(lexer, str_lit_oneline);
         TEST_RUN(lexer, str_lit_multline);
         TEST_RUN(lexer, comment_star_oneline);
+        TEST_RUN(lexer, punctuators);
 }

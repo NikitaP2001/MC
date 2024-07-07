@@ -358,20 +358,31 @@ static inline void pp_fetch_chrconst(struct pp_lexer *pp)
         pp_fetch_quotation(pp, '\'');
 }
 
+static const uint8_t pp_punc_lookup[256] = {
+        ['#'] = 1, ['%'] = 1, ['&'] = 1, ['('] = 1, [')'] = 1, ['*'] = 1,
+        ['+'] = 1, [','] = 1, ['-'] = 1, ['.'] = 1, ['/'] = 1, [':'] = 1,
+        [';'] = 1, ['<'] = 1, ['>'] = 1, ['?'] = 1, ['['] = 1, [']'] = 1,
+        ['^'] = 1, ['{'] = 1, ['|'] = 1, ['}'] = 1, ['~'] = 1, ['='] = 1,
+        ['!'] = 1,
+};
 
-static inline void pp_fetch_punctuator(struct pp_lexer *pp)
+static inline _Bool  pp_is_punc_char(char chr)
+{
+        return pp_punc_lookup[(uint8_t)chr];
+}
+
+/* TODO: prefix tree or DFA ?*/
+static void pp_fetch_punctuator(struct pp_lexer *pp)
 {
         int max_punc_len;
         for (max_punc_len = 0; max_punc_len < TOKEN_MAX_PUNC_LEN; 
                 max_punc_len++) {
-                if (pp->pos[max_punc_len] == '\0')
+                if (!pp_is_punc_char(pp->pos[max_punc_len]))
                         break;
         }
-        for (int i = TOKEN_MAX_PUNC_LEN; i > 0; i--) {
-                uint8_t hash = pearson_hash(&pp->pos[0], i);
-                int punc_num = token_punc_table[hash];
-                if (punc_num != punc_invalid && pp_isstr(pp, 
-                        token_punctuators[punc_num])) {
+        for (int i = max_punc_len; i > 0; i--) {
+                int punc_num = trie_search(&token_punc_trie, &pp->pos[0], i);
+                if (punc_num != punc_invalid) {
                         pp_advance(pp, i);
                         return;
                 }

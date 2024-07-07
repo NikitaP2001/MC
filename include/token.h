@@ -110,9 +110,9 @@ enum keyword_type {
         keyw_invalid
 };
 
-#define TOKEN_MAX_PUNC_LEN 3
+#define TOKEN_MAX_PUNC_LEN 4
 
-extern uint8_t token_punc_table[PEARSON_TABLE_SIZE];
+extern struct trie_node token_punc_trie;
 extern const char *token_punctuators[];
 
 enum punc_type {
@@ -141,6 +141,7 @@ enum punc_type {
         punc_xor_assign,
         punc_or_assign,
         punc_double_hash,
+        /* TODO: implement digraph support */
         punc_digraph_left_sq_br,
         punc_digraph_right_sq_br,
         punc_digraph_left_ql_br,

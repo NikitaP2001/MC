@@ -52,11 +52,14 @@ if (strcmp(arg1, arg2) != 0) {                                                  
         return;                                                                 \
 }
 
+/* TODO: rewrite all macros to fputs like this one */
 #define EXPECT_EQ(arg1, arg2)                                                   \
 if (arg1 != arg2) {                                                             \
         TEST_EXPECT_INFO;                                                       \
-        printf(#arg1" (%llx) != "#arg2" (%llx)\n",                              \
-                (uint64_t)arg1, (uint64_t)arg2);                                \
+        fputs(#arg1, stdout);                                                   \
+        printf(" (%llx) != ", (uint64_t)arg1);                                  \
+        fputs(#arg2, stdout);                                                   \
+        printf(" (%llx)\n", (uint64_t)arg2);                                    \
         *result = false;                                                        \
 }
 #define EXPECT_NE(arg1, arg2)                                                   \

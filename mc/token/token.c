@@ -70,8 +70,7 @@ static const char* keywords[] = {
         "union"
 };
 
-static uint8_t keyw_table[PEARSON_TABLE_SIZE];
-
+static struct trie_node token_keyw_trie;
 
 static inline _Bool token_is_wstr(struct pp_token *strlit)
 {
@@ -570,7 +569,7 @@ const char *token_punctuators[] = {
         "<=", ">=", "==", "!=", "&&",
         "||", "*=", "/=", "%=", "+=",
         "-=", "&=", "^=", "|=", "##",
-        "<:", ">:", "<%", "%>", "%:",
+        "<:", ":>", "<%", "%>", "%:",
         
         ".", "!", "-", "+", "*", "&",
         "<", ">", "^", "|", ":", "=",
@@ -579,12 +578,12 @@ const char *token_punctuators[] = {
         "%"
 };
 
-uint8_t token_punc_table[PEARSON_TABLE_SIZE];
+struct trie_node token_punc_trie;
 
 static enum punc_type token_punctuator_type(struct pp_token *punct)
 {
-        uint8_t hash = pearson_hash(punct->value, punct->length);
-        int punc_num = token_punc_table[hash];
+        int punc_num = trie_search(&token_punc_trie, punct->value, 
+                punct->length);
         if (punc_num != punc_invalid && pp_token_valcmp(punct, 
                 token_punctuators[punc_num]))
                 punc_num = punc_invalid;
@@ -665,8 +664,7 @@ token_identifier(struct convert_context *ctx)
         struct token *tok = token_create(pos);
         char *id_val = pos->value;
 
-        uint8_t hash = pearson_hash(id_val, pos->length);
-        int keyw_num = keyw_table[hash];
+        int keyw_num = trie_search(&token_keyw_trie, id_val, pos->length);
         /* TODO: handle universal char name */
         if (keyw_num != keyw_invalid && pp_token_valcmp(pos, 
                 keywords[keyw_num]) == 0) {
@@ -933,18 +931,16 @@ struct token* token_convert_next(struct convert_context *ctx)
 
 void token_init()
 {
-        assert(keyw_invalid < UINT8_MAX);
-        memset(keyw_table, keyw_invalid, sizeof(keyw_table));
+        assert(keyw_invalid < TRIE_ALPHABET_SIZE);
+        trie_init(&token_keyw_trie, punc_invalid);
         for (size_t n_kw = 0; n_kw < ARRAY_SIZE(keywords); n_kw++) {
                 const char *keyw = keywords[n_kw];
-                uint8_t hash = pearson_hash(keyw, strlen(keyw));
-                keyw_table[hash] = n_kw;
+                trie_insert(&token_keyw_trie, keyw, n_kw);
         }
 
-        memset(token_punc_table, punc_invalid, sizeof(token_punc_table));
+        trie_init(&token_punc_trie, punc_invalid);
         for (size_t n_p = 0; n_p < ARRAY_SIZE(token_punctuators); n_p++) {
                 const char *punc = token_punctuators[n_p];
-                uint8_t hash = pearson_hash(punc, strlen(punc));
-                token_punc_table[hash] = n_p;
+                trie_insert(&token_punc_trie, punc, n_p);
         }
 }
