@@ -75,10 +75,35 @@ enum parser_symbol {
         psym_struct_declarator,
         psym_translation_unit,
         psym_translation_unit2,
-        psym_external_declaration, /* - */
+        psym_external_declaration,
+        psym_parameter_list,
+        psym_parameter_list2,
+        psym_parameter_declaration,
+        psym_declaration_specifiers,
+        psym_declarator,
+        psym_storage_class_specifier,
+        psym_function_specifier,
+        psym_function_definition,
+        psym_declaration,
+        psym_direct_declarator,
+        psym_declaration_list,
+        psym_declaration_list2,
+        psym_compound_statement,
+        psym_init_declarator_list,
+        psym_init_declarator_list2,
+        psym_block_item_list,
+        psym_block_item_list2,
+        psym_init_declarator,
+        psym_block_item,
+        psym_statement,
+        psym_labeled_statement,
+        psym_expression_statement,
+        psym_selection_statement,
+        psym_iteration_statement,
+        psym_jump_statement,
 
         psym_first_nonterm = psym_expression,
-        psym_last_nonterm = psym_pointer,
+        psym_last_nonterm = psym_statement,
 
         psym_identifier,
         psym_constant,
@@ -108,7 +133,7 @@ enum parser_symbol {
 
 #define PARSER_NUM_TERM  (psym_last_term - psym_first_term + 1)
 #define PARSER_NUM_NONTERM (psym_last_nonterm - psym_first_nonterm + 1)
-#define PARSER_NUM_SYM   (psym_last)
+#define PARSER_NUM_SYM   (psym_last + 1)
 
 #define PARSER_PROD_LEN_LIMIT 10
 

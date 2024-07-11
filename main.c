@@ -14,6 +14,7 @@ int main()
         struct filesys fs;
         struct pp_context pp;
         struct convert_context ctx;
+        struct parser ps;
 
         fs_init(&fs);
         fs_add_local(&fs, "./mc"); 
@@ -44,6 +45,10 @@ int main()
                 putchar('\n');
                 tok = list_next(tok);
         }
+
+        parser_init(&ps, psym_constant_expression);
+
+        parser_free(&ps);
 
         convert_free(&ctx);
         pp_free(&pp);

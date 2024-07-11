@@ -89,8 +89,8 @@ static void
 parser_grammar_add(struct parser *ps, struct parser_production_list *p_lst)
 {
         enum parser_symbol type = p_lst->production->source;
-        int gram_pos = psym_first_nonterm - type;
-        if (ps->grammar[type] == NULL)
+        int gram_pos = type - psym_first_nonterm;
+        if (ps->grammar[gram_pos] == NULL)
                 ps->grammar[gram_pos] = p_lst;
         else
                 list_append(ps->grammar[gram_pos], p_lst);
@@ -100,7 +100,7 @@ static inline
 struct parser_production_list* 
 parser_grammar_get(struct parser *ps, enum parser_symbol type)
 {
-        int gram_pos = psym_first_nonterm - type;
+        int gram_pos = type - psym_first_nonterm;
         return ps->grammar[gram_pos];
 }
 
@@ -108,9 +108,8 @@ static void
 parser_production_list_init(struct parser *ps, enum parser_symbol type)
 {
         struct parser_production *prod = &parser_grammar[0];
-        for (size_t i = 0; 
-        i < parser_grammar_size(); 
-        i++, prod++) {
+        size_t grammar_size = parser_grammar_size();
+        for (size_t i = 0; i < grammar_size; i++, prod++) {
                 if (prod->source != type)
                         continue;
 
@@ -120,7 +119,9 @@ parser_production_list_init(struct parser *ps, enum parser_symbol type)
                 parser_grammar_add(ps, p_lst);
         }
         /* grammar may be incorrect */
-        assert(parser_grammar_get(ps, type) == NULL);
+        if (parser_grammar_get(ps, type) == NULL)
+                __debugbreak();
+        assert(parser_grammar_get(ps, type) != NULL);
 }
 
 static inline _Bool
@@ -132,7 +133,10 @@ parser_production_is_invalid(struct parser_production prod)
 static void
 parser_production_list_free(struct parser *ps)
 {
-        list_destroy(ps->grammar, (list_free)free);
+        for (int i = 0; i < PARSER_NUM_NONTERM; i++) {
+                if (ps->grammar[i] != NULL)
+                        list_destroy(ps->grammar[i], (list_free)free);
+        }
 }
 
 static void
@@ -195,14 +199,17 @@ parser_first_init_prod(struct parser *ps, struct parser_production *pr)
 static void
 parser_first_init_sym(struct parser *ps, enum parser_symbol type)
 {
+        struct parser_production_list *pr_entry;
         assert(!parser_symbol_is_terminal(type));
         struct parser_production_list *pr_list = parser_grammar_get(ps, type);
         if (pr_list == NULL) {
                 parser_production_list_init(ps, type);
+                pr_list = parser_grammar_get(ps, type);
                 assert(pr_list != NULL);
         }
         LIST_FOREACH_ENTRY(pr_list) {
-                parser_first_init_prod(ps, (struct parser_production*)entry);
+                pr_entry = (struct parser_production_list*)entry;
+                parser_first_init_prod(ps, pr_entry->production);
         }
 }
 
@@ -241,12 +248,15 @@ static void
 parser_follow_init(struct parser *ps)
 {
         struct parser_production_list *pr_list;
+        struct parser_production_list *pr_entry;
 
         for (int i = psym_first_nonterm; i < psym_last_nonterm; i++) {
+                parser_first_init_sym(ps, i);
                 pr_list = parser_grammar_get(ps, i);
                 LIST_FOREACH_ENTRY(pr_list) {
+                        pr_entry = (struct parser_production_list*)entry;
                         if (pasrer_follow_init_prod(ps, 
-                        (struct parser_production*)entry) != 0) {
+                                pr_entry->production) != 0) {
                                 i = 0;
                         }
                 }
@@ -323,6 +333,7 @@ void parser_init(struct parser *ps, enum parser_symbol start_sym)
         memset(ps->first_set, 0, sizeof(ps->first_set));
         memset(ps->follow_set, 0, sizeof(ps->follow_set));
         memset(ps->table, 0, sizeof(ps->table));
+        memset(ps->grammar, 0, sizeof(ps->grammar));
 
         ps->next_sym = NULL;
         ps->get_curr_file = NULL;

@@ -2,6 +2,393 @@
 
 struct parser_production parser_grammar[] = {
 
+        { psym_jump_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_goto),
+                                psym_identifier,
+                                PARSER_PUNCTUATOR(punc_semicolon))
+        },
+        { psym_jump_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_continue),
+                                PARSER_PUNCTUATOR(punc_semicolon))
+        },
+        { psym_jump_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_break),
+                                PARSER_PUNCTUATOR(punc_semicolon))
+        },
+        { psym_jump_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_return),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_semicolon))
+        },
+        { psym_jump_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_return),
+                                PARSER_PUNCTUATOR(punc_semicolon))
+        },
+
+        { psym_iteration_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_while),
+                                PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                psym_statement)
+        },
+        { psym_iteration_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_do),
+                                psym_statement,
+                                PARSER_KEYWORD(keyw_while),
+                                PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                PARSER_PUNCTUATOR(punc_semicolon))
+        },
+        { psym_iteration_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_for),
+                                PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                psym_statement)
+        },
+        { psym_iteration_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_for),
+                                PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                psym_statement)
+        },
+        { psym_iteration_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_for),
+                                PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                psym_statement)
+        },
+        { psym_iteration_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_for),
+                                PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                psym_statement)
+        },
+        { psym_iteration_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_for),
+                                PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                psym_statement)
+        },
+        { psym_iteration_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_for),
+                                PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                psym_statement)
+        },
+        { psym_iteration_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_for),
+                                PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                psym_declaration,
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                psym_statement)
+        },
+        { psym_iteration_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_for),
+                                PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                psym_declaration,
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                psym_statement)
+        },
+        { psym_iteration_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_for),
+                                PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                psym_declaration,
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                psym_statement)
+        },
+        { psym_iteration_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_for),
+                                PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                psym_declaration,
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                PARSER_PUNCTUATOR(punc_semicolon),
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                psym_statement)
+        },
+
+        { psym_selection_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_if),
+                                PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                psym_statement)
+        },
+        { psym_selection_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_if),
+                                PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                psym_statement,
+                                PARSER_KEYWORD(keyw_else),
+                                psym_statement)
+        },
+        { psym_selection_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_switch),
+                                PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                psym_expression,
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                psym_statement)
+        },
+
+        { psym_expression_statement,
+                PARSER_PROD_DEF(psym_expression,
+                                PARSER_PUNCTUATOR(punc_semicolon))
+        },
+        { psym_expression_statement,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_semicolon))
+        },
+
+        { psym_statement,
+                PARSER_PROD_DEF(psym_labeled_statement)
+        },
+        { psym_statement,
+                PARSER_PROD_DEF(psym_compound_statement)
+        },
+        { psym_statement,
+                PARSER_PROD_DEF(psym_expression_statement)
+        },
+        { psym_statement,
+                PARSER_PROD_DEF(psym_selection_statement)
+        },
+        { psym_statement,
+                PARSER_PROD_DEF(psym_iteration_statement)
+        },
+        { psym_statement,
+                PARSER_PROD_DEF(psym_jump_statement)
+        },
+
+        { psym_block_item,
+                PARSER_PROD_DEF(psym_declaration)
+        },
+        { psym_block_item,
+                PARSER_PROD_DEF(psym_statement)
+        },
+
+        { psym_block_item_list,
+                PARSER_PROD_DEF(psym_block_item,
+                                psym_block_item_list2)
+        },
+        { psym_block_item_list2,
+                PARSER_PROD_DEF(psym_block_item,
+                                psym_block_item_list2)
+        },
+        { psym_block_item_list2,
+                PARSER_PROD_DEF(psym_epsilon)
+        },
+
+        { psym_init_declarator,
+                PARSER_PROD_DEF(psym_declarator)
+        },
+        { psym_init_declarator,
+                PARSER_PROD_DEF(psym_declarator,
+                                PARSER_PUNCTUATOR(punc_assign),
+                                psym_initializer)
+        },
+
+        { psym_init_declarator_list,
+                PARSER_PROD_DEF(psym_init_declarator,
+                                psym_init_declarator_list2)
+        },
+        { psym_init_declarator_list2,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_comma),
+                                psym_init_declarator,
+                                psym_init_declarator_list2)
+        },
+        { psym_init_declarator_list2,
+                PARSER_PROD_DEF(psym_epsilon)
+        },
+
+        { psym_compound_statement,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_left_ql_br),
+                                psym_block_item_list,
+                                PARSER_PUNCTUATOR(punc_left_ql_br))
+        },
+        { psym_compound_statement,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_left_ql_br),
+                                PARSER_PUNCTUATOR(punc_left_ql_br))
+        },
+
+        { psym_declaration_list,
+                PARSER_PROD_DEF(psym_declaration,
+                                psym_declaration_list2)
+        },
+        { psym_declaration_list2,
+                PARSER_PROD_DEF(psym_declaration,
+                                psym_declaration_list2)
+        },
+        { psym_declaration_list2,
+                PARSER_PROD_DEF(psym_epsilon)
+        },
+
+        { psym_declaration, 
+                PARSER_PROD_DEF(psym_declaration_specifiers,
+                                psym_init_declarator_list,
+                                PARSER_PUNCTUATOR(punc_semicolon))
+        },
+        { psym_declaration, 
+                PARSER_PROD_DEF(psym_declaration_specifiers,
+                                PARSER_PUNCTUATOR(punc_semicolon))
+        },
+
+        { psym_function_definition,
+                PARSER_PROD_DEF(psym_declaration_specifiers,
+                                psym_declarator,
+                                psym_declaration_list,
+                                psym_compound_statement)
+        },
+        { psym_function_definition,
+                PARSER_PROD_DEF(psym_declaration_specifiers,
+                                psym_declarator,
+                                psym_compound_statement)
+        },
+
+        { psym_function_specifier,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_inline))
+        },
+
+        { psym_storage_class_specifier,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_typedef))
+        },
+        { psym_storage_class_specifier,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_extern))
+        },
+        { psym_storage_class_specifier,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_static))
+        },
+        { psym_storage_class_specifier,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_auto))
+        },
+        { psym_storage_class_specifier,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_register))
+        },
+
+        { psym_abstract_declarator,
+                PARSER_PROD_DEF(psym_pointer)
+        },
+        { psym_abstract_declarator,
+                PARSER_PROD_DEF(psym_pointer,
+                                psym_direct_abstract_declarator)
+        },
+        { psym_abstract_declarator,
+                PARSER_PROD_DEF(psym_direct_abstract_declarator)
+        },
+
+        { psym_declarator,
+                PARSER_PROD_DEF(psym_pointer,
+                                psym_direct_declarator)
+        },
+        { psym_declarator,
+                PARSER_PROD_DEF(psym_direct_declarator)
+        },
+
+        { psym_external_declaration,
+                PARSER_PROD_DEF(psym_function_definition)
+        },
+        { psym_external_declaration,
+                PARSER_PROD_DEF(psym_declaration)
+        },
+
+        { psym_declaration_specifiers,
+                PARSER_PROD_DEF(psym_storage_class_specifier,
+                                psym_declaration_specifiers)
+        },
+        { psym_declaration_specifiers,
+                PARSER_PROD_DEF(psym_storage_class_specifier)
+        },
+        { psym_declaration_specifiers,
+                PARSER_PROD_DEF(psym_type_specifier,
+                                psym_declaration_specifiers)
+        },
+        { psym_declaration_specifiers,
+                PARSER_PROD_DEF(psym_type_specifier)
+        },
+        { psym_declaration_specifiers,
+                PARSER_PROD_DEF(psym_type_qualifier,
+                                psym_declaration_specifiers)
+        },
+        { psym_declaration_specifiers,
+                PARSER_PROD_DEF(psym_type_qualifier)
+        },
+        { psym_declaration_specifiers,
+                PARSER_PROD_DEF(psym_function_specifier,
+                                psym_declaration_specifiers)
+        },
+        { psym_declaration_specifiers,
+                PARSER_PROD_DEF(psym_function_specifier)
+        },
+
+        { psym_parameter_declaration,
+                PARSER_PROD_DEF(psym_declaration_specifiers,
+                                psym_declarator)
+        },
+        { psym_parameter_declaration,
+                PARSER_PROD_DEF(psym_declaration_specifiers,
+                                psym_abstract_declarator)
+        },
+        { psym_parameter_declaration,
+                PARSER_PROD_DEF(psym_declaration_specifiers)
+        },
+
+        { psym_parameter_list,
+                PARSER_PROD_DEF(psym_parameter_declaration,
+                                psym_parameter_list2)
+        },
+        { psym_parameter_list2,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_comma),
+                                psym_parameter_declaration,
+                                psym_parameter_list2)
+        },
+        { psym_parameter_list2,
+                PARSER_PROD_DEF(psym_epsilon)
+        },
+
+        { psym_parameter_type_list, 
+                PARSER_PROD_DEF(psym_parameter_list)
+        },
+        { psym_parameter_type_list, 
+                PARSER_PROD_DEF(psym_parameter_list,
+                                PARSER_PUNCTUATOR(punc_comma),
+                                PARSER_PUNCTUATOR(punc_dots))
+        },
+
+        { psym_typedef_name, 
+                PARSER_PROD_DEF(psym_identifier)
+        },
+
         { psym_translation_unit,
                 PARSER_PROD_DEF(psym_external_declaration,
                                 psym_translation_unit2)
@@ -289,12 +676,12 @@ struct parser_production parser_grammar[] = {
                 PARSER_PROD_DEF(psym_enumerator,
                                 psym_enumerator_list2)
         },
-        { psym_enumerator_list,
+        { psym_enumerator_list2,
                 PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_comma),
                                 psym_enumerator,
                                 psym_enumerator_list2)
         },
-        { psym_enumerator_list,
+        { psym_enumerator_list2,
                 PARSER_PROD_DEF(psym_epsilon)
         },
 
@@ -601,7 +988,7 @@ struct parser_production parser_grammar[] = {
         },
 
         { psym_additive_expression, 
-                PARSER_PROD_DEF(psym_multiplicative_expression2, 
+                PARSER_PROD_DEF(psym_multiplicative_expression, 
                                 psym_additive_expression2)
         },
         { psym_additive_expression2, 
