@@ -48,6 +48,21 @@ enum constant_type {
 
 };
 
+static inline _Bool token_const_is_float(enum constant_type type)
+{
+        return type >= const_float && type <= const_long_double;
+}
+
+static inline _Bool token_const_is_integer(enum constant_type type)
+{
+        return type >= const_int && type <= const_ulong_long_int;
+}
+
+static inline _Bool token_const_is_char(enum constant_type type)
+{
+        return type >= const_char && type <= const_wchar_t;
+}
+
 extern const char token_simple_esc_chars[];
 
 struct constant_value {
@@ -59,6 +74,7 @@ struct constant_value {
         } data;
 };
 
+/* note: keep token_type_strs consistent */
 enum token_type {
         tok_keyword,
         tok_identifier,
@@ -66,6 +82,8 @@ enum token_type {
         tok_strlit,
         tok_punctuator
 };
+
+extern const char* token_keywords[];
 
 enum keyword_type {
         keyw_auto,
@@ -109,6 +127,11 @@ enum keyword_type {
 
         keyw_invalid
 };
+
+static inline const char *token_keyw_to_str(enum keyword_type type)
+{
+        return token_keywords[type];
+}
 
 #define TOKEN_MAX_PUNC_LEN 4
 
@@ -178,6 +201,11 @@ enum punc_type {
         punc_invalid,
 };
 
+static inline const char *token_punc_to_str(enum punc_type type)
+{
+        return token_punctuators[type];
+}
+
 union token_value {
 
         enum keyword_type var_keyw;
@@ -215,5 +243,17 @@ struct token* token_convert_next(struct convert_context *ctx);
 void token_global_init();
 
 void token_global_free();
+
+
+#ifdef DEBUG
+void token_print_content(struct token *tok);
+
+#define TOKEN_PRINT_CONTENT(tok) token_print_content(tok)
+
+#else /* DEBUG */
+
+#define TOKEN_PRINT_CONTENT(tok) do {} while (false)
+
+#endif /* DEBUG */
 
 #endif /* _TOKEN_H_ */

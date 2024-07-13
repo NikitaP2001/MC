@@ -7,17 +7,105 @@
 #include <parser.h>
 #include "grammar.h"
 
-static inline _Bool
-parser_symbol_is_terminal(enum parser_symbol sym)
-{
-        return (sym >= psym_first_term && sym <= psym_last_term);
-}
-
-static inline _Bool 
-parser_symbol_not_terminal(enum parser_symbol sym)
-{
-        return (sym >= psym_first_nonterm && sym <= psym_last_nonterm);
-}
+const char *parser_symbol_nonterms[] = {
+        "psym_expression",
+        "psym_expression2",
+        "psym_conditional_expression",
+        "psym_logical_or_expression",
+        "psym_logical_or_expression2",
+        "psym_logical_and_expression",
+        "psym_logical_and_expression2",
+        "psym_inclusive_or_expression",
+        "psym_inclusive_or_expression2",
+        "psym_exclusive_or_expression",
+        "psym_exclusive_or_expression2",
+        "psym_and_expression",
+        "psym_and_expression2",
+        "psym_equality_expression",
+        "psym_equality_expression2",
+        "psym_relational_expression",
+        "psym_relational_expression2",
+        "psym_shift_expression",
+        "psym_shift_expression2",
+        "psym_additive_expression",
+        "psym_additive_expression2",
+        "psym_multiplicative_expression",
+        "psym_multiplicative_expression2",
+        "psym_cast_expression",
+        "psym_unary_expression",
+        "psym_type_name",
+        "psym_postfix_expression",
+        "psym_postfix_expression2",
+        "psym_unary_operator",
+        "psym_primary_expression",
+        "psym_initializer_list",
+        "psym_initializer_list2",
+        "psym_argument_expression_list",
+        "psym_argument_expression_list2",
+        "psym_assignment_expression",
+        "psym_assignment_operator",
+        "psym_constant_expression",
+        "psym_specifier_qualifier_list",
+        "psym_abstract_declarator",
+        "psym_type_specifier",
+        "psym_type_qualifier",
+        "psym_struct_or_union_specifier",
+        "psym_enum_specifier",
+        "psym_typedef_name",
+        "psym_enumerator_list",
+        "psym_enumerator_list2",
+        "psym_enumerator",
+        "psym_enumeration_constant",
+        "psym_designation",
+        "psym_initializer",
+        "psym_designator_list",
+        "psym_designator_list2",
+        "psym_designator",
+        "psym_pointer",
+        "psym_direct_abstract_declarator",
+        "psym_direct_abstract_declarator2",
+        "psym_parameter_type_list",
+        "psym_struct_or_union",
+        "psym_struct_declaration_list",
+        "psym_struct_declaration_list2",
+        "psym_type_qualifier_list",
+        "psym_type_qualifier_list2",
+        "psym_struct_declaration",
+        "psym_struct_declarator_list",
+        "psym_struct_declarator_list2",
+        "psym_struct_declarator",
+        "psym_translation_unit",
+        "psym_translation_unit2",
+        "psym_external_declaration",
+        "psym_parameter_list",
+        "psym_parameter_list2",
+        "psym_parameter_declaration",
+        "psym_declaration_specifiers",
+        "psym_declarator",
+        "psym_storage_class_specifier",
+        "psym_function_specifier",
+        "psym_function_definition",
+        "psym_declaration",
+        "psym_direct_declarator",
+        "psym_direct_declarator2",
+        "psym_declaration_list",
+        "psym_declaration_list2",
+        "psym_compound_statement",
+        "psym_init_declarator_list",
+        "psym_init_declarator_list2",
+        "psym_block_item_list",
+        "psym_block_item_list2",
+        "psym_init_declarator",
+        "psym_block_item",
+        "psym_statement",
+        "psym_labeled_statement",
+        "psym_expression_statement",
+        "psym_selection_statement",
+        "psym_iteration_statement",
+        "psym_jump_statement",
+        "psym_identifier_list",
+        "psym_identifier_list2",
+};
 
 /* @return next symbol present in set, ordered after @sym_num, 
  * psym_invalid in case no more symbols present */
@@ -114,13 +202,11 @@ parser_production_list_init(struct parser *ps, enum parser_symbol type)
                         continue;
 
                 struct parser_production_list *p_lst 
-                        = calloc(1, sizeof(struct parser_production_list *));
+                        = calloc(1, sizeof(struct parser_production_list));
                 p_lst->production = prod;
                 parser_grammar_add(ps, p_lst);
         }
         /* grammar may be incorrect */
-        if (parser_grammar_get(ps, type) == NULL)
-                __debugbreak();
         assert(parser_grammar_get(ps, type) != NULL);
 }
 
@@ -169,6 +255,8 @@ static void parser_first_prod_get(struct parser *ps,
 {
         enum parser_symbol sym_dv;
 
+        /* no left recursion */
+        assert(pr->derivation[0] != pr->source);
         for (size_t i_sym = 0; i_sym < pr->n_deriv; i_sym++) {
                 sym_dv = pr->derivation[i_sym];
                 if (parser_symbol_is_terminal(sym_dv) 
@@ -264,8 +352,21 @@ parser_follow_init(struct parser *ps)
 }
 
 static inline
-void
-parser_table_row_addentry(struct parser_production *table_row, 
+struct parser_production
+parser_table_row_get_entry(struct parser_production *table_row, 
+                         enum parser_symbol position)
+{
+        static struct parser_production invalid = {
+                .source = psym_invalid
+        };
+        if (parser_symbol_is_terminal(position))
+                return table_row[position - psym_first_term];
+        else
+                return invalid;
+}
+
+static inline void
+parser_table_row_add_entry(struct parser_production *table_row, 
                          enum parser_symbol position,
                          struct parser_production entry)
 {
@@ -289,7 +390,7 @@ parser_table_add_production(struct parser *ps,
                         has_eps = true;
                         continue;
                 }
-                parser_table_row_addentry(table_row, sym, *pr);
+                parser_table_row_add_entry(table_row, sym, *pr);
         }
         if (has_eps) {
                 struct parser_production pr_eps = {
@@ -300,7 +401,7 @@ parser_table_add_production(struct parser *ps,
                 follow = parser_follow_get(ps, pr->source);
                 PARSER_SYM_SET_FOREACH(follow) {
                         sym = (enum parser_symbol)entry;
-                        parser_table_row_addentry(table_row, sym, pr_eps);
+                        parser_table_row_add_entry(table_row, sym, pr_eps);
                 }
         }
 }
@@ -308,36 +409,36 @@ parser_table_add_production(struct parser *ps,
 struct parser_production*
 parser_table_get(struct parser *ps, enum parser_symbol type)
 {
-        int row_pos = psym_first_nonterm - type;
+        int row_pos = type - psym_first_nonterm;
         return ps->table[row_pos];
 }
 
 static void parser_table_init(struct parser *ps)
 {
         struct parser_production_list *pr_list;
-        struct parser_production *prod;
+        struct parser_production_list *pr_entry;
 
         for (int i = psym_first_nonterm; i < psym_last_nonterm; i++) {
                 pr_list = parser_grammar_get(ps, i);
 
                 LIST_FOREACH_ENTRY(pr_list) {
-                        prod = (struct parser_production*)entry;
+                        pr_entry = (struct parser_production_list*)entry;
                         parser_table_add_production(ps, 
-                                parser_table_get(ps, i), prod);
+                                parser_table_get(ps, i), pr_entry->production);
                 }
         } 
 }
 
-void parser_init(struct parser *ps, enum parser_symbol start_sym)
+void parser_init(struct parser *ps, 
+                struct parser_ops ops,
+                enum parser_symbol start_sym)
 {
         memset(ps->first_set, 0, sizeof(ps->first_set));
         memset(ps->follow_set, 0, sizeof(ps->follow_set));
         memset(ps->table, 0, sizeof(ps->table));
         memset(ps->grammar, 0, sizeof(ps->grammar));
 
-        ps->next_sym = NULL;
-        ps->get_curr_file = NULL;
-        ps->get_curr_line = NULL;
+        ps->ops = ops;
         ps->start_sym = start_sym;
 
         /* endmarker follows root level symbol - start_sym*/
@@ -403,26 +504,33 @@ static void parser_stack_pop(struct parser_stack *stack)
 
 static enum parser_symbol parser_token_tosymbol(struct token *tok)
 {
-        UNUSED(tok);
+        switch (tok->type) {
+                case tok_keyword:
+                        return psym_first_keyw + tok->value.var_keyw;
+                case tok_identifier:
+                        return psym_identifier;
+                case tok_constant:
+                        return psym_constant;
+                case tok_strlit:
+                        return psym_string_literal;
+                case tok_punctuator:
+                        return psym_first_punc + tok->value.var_punc;
+                default:
+                        MC_LOG(MC_CRIT, "unexpected token type");
+                        break;
+        }
         return psym_invalid;
 }
 
-/*
-        create callbacks, call on node parse
-        seperate callback for error
-        that we could define some unneded callbacks to
-        error handler when parsing const expr, for example
-*/
 enum mc_status parser_process(struct parser *ps, void *pp_data)
 {
         enum parser_symbol top_sym;
-        struct token *curr_tok = ps->next_sym(pp_data);
+        struct parser_ops *pops = &ps->ops;
+        struct token *curr_tok = pops->next_sym(pp_data);
         struct parser_stack ps_stack;
         enum mc_status status = MC_OK;
 
-        UNUSED(curr_tok);
         parser_stack_init(ps, &ps_stack);
-        parser_stack_push(&ps_stack, ps->start_sym);
 
         while ((top_sym = parser_stack_top(&ps_stack)) 
                 && top_sym != psym_endmarker
@@ -430,19 +538,23 @@ enum mc_status parser_process(struct parser *ps, void *pp_data)
                 enum parser_symbol tok_sym = parser_token_tosymbol(curr_tok);
                 if (tok_sym == top_sym) {
                         parser_stack_pop(&ps_stack);
-                        curr_tok = ps->next_sym(pp_data);
+                        curr_tok = pops->next_sym(pp_data);
                 } else if (parser_symbol_is_terminal(top_sym)
                         || parser_production_is_invalid(
-                        parser_table_get(ps, top_sym)[tok_sym])) {
-                        status = ps->error(pp_data, top_sym);
+                        parser_table_row_get_entry(parser_table_get(ps, 
+                                top_sym), tok_sym))) {
+                        status = pops->error(pp_data, top_sym);
                 } else {
-                        struct parser_production prod 
-                                = parser_table_get(ps, top_sym)[tok_sym];
-                        ps->output(pp_data, prod);
+                        struct parser_production prod = 
+                                parser_table_row_get_entry(parser_table_get(ps, 
+                                        top_sym), tok_sym);
+                        pops->output(pp_data, prod);
                         parser_stack_pop(&ps_stack);
-                        for (size_t i_sym = 0; i_sym < prod.n_deriv; i_sym++) {
+                        assert(prod.n_deriv > 0);
+                        for (size_t i_sym = prod.n_deriv; 
+                                i_sym > 0; i_sym--) {
                                 parser_stack_push(&ps_stack, 
-                                        prod.derivation[i_sym]);
+                                        prod.derivation[i_sym - 1]);
                         }
                 }
         }

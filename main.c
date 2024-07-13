@@ -8,12 +8,58 @@
 #include <parser.h>
 #include <token.h>
 
+struct parser_context {
+        struct token *curr;
+};
+
+void parser_context_init(struct parser_context *pctx, 
+                        struct convert_context *cctx)
+{
+        pctx->curr = convert_get_token(cctx);
+}
+
+struct token *parser_context_next(struct parser_context *pctx)
+{
+        struct token *curr = pctx->curr;
+        if (curr != NULL)
+                pctx->curr = list_next(curr);
+        return curr;
+}
+
+struct token *next_sym(void *pp_data)
+{
+        struct parser_context *pctx = (struct parser_context *)pp_data;
+        struct token *tok = parser_context_next(pctx);
+        TOKEN_PRINT_CONTENT(tok);
+        return tok;
+}
+
+enum mc_status error(void *pp_data, enum parser_symbol top)
+{
+        UNUSED(pp_data);
+        UNUSED(top);
+        MC_LOG(MC_DEBUG, "error");
+
+        return MC_FAIL;
+}
+
+
+void output(void *pp_data, struct parser_production prod)
+{
+        UNUSED(pp_data);
+        UNUSED(prod);
+        MC_LOG(MC_DEBUG, "Output production: %s", 
+                parser_symbol_to_str(prod.source));
+}
+
+
 int main()
 {
         mc_init();
         struct filesys fs;
         struct pp_context pp;
         struct convert_context ctx;
+        struct parser_context pctx;
         struct parser ps;
 
         fs_init(&fs);
@@ -37,17 +83,17 @@ int main()
                 puts("Bad token convertation");
                 exit(1);
         }
-        struct token *tok;
-        tok = convert_get_token(&ctx);
-        while (tok) {
-                for (size_t i = 0; i < tok->first->length; i++)
-                        putchar(tok->first->value[i]);
-                putchar('\n');
-                tok = list_next(tok);
-        }
 
-        parser_init(&ps, psym_constant_expression);
+        struct parser_ops ops = {
+                .next_sym = next_sym,
+                .error = error,
+                .output = output,
+        };
 
+        parser_context_init(&pctx, &ctx);
+
+        parser_init(&ps, ops, psym_translation_unit);
+        parser_process(&ps, &pctx);
         parser_free(&ps);
 
         convert_free(&ctx);

@@ -2,6 +2,152 @@
 
 struct parser_production parser_grammar[] = {
 
+        { psym_labeled_statement,
+                PARSER_PROD_DEF(psym_identifier,
+                                PARSER_PUNCTUATOR(punc_colon),
+                                psym_statement)
+        },
+        { psym_labeled_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_case),
+                                psym_constant_expression,
+                                PARSER_PUNCTUATOR(punc_colon),
+                                psym_statement)
+        },
+        { psym_labeled_statement,
+                PARSER_PROD_DEF(PARSER_KEYWORD(keyw_default),
+                                PARSER_PUNCTUATOR(punc_colon),
+                                psym_statement)
+        },
+
+        { psym_identifier_list,
+                PARSER_PROD_DEF(psym_identifier,
+                                psym_identifier_list2)
+        },
+        { psym_identifier_list2,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_comma), 
+                                psym_identifier, 
+                                psym_identifier_list2)
+        },
+        { psym_identifier_list2,
+                PARSER_PROD_DEF(psym_epsilon)
+        },
+        
+        { psym_direct_declarator,
+                PARSER_PROD_DEF(psym_identifier,
+                                psym_direct_declarator2)
+        },
+        { psym_direct_declarator,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                psym_declarator,
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                psym_direct_declarator2)
+        },
+        { psym_direct_declarator2,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_left_sq_br),
+                                psym_type_qualifier_list,
+                                psym_assignment_expression,
+                                PARSER_PUNCTUATOR(punc_right_sq_br),
+                                psym_direct_declarator2)
+        },
+        { psym_direct_declarator2,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_left_sq_br),
+                                PARSER_PUNCTUATOR(punc_right_sq_br),
+                                psym_direct_declarator2)
+        },
+        { psym_direct_declarator2,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_left_sq_br),
+                                psym_assignment_expression,
+                                PARSER_PUNCTUATOR(punc_right_sq_br),
+                                psym_direct_declarator2)
+        },
+        { psym_direct_declarator2,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_left_sq_br),
+                                psym_type_qualifier_list,
+                                PARSER_PUNCTUATOR(punc_right_sq_br),
+                                psym_direct_declarator2)
+        },
+        { psym_direct_declarator2,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_left_sq_br),
+                                PARSER_KEYWORD(keyw_static),
+                                psym_type_qualifier_list,
+                                psym_assignment_expression,
+                                PARSER_PUNCTUATOR(punc_right_sq_br),
+                                psym_direct_declarator2)
+        },
+        { psym_direct_declarator2,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_left_sq_br),
+                                PARSER_KEYWORD(keyw_static),
+                                psym_assignment_expression,
+                                PARSER_PUNCTUATOR(punc_right_sq_br),
+                                psym_direct_declarator2)
+        },
+        { psym_direct_declarator2,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_left_sq_br),
+                                psym_type_qualifier_list,
+                                PARSER_KEYWORD(keyw_static),
+                                psym_assignment_expression,
+                                PARSER_PUNCTUATOR(punc_right_sq_br),
+                                psym_direct_declarator2)
+        },
+        { psym_direct_declarator2,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_left_sq_br),
+                                psym_type_qualifier_list,
+                                PARSER_PUNCTUATOR(punc_mul),
+                                PARSER_PUNCTUATOR(punc_right_sq_br),
+                                psym_direct_declarator2)
+        },
+        { psym_direct_declarator2,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_left_sq_br),
+                                PARSER_PUNCTUATOR(punc_mul),
+                                PARSER_PUNCTUATOR(punc_right_sq_br),
+                                psym_direct_declarator2)
+        },
+        { psym_direct_declarator2,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                psym_parameter_type_list,
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                psym_direct_declarator2)
+        },
+        { psym_direct_declarator2,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                psym_identifier_list,
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                psym_direct_declarator2)
+        },
+        { psym_direct_declarator2,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_left_rnd_br),
+                                PARSER_PUNCTUATOR(punc_right_rnd_br),
+                                psym_direct_declarator2)
+        },
+        { psym_direct_declarator2,
+                PARSER_PROD_DEF(psym_epsilon)
+        },
+
+        { psym_struct_declarator,
+                PARSER_PROD_DEF(psym_declarator)
+        },
+        { psym_struct_declarator,
+                PARSER_PROD_DEF(psym_declarator,
+                                PARSER_PUNCTUATOR(punc_colon),
+                                psym_constant_expression)
+        },
+        { psym_struct_declarator,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_colon),
+                                psym_constant_expression)
+        },
+
+        { psym_type_qualifier_list,
+                PARSER_PROD_DEF(psym_type_qualifier,
+                                psym_type_qualifier_list2)
+        },
+        { psym_type_qualifier_list2,
+                PARSER_PROD_DEF(psym_type_qualifier,
+                                psym_type_qualifier_list2)
+        },
+        { psym_type_qualifier_list2,
+                PARSER_PROD_DEF(psym_epsilon)
+        },
+
         { psym_jump_statement,
                 PARSER_PROD_DEF(PARSER_KEYWORD(keyw_goto),
                                 psym_identifier,

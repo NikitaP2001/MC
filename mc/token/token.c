@@ -30,7 +30,7 @@ void token_destroy(struct token *tok)
 }
 
 /* order should match enum token_type */
-static const char* keywords[] = {
+const char* token_keywords[] = {
         "auto",
         "enum",
         "restrict",
@@ -667,7 +667,7 @@ token_identifier(struct convert_context *ctx)
         int keyw_num = trie_search(&token_keyw_trie, id_val, pos->length);
         /* TODO: handle universal char name */
         if (keyw_num != keyw_invalid && pp_token_valcmp(pos, 
-                keywords[keyw_num]) == 0) {
+                token_keywords[keyw_num]) == 0) {
                 tok->type = tok_keyword;
                 tok->value.var_keyw = keyw_num;
         } else if (!token_identifier_setvalue(tok, pos)) {
@@ -933,8 +933,8 @@ void token_global_init()
 {
         assert(keyw_invalid < TRIE_ALPHABET_SIZE);
         trie_init(&token_keyw_trie, punc_invalid);
-        for (size_t n_kw = 0; n_kw < ARRAY_SIZE(keywords); n_kw++) {
-                const char *keyw = keywords[n_kw];
+        for (size_t n_kw = 0; n_kw < ARRAY_SIZE(token_keywords); n_kw++) {
+                const char *keyw = token_keywords[n_kw];
                 trie_insert(&token_keyw_trie, keyw, n_kw);
         }
 
@@ -950,3 +950,70 @@ void token_global_free()
         trie_free(&token_keyw_trie);
         trie_free(&token_punc_trie);
 }
+
+#ifdef DEBUG
+
+static const char *token_type_strs[] = {
+        [tok_keyword] = "keyword",
+        [tok_identifier] = "identifier",
+        [tok_constant] = "constant",
+        [tok_strlit] = "string literal",
+        [tok_punctuator] = "punctuator",
+};
+
+static void token_print_constant(struct constant_value c_val)
+{
+        if (token_const_is_float(c_val.type))
+                printf("%Lf", c_val.data.var_long_double);
+        else if (token_const_is_integer(c_val.type))
+                printf("%llx", c_val.data.var_uint);
+        else if (token_const_is_char(c_val.type)) {
+                if (c_val.type == const_wchar_t)
+                        printf("%lc", (wchar_t)c_val.data.var_int);
+                else
+                        printf("%c", (char)c_val.data.var_int);
+        } else
+                MC_LOG(MC_CRIT, "unexpected value type");
+}
+
+void token_print_content(struct token *tok)
+{
+        union token_value t_val = tok->value; 
+        MC_LOG(MC_DEBUG, "token %p", (void *)tok);
+        printf("%s [", token_type_strs[tok->type]);
+
+        switch (tok->type) {
+                case tok_keyword:
+                {
+                        printf(token_keywords[t_val.var_keyw]);
+                        break;
+                }
+                case tok_identifier:
+                case tok_strlit:    
+                {
+                        for (file_size_t i = 0; i < t_val.var_raw.length; i++)
+                                putchar(t_val.var_raw.value[i]);
+                        break;
+                }
+                case tok_constant:
+                {
+                        token_print_constant(t_val.var_const);
+                        break;
+
+                }
+                case tok_punctuator:
+                {
+                        printf(token_punctuators[t_val.var_punc]);
+                        break;
+                }
+                default:
+                {
+                        MC_LOG(MC_CRIT, "unexpected token type");
+                        break;
+                }
+                        
+        }
+        puts("]");
+}
+
+#endif /* DEBUG */
