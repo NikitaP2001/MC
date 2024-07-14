@@ -83,6 +83,7 @@ enum parser_symbol {
         psym_parameter_list2,
         psym_parameter_declaration,
         psym_declaration_specifiers,
+        psym_declaration_specifiers_opt,
         psym_declarator,
         psym_storage_class_specifier,
         psym_function_specifier,
@@ -159,9 +160,11 @@ const char *
 parser_symbol_to_str(enum parser_symbol sym)
 {
         if (sym >= psym_first_punc && sym <= psym_last_punc)
-                return token_punc_to_str((enum punc_type)sym);
+                return token_punc_to_str((enum punc_type)
+                        (sym - psym_first_punc));
         else if (sym >= psym_first_keyw && sym <= psym_last_keyw)
-                return token_keyw_to_str((enum keyword_type)sym);
+                return token_keyw_to_str((enum keyword_type)
+                        (sym - psym_first_keyw));
         else if (parser_symbol_not_terminal((enum parser_symbol)sym))
                 return parser_symbol_nonterms[sym - psym_first_nonterm];
         else switch (sym)  {

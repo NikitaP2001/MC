@@ -470,31 +470,25 @@ struct parser_production parser_grammar[] = {
 
         { psym_declaration_specifiers,
                 PARSER_PROD_DEF(psym_storage_class_specifier,
-                                psym_declaration_specifiers)
-        },
-        { psym_declaration_specifiers,
-                PARSER_PROD_DEF(psym_storage_class_specifier)
+                                psym_declaration_specifiers_opt)
         },
         { psym_declaration_specifiers,
                 PARSER_PROD_DEF(psym_type_specifier,
-                                psym_declaration_specifiers)
-        },
-        { psym_declaration_specifiers,
-                PARSER_PROD_DEF(psym_type_specifier)
+                                psym_declaration_specifiers_opt)
         },
         { psym_declaration_specifiers,
                 PARSER_PROD_DEF(psym_type_qualifier,
-                                psym_declaration_specifiers)
-        },
-        { psym_declaration_specifiers,
-                PARSER_PROD_DEF(psym_type_qualifier)
+                                psym_declaration_specifiers_opt)
         },
         { psym_declaration_specifiers,
                 PARSER_PROD_DEF(psym_function_specifier,
-                                psym_declaration_specifiers)
+                                psym_declaration_specifiers_opt)
         },
-        { psym_declaration_specifiers,
-                PARSER_PROD_DEF(psym_function_specifier)
+        { psym_declaration_specifiers_opt, 
+                PARSER_PROD_DEF(psym_declaration_specifiers)
+        },
+        { psym_declaration_specifiers_opt, 
+                PARSER_PROD_DEF(psym_epsilon)
         },
 
         { psym_parameter_declaration,

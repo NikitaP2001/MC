@@ -50,6 +50,9 @@ void output(void *pp_data, struct parser_production prod)
         UNUSED(prod);
         MC_LOG(MC_DEBUG, "Output production: %s", 
                 parser_symbol_to_str(prod.source));
+        for (size_t i = 0; i < prod.n_deriv; i++)
+                printf("%s ", parser_symbol_to_str(prod.derivation[i]));
+        putchar('\n');
 }
 
 
