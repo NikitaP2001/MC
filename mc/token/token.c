@@ -932,7 +932,7 @@ struct token* token_convert_next(struct convert_context *ctx)
 void token_global_init()
 {
         assert(keyw_invalid < TRIE_ALPHABET_SIZE);
-        trie_init(&token_keyw_trie, punc_invalid);
+        trie_init(&token_keyw_trie, keyw_invalid);
         for (size_t n_kw = 0; n_kw < ARRAY_SIZE(token_keywords); n_kw++) {
                 const char *keyw = token_keywords[n_kw];
                 trie_insert(&token_keyw_trie, keyw, n_kw);
