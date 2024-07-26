@@ -42,6 +42,7 @@ const char *parser_symbol_nonterms[] = {
         "psym_initializer_list2",
         "psym_argument_expression_list",
         "psym_argument_expression_list2",
+        "psym_argument_expression_list_opt",
         "psym_assignment_expression",
         "psym_assignment_operator",
         "psym_constant_expression",
@@ -134,6 +135,12 @@ parser_symbol_set_empty(struct parser_symbol_set *set)
         set->n_elem = 0;
 }
 
+static inline _Bool
+parser_symbol_set_isempty(struct parser_symbol_set *set)
+{
+        return (set->n_elem == 0);
+}
+
 static inline void
 parser_symbol_set_insert(struct parser_symbol_set *sym_set, 
                          enum parser_symbol sym)
@@ -174,16 +181,17 @@ parser_symbol_set_size(struct parser_symbol_set *sym_set)
         return sym_set->n_elem;
 }
 
-static _Bool parser_symbol_set_is_joint(struct parser_symbol_set *set1, 
-                                        struct parser_symbol_set *set2)
+static void parser_symbol_set_joint(_IN struct parser_symbol_set *set1, 
+                                    _IN struct parser_symbol_set *set2,
+                                    _OUT struct parser_symbol_set *joint)
 {
-        if (set1->n_elem == 0 || set2->n_elem == 0)
-                return false;
+        if (set1->n_elem == 0 || set2->n_elem == 0) 
+                return;
+        
         for (uint32_t i = 0; i < PARSER_NUM_SYM; i++) {
-                if (set1->syms[i] == set2->syms[i])
-                        return true;
+                if (set1->syms[i] && set2->syms[i])
+                        parser_symbol_set_insert(joint, i);
         }
-        return false;
 }
 
 static void
@@ -294,11 +302,20 @@ static void
 parser_first_init_prod(struct parser *ps, struct parser_production *pr)
 {
         struct parser_symbol_set pr_set = {0};
+        struct parser_symbol_set joint = {0};
         enum parser_symbol type = pr->source;
         parser_first_prod_get(ps, pr, &pr_set);
-        if (parser_symbol_set_is_joint(&ps->first_set[type], &pr_set))
+        parser_symbol_set_joint(&ps->first_set[type], &pr_set, &joint);
+        if (!parser_symbol_set_isempty(&joint)) {
                 MC_LOG(MC_ERR, "LL1 rule does not hold for %s", 
                         parser_symbol_to_str(type));
+                for (int i = 0; i < PARSER_NUM_SYM; i++) {
+                        if (joint.syms[i])
+                                printf("%s ", parser_symbol_to_str(i));
+                }
+                putchar('\n');
+        }
+                
         parser_symbol_set_copy(&ps->first_set[type], &pr_set);
 }
 
@@ -580,3 +597,4 @@ enum mc_status parser_process(struct parser *ps, void *pp_data)
         parser_stack_free(&ps_stack);
         return status;
 }
+

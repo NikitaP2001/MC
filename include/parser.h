@@ -44,6 +44,7 @@ enum parser_symbol {
         psym_initializer_list2,
         psym_argument_expression_list,
         psym_argument_expression_list2,
+        psym_argument_expression_list_opt,
         psym_assignment_expression,
         psym_assignment_operator,
         psym_constant_expression,
@@ -108,9 +109,10 @@ enum parser_symbol {
         psym_jump_statement,
         psym_identifier_list,
         psym_identifier_list2,
+        psym_comma_opt,
 
         psym_first_nonterm = psym_expression,
-        psym_last_nonterm = psym_identifier_list2,
+        psym_last_nonterm = psym_comma_opt,
 
         psym_identifier,
         psym_constant,

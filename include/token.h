@@ -189,8 +189,8 @@ enum punc_type {
         punc_question,
         punc_left_sq_br,
         punc_right_sq_br,
-        punc_right_rnd_br,
         punc_left_rnd_br,
+        punc_right_rnd_br,
         punc_left_ql_br,
         punc_right_ql_br,
         punc_tilde,
@@ -221,8 +221,8 @@ union token_value {
         
 };
 
-
-
+/* TODO: replace linked list with just array, 
+ * then also store pp tok ptr in seperate place */
 struct token {
         struct list_head link;
         enum token_type type;
@@ -232,7 +232,6 @@ struct token {
         /* first preprocessing token, which
          * was met, while converting this token */
         struct pp_token *first;
-
 };
 
 void token_destroy(struct token *tok);

@@ -713,6 +713,12 @@ struct parser_production parser_grammar[] = {
         { psym_argument_expression_list2,
                 PARSER_PROD_DEF(psym_epsilon)
         },
+        { psym_argument_expression_list_opt, 
+                PARSER_PROD_DEF(psym_argument_expression_list)
+        },
+        { psym_argument_expression_list_opt, 
+                PARSER_PROD_DEF(psym_epsilon)
+        },
 
         { psym_initializer,
                 PARSER_PROD_DEF(psym_assignment_expression)
@@ -1006,6 +1012,13 @@ struct parser_production parser_grammar[] = {
                                 PARSER_PUNCTUATOR(punc_right_rnd_br))
         },
 
+        { psym_comma_opt,
+                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_comma))
+        },
+        { psym_comma_opt,
+                PARSER_PROD_DEF(psym_epsilon)
+        },
+
         { psym_postfix_expression, 
                 PARSER_PROD_DEF(psym_primary_expression,
                                 psym_postfix_expression2)
@@ -1016,16 +1029,7 @@ struct parser_production parser_grammar[] = {
                                 PARSER_PUNCTUATOR(punc_right_rnd_br),
                                 PARSER_PUNCTUATOR(punc_left_ql_br),
                                 psym_initializer_list,
-                                PARSER_PUNCTUATOR(punc_right_ql_br),
-                                psym_postfix_expression2)
-        },
-        { psym_postfix_expression, 
-                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_left_rnd_br),
-                                psym_type_name,
-                                PARSER_PUNCTUATOR(punc_right_rnd_br),
-                                PARSER_PUNCTUATOR(punc_left_ql_br),
-                                psym_initializer_list,
-                                PARSER_PUNCTUATOR(punc_comma),
+                                PARSER_PUNCTUATOR(psym_comma_opt),
                                 PARSER_PUNCTUATOR(punc_right_ql_br),
                                 psym_postfix_expression2)
         },
@@ -1037,12 +1041,7 @@ struct parser_production parser_grammar[] = {
         },
         { psym_postfix_expression2, 
                 PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_left_rnd_br), 
-                                psym_argument_expression_list,
-                                PARSER_PUNCTUATOR(punc_right_rnd_br),
-                                psym_postfix_expression2)
-        },
-        { psym_postfix_expression2, 
-                PARSER_PROD_DEF(PARSER_PUNCTUATOR(punc_left_rnd_br), 
+                                psym_argument_expression_list_opt,
                                 PARSER_PUNCTUATOR(punc_right_rnd_br),
                                 psym_postfix_expression2)
         },
