@@ -17,6 +17,8 @@ enum mc_status {
         MC_PARSE_ERROR = 10,
 };
 
+typedef enum mc_status mc_status_t;
+
 #define _IN
 #define _OUT
 #define _INOUT

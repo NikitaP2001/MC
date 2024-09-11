@@ -1,6 +1,6 @@
 MODULE := parser.a
 DEPS := 
 
-SRC = parser.c grammar.c
+SRC = parser.c tree.c
 
 include $(BLDRULES)

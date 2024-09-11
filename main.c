@@ -18,43 +18,47 @@ void parser_context_init(struct parser_context *pctx,
         pctx->curr = convert_get_token(cctx);
 }
 
-struct token *parser_context_next(struct parser_context *pctx)
+void parser_context_pull(struct parser_context *pctx)
 {
         struct token *curr = pctx->curr;
         if (curr != NULL)
                 pctx->curr = list_next(curr);
-        return curr;
 }
 
-struct token *next_sym(void *pp_data)
+struct token *pull_token(void *pp_data)
 {
         struct parser_context *pctx = (struct parser_context *)pp_data;
-        struct token *tok = parser_context_next(pctx);
-        TOKEN_PRINT_CONTENT(tok);
-        return tok;
+        parser_context_pull(pctx);
+        TOKEN_PRINT_CONTENT(pctx->curr);
+        return pctx->curr;
 }
 
-enum mc_status error(void *pp_data, enum parser_symbol top)
+void put_token(void *pp_data, struct token *tok)
+{
+        struct parser_context *pctx = (struct parser_context *)pp_data;
+        assert(list_next(tok) == pctx->curr);
+        pctx->curr = tok;
+}
+
+struct token *fetch_token(void *pp_data)
+{
+        struct parser_context *pctx = (struct parser_context *)pp_data;
+        return pctx->curr;
+}
+
+mc_status_t error_handler(void *pp_data, const char *message)
 {
         UNUSED(pp_data);
-        UNUSED(top);
-        MC_LOG(MC_DEBUG, "error");
-
+        printf("error: %s", message);
         return MC_FAIL;
 }
 
-
-void output(void *pp_data, struct parser_production prod)
+enum parser_symbol get_symbol(void *pp_data, struct token *name)
 {
         UNUSED(pp_data);
-        UNUSED(prod);
-        MC_LOG(MC_DEBUG, "Output production: %s", 
-                parser_symbol_to_str(prod.source));
-        for (size_t i = 0; i < prod.n_deriv; i++)
-                printf("%s ", parser_symbol_to_str(prod.derivation[i]));
-        putchar('\n');
+        UNUSED(name);
+        return psym_identifier;
 }
-
 
 int main()
 {
@@ -62,7 +66,6 @@ int main()
         struct filesys fs;
         struct pp_context pp;
         struct convert_context ctx;
-        struct parser_context pctx;
         struct parser ps;
 
         fs_init(&fs);
@@ -86,17 +89,18 @@ int main()
                 puts("Bad token convertation");
                 exit(1);
         }
-
-        struct parser_ops ops = {
-                .next_sym = next_sym,
-                .error = error,
-                .output = output,
-        };
-
+        struct parser_context pctx; 
         parser_context_init(&pctx, &ctx);
+        struct parser_ops ops = {
+                .pull_token = pull_token,
+                .put_token = put_token,
+                .fetch_token = fetch_token,
+                .error = error_handler,
+                .get_symbol = get_symbol,
+        };
+        parser_init(&ps, ops, &pctx);
+        parser_translation_unit(&ps);
 
-        parser_init(&ps, ops, psym_translation_unit);
-        parser_process(&ps, &pctx);
         parser_free(&ps);
 
         convert_free(&ctx);
