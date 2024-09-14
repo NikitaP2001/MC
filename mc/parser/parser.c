@@ -24,6 +24,9 @@ static mc_status_t parser_initializer_list(struct parser *ps);
 static mc_status_t parser_declaration(struct parser *ps);
 static mc_status_t parser_compound_statement(struct parser *ps);
 static mc_status_t parser_statement(struct parser *ps);
+static mc_status_t parser_type_qualifier_list(struct parser *ps);
+static mc_status_t parser_declarator(struct parser *ps);
+static mc_status_t parser_parameter_type_list(struct parser *ps);
 
 static inline void parser_stack_init(struct parser *ps)
 {
@@ -142,10 +145,208 @@ parser_error(struct parser *ps, char *message)
         return ps->ops.error(ps->data, message);
 }
 
+static mc_status_t parser_direct_declarator_array(struct parser *ps, 
+                                                  struct pt_node *dir_decl)
+{
+        mc_status_t status;
+        static const uint8_t type_lst_first[] = { TYPE_QUALIFIER_LIST };
+        static const uint8_t assig_first[] = { ASSIGNMENT_EXPRESSION };
+
+        enum parser_symbol sym = parser_fetch_symbol(ps);
+        if (type_lst_first[sym]) {
+                status = parser_type_qualifier_list(ps);
+                if (!MC_SUCC(status)) {
+                        return parser_error(ps, "invalid type qualifier list");
+                }
+                pt_node_child_add(dir_decl, parser_stack_pop(ps));
+        } else if (sym == PARSER_KEYWORD(keyw_static)) {
+                pt_node_child_add(dir_decl, 
+                        pt_node_create_leaf(parser_pull_token(ps)));
+
+                if (type_lst_first[parser_fetch_symbol(ps)]) {
+                        status = parser_type_qualifier_list(ps);
+                        if (!MC_SUCC(status)) {
+                                return parser_error(ps, 
+                                        "invalid type qualifier list");
+                        }
+                        pt_node_child_add(dir_decl, parser_stack_pop(ps));
+                }
+
+                if (assig_first[parser_fetch_symbol(ps)]) {
+                        return parser_error(ps, 
+                                "expected assignment expression");
+                }
+                status = parser_assignment_expression(ps);
+                if (!MC_SUCC(status)) {
+                        return parser_error(ps, 
+                                "invalid assignment expression");
+                }
+                pt_node_child_add(dir_decl, parser_stack_pop(ps));
+                return MC_OK;
+        } else if (sym == PARSER_PUNCTUATOR(punc_mul)) {
+                pt_node_child_add(dir_decl, 
+                        pt_node_create_leaf(parser_pull_token(ps)));
+                return MC_OK;
+        } else if (assig_first[sym]) {
+                status = parser_assignment_expression(ps);
+                if (!MC_SUCC(status)) {
+                        return parser_error(ps, 
+                                "invalid assignment expression");
+                }
+                pt_node_child_add(dir_decl, parser_stack_pop(ps));
+                return MC_OK;
+        } else {
+                return MC_OK;
+        }
+
+        sym = parser_fetch_symbol(ps);
+        if (assig_first[sym]) {
+                status = parser_assignment_expression(ps);
+                if (!MC_SUCC(status)) {
+                        return parser_error(ps, 
+                                "invalid assignment expression");
+                }
+                pt_node_child_add(dir_decl, parser_stack_pop(ps));
+        } else if (sym == PARSER_KEYWORD(keyw_static)) {
+                pt_node_child_add(dir_decl, 
+                        pt_node_create_leaf(parser_pull_token(ps)));
+
+                if (!assig_first[parser_fetch_symbol(ps)]) {
+                        return parser_error(ps, 
+                                "expected assignment expression");
+                }
+
+                status = parser_assignment_expression(ps);
+                if (!MC_SUCC(status)) {
+                        status = parser_error(ps, 
+                                "invalid assignment expression");
+                        return MC_FAIL;
+                }
+                pt_node_child_add(dir_decl, parser_stack_pop(ps));
+        } else if (sym == PARSER_KEYWORD(punc_mul)) {
+                pt_node_child_add(dir_decl, 
+                        pt_node_create_leaf(parser_pull_token(ps)));
+        }
+
+        return MC_OK;
+}
+
+static mc_status_t parser_identifier_list(struct parser *ps)
+{
+        mc_status_t status;
+        struct pt_node *id_lst = pt_node_create(psym_identifier_list);
+        parser_stack_push(ps, id_lst);
+
+        do {
+                if (parser_fetch_symbol(ps) != psym_identifier) {
+                        status = parser_error(ps, "expected identifier");
+                        goto fail;
+                }
+                pt_node_child_add(id_lst, 
+                        pt_node_create_leaf(parser_pull_token(ps)));
+
+        } while (parser_fetch_symbol(ps) == PARSER_PUNCTUATOR(punc_comma) 
+                && parser_pull_token(ps));
+
+        return MC_OK;
+fail:
+        parser_stack_restore(ps, id_lst);
+        return status;
+}
+
+static mc_status_t parser_direct_declarator_parameter(struct parser *ps, 
+                                                      struct pt_node *dir_decl)
+{
+        mc_status_t status;
+        static const uint8_t param_first[] = { PARAMETER_TYPE_LIST };
+        enum parser_symbol sym = parser_fetch_symbol(ps);
+
+        _Bool is_id = (sym == psym_identifier);
+        if ((param_first[sym] && !is_id) || (is_id && parser_get_symbol(ps,
+                parser_fetch_token(ps)) != psym_typedef_name)) {
+                status = parser_parameter_type_list(ps);
+                if (!MC_SUCC(status))
+                        return parser_error(ps, "invalid parameter type list");
+                pt_node_child_add(dir_decl, parser_stack_pop(ps));
+        } else if (is_id) {
+                status = parser_identifier_list(ps);
+                if (!MC_SUCC(status))
+                        return parser_error(ps, "invalid identifier list");
+                pt_node_child_add(dir_decl, parser_stack_pop(ps));
+        } 
+
+        return MC_OK;
+}
+
 static mc_status_t parser_direct_declarator(struct parser *ps)
 {
-        UNUSED(ps);
-        return MC_OK;
+        mc_status_t status;
+        static const uint8_t decl_first[] = { DECLARATOR };
+        struct pt_node *dir_decl = pt_node_create(psym_direct_declarator);
+        parser_stack_push(ps, dir_decl);
+
+        enum parser_symbol sym = parser_fetch_symbol(ps);
+        if (sym == psym_identifier) {
+                pt_node_child_add(dir_decl, 
+                        pt_node_create_leaf(parser_pull_token(ps)));
+        } else if (sym == PARSER_PUNCTUATOR(punc_left_rnd_br)) {
+                /* pull the ( before ( declarator ) */
+                parser_pull_token(ps);
+
+                if (!decl_first[parser_fetch_symbol(ps)]) {
+                        status = parser_error(ps, "expected declarator");
+                        goto fail;
+                }
+                status = parser_declarator(ps);
+                if (!MC_SUCC(status)) {
+                        status = parser_error(ps, "invalid declarator");
+                        goto fail;
+                }
+                pt_node_child_add(dir_decl, parser_stack_pop(ps));
+
+                if (parser_fetch_symbol(ps) 
+                        != PARSER_PUNCTUATOR(punc_right_rnd_br)) {
+                        status = parser_error(ps, "invalid declarator");
+                        goto fail;
+                }
+                parser_pull_token(ps);
+        } else {
+                status = parser_error(ps, 
+                        "expected ( declarator ) or identifier");
+                goto fail;
+        }
+
+        for (sym = parser_fetch_symbol(ps);
+                sym == PARSER_PUNCTUATOR(punc_left_sq_br) 
+                || sym == PARSER_PUNCTUATOR(punc_left_rnd_br);
+                sym = parser_fetch_symbol(ps)) {
+
+                /* pull [ or ( */
+                parser_pull_token(ps);
+
+                if (sym == PARSER_PUNCTUATOR(punc_left_sq_br)) {
+                        status = parser_direct_declarator_array(ps, dir_decl);
+                        if (parser_fetch_symbol(ps) 
+                                != PARSER_PUNCTUATOR(punc_right_sq_br)) {
+                                status = parser_error(ps, "expected ] symbol");
+                                goto fail;
+                        }
+                } else if (sym == PARSER_PUNCTUATOR(punc_left_rnd_br)) {
+                        status = parser_direct_declarator_parameter(ps, 
+                                dir_decl);
+                        if (parser_fetch_symbol(ps) 
+                                != PARSER_PUNCTUATOR(punc_right_rnd_br)) {
+                                status = parser_error(ps, "expected ) symbol");
+                                goto fail;
+                        }
+                }
+
+                /* pull ] or ) */
+                parser_pull_token(ps);
+        }
+fail:
+        parser_stack_restore(ps, dir_decl);
+        return status;        
 }
 
 static mc_status_t parser_declarator(struct parser *ps)

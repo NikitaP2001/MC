@@ -277,4 +277,7 @@
         ITERATION_STATEMENT                             \
         JUMP_STATEMENT
 
+#define PARAMETER_TYPE_LIST                             \
+        PARAMETER_LIST
+
 #endif /* _SYMSET_H_ */
