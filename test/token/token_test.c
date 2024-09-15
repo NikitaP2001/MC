@@ -136,6 +136,35 @@ TEST_CASE(token, numbers_int_valid)
      remove(TFILE_NAME);
 }
 
+TEST_CASE(token, punct_after_strlit)
+{
+     struct filesys fs;
+     struct pp_context pp;
+     struct convert_context ctx;
+     fs_init(&fs);
+     fs_add_local(&fs, "./");
+     pp_init(&pp, &fs);
+
+     const char test[] = "\"Hello, World!\";";
+     ASSERT_TRUE(write_file(TFILE_NAME, test, LEN_OF(test)));
+     enum mc_status status = pp_run(&pp, TFILE_NAME);
+     ASSERT_TRUE(MC_SUCC(status));
+
+     convert_init(&ctx, &pp);
+     ASSERT_TRUE(MC_SUCC(convert_run(&ctx)));
+     struct token *tok = convert_get_token(&ctx);
+
+     EXPECT_EQ(tok->type, tok_strlit)
+     tok = list_next(tok); /* str literal */
+     EXPECT_EQ(tok->type, tok_punctuator);
+     EXPECT_EQ(tok->value.var_punc, punc_semicolon)
+
+     convert_free(&ctx);
+     pp_free(&pp);
+     fs_free(&fs);
+     remove(TFILE_NAME);
+}
+
 TEST_CASE(token, punct_seq)
 {
      struct filesys fs;
@@ -567,6 +596,7 @@ int main()
      TEST_RUN(token, int_suffix_invalid);
      TEST_RUN(token, numbers_int_valid);
      TEST_RUN(token, punct_seq);
+     TEST_RUN(token, punct_after_strlit);
      TEST_RUN(token, invalid_token_identifier);
      TEST_RUN(token, valid_token_sequence);
      TEST_RUN(token, wstrl_uchr_names);

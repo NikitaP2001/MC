@@ -15,6 +15,12 @@ _Bool convert_advance(struct convert_context *ctx)
         return true;
 }
 
+void convert_retreat(struct convert_context *ctx)
+{
+        assert(list_has_prev(ctx->pos));
+        ctx->pos = (struct pp_token*)list_prev(ctx->pos);
+}
+
 void convert_init(struct convert_context *ctx, struct pp_context *pp)
 {
         assert(mc_isinit());

@@ -10,12 +10,15 @@
 
 struct parser_context {
         struct token *curr;
+        struct token *last_pull;
+        struct token *last_error;
 };
 
 void parser_context_init(struct parser_context *pctx, 
                         struct convert_context *cctx)
 {
         pctx->curr = convert_get_token(cctx);
+        pctx->last_error = NULL;
 }
 
 void parser_context_pull(struct parser_context *pctx)
@@ -31,7 +34,7 @@ struct token *pull_token(void *pp_data)
         struct token *curr_tok = pctx->curr;
         parser_context_pull(pctx);
         TOKEN_PRINT_CONTENT(curr_tok);
-        return curr_tok;
+        return pctx->last_pull = curr_tok;
 }
 
 void put_token(void *pp_data, struct token *tok)
@@ -50,8 +53,14 @@ struct token *fetch_token(void *pp_data)
 mc_status_t error_handler(void *pp_data, const char *message)
 {
         struct parser_context *pctx = (struct parser_context *)pp_data;
-        printf("error: %s", message);
-        token_print(pctx->curr);
+        if (pctx->last_error != pctx->curr) {
+                printf("error: %s", message);
+                if (pctx->last_pull != NULL)
+                        token_print(pctx->last_pull);
+                else
+                        token_print(pctx->curr);
+                pctx->last_error = pctx->curr;
+        }
         return MC_FAIL;
 }
 

@@ -240,7 +240,7 @@
         PARAMETER_LIST
 
 #define COMPOUND_STATEMENT                              \
-        [PARSER_PUNCTUATOR(punc_left_sq_br)] = 1,
+        [PARSER_PUNCTUATOR(punc_left_ql_br)] = 1,
 
 #define LABELED_STATEMENT                               \
         [psym_identifier] = 1,                          \

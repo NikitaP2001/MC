@@ -483,8 +483,11 @@ token_char_strlit(struct convert_context *ctx, size_t length)
         while (buf_pos < raw_len && not_last) {
                 pos = convert_pos(ctx);
                 if (pos->type != pp_str_lit) {
-                        if (!token_is_space(pos))
+                        /* we touch next valuable tok, so we restore */
+                        if (!token_is_space(pos)) {
+                                convert_retreat(ctx);
                                 break;
+                        }
                         not_last = convert_advance(ctx);
                         val_pos = STRLIT_START_OFFSET;
                         continue;
@@ -972,7 +975,7 @@ static void token_print_constant(struct constant_value c_val)
         if (token_const_is_float(c_val.type))
                 printf("%Lf", c_val.data.var_long_double);
         else if (token_const_is_integer(c_val.type))
-                printf("%llx", c_val.data.var_uint);
+                printf("0x%llx", c_val.data.var_uint);
         else if (token_const_is_char(c_val.type)) {
                 if (c_val.type == const_wchar_t)
                         printf("%lc", (wchar_t)c_val.data.var_int);

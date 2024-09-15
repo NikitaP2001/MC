@@ -25,6 +25,8 @@ convert_continue(struct convert_context *ctx)
 
 _Bool convert_advance(struct convert_context *ctx);
 
+void convert_retreat(struct convert_context *ctx);
+
 void convert_init(struct convert_context *ctx, struct pp_context *pp);
 
 void convert_error(struct convert_context *ctx, const char *format, ...);
