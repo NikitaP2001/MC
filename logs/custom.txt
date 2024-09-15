@@ -16,3 +16,25 @@ UNADDRESSABLE ACCESS
 name=gcc __pformat_int false positive
 ...
 *!__pformat_int
+
+UNADDRESSABLE ACCESS
+name=gcc printf __pformat_xint unknown issue
+*!.text
+*!__pformat_xint
+*!__mingw_pformat
+*!__mingw_vfprintf
+*!printf
+
+UNADDRESSABLE ACCESS
+name=gcc scanf unknown issue
+*!.text
+*!__mingw_vsscanf
+*!sscanf
+
+UNINITIALIZED READ
+name=NT FindFirstFileExW unknown issue
+...
+KERNELBASE.dll!FindFirstFileExW
+KERNELBASE.dll!FindFirstFileA
+msvcrt.dll!stat64
+*!stat

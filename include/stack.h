@@ -54,7 +54,8 @@ static inline void
 stack_top(_IN struct stack *st, _OUT void *result)
 {
         const int elem_size = st->element_size;
-        uint8_t *src = (uint8_t *)st->storage + st->size * elem_size;
+        const int last_idx = st->size - 1;
+        uint8_t *src = (uint8_t *)st->storage + last_idx * elem_size;
         assert(st->size != 0);
         memcpy(result, src, elem_size);
 }

@@ -511,6 +511,7 @@ token_char_strlit(struct convert_context *ctx, size_t length)
                 }
         }
         tok->value.var_raw.value = buffer;
+        tok->value.var_raw.is_alloc = true;
         tok->value.var_raw.length = (buf_pos + 1) * sizeof(char);
         return tok;
 
@@ -949,6 +950,11 @@ void token_global_free()
 {
         trie_free(&token_keyw_trie);
         trie_free(&token_punc_trie);
+}
+
+void token_print(struct token *tok)
+{
+        pp_print_token_line(tok->first);
 }
 
 #ifdef DEBUG

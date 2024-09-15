@@ -243,6 +243,7 @@ void token_global_init();
 
 void token_global_free();
 
+void token_print(struct token *tok);
 
 #ifdef DEBUG
 void token_print_content(struct token *tok);

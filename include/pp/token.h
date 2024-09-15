@@ -32,7 +32,6 @@ struct pp_token {
         char *value;
         file_size_t length;
 
-
         /* counts backslashes also, for internal use */
         line_num_t line;
 
@@ -106,7 +105,7 @@ static inline
 _Bool
 pp_token_is_newline(struct pp_token *token)
 {
-        return token->type == pp_other && pp_token_valcmp(token, "\n");
+        return token->type == pp_other && (pp_token_valcmp(token, "\n") == 0);
 }
 
 #endif /* _PP_TOKEN_H_ */

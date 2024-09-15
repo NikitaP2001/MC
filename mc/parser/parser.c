@@ -344,6 +344,8 @@ static mc_status_t parser_direct_declarator(struct parser *ps)
                 /* pull ] or ) */
                 parser_pull_token(ps);
         }
+
+        return MC_OK;
 fail:
         parser_stack_restore(ps, dir_decl);
         return status;        

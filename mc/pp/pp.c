@@ -26,6 +26,7 @@ pp_print_tokens(struct pp_token *tok_beg, struct pp_token *tok_end)
                 }
                 chr_beg -= 1;
         }
+        putchar('\n');
         pp_print_line_number(file_line++);
 
         for ( ; chr_beg <= chr_end; chr_beg++) {

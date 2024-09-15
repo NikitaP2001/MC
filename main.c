@@ -28,9 +28,10 @@ void parser_context_pull(struct parser_context *pctx)
 struct token *pull_token(void *pp_data)
 {
         struct parser_context *pctx = (struct parser_context *)pp_data;
+        struct token *curr_tok = pctx->curr;
         parser_context_pull(pctx);
-        TOKEN_PRINT_CONTENT(pctx->curr);
-        return pctx->curr;
+        TOKEN_PRINT_CONTENT(curr_tok);
+        return curr_tok;
 }
 
 void put_token(void *pp_data, struct token *tok)
@@ -48,8 +49,9 @@ struct token *fetch_token(void *pp_data)
 
 mc_status_t error_handler(void *pp_data, const char *message)
 {
-        UNUSED(pp_data);
+        struct parser_context *pctx = (struct parser_context *)pp_data;
         printf("error: %s", message);
+        token_print(pctx->curr);
         return MC_FAIL;
 }
 
