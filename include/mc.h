@@ -50,13 +50,11 @@ enum MC_LOG_LEVEL {
 
 const char* mc_get_log_fmt(enum MC_LOG_LEVEL loglevel);
 
-#define MC_LOG(loglevel, ...)                                           \
-{                                                                       \
-        if (loglevel <= MC_CRIT) __debugbreak();                        \
-        printf(mc_get_log_fmt(loglevel), __FILE__, __LINE__);           \
-        printf(__VA_ARGS__);                                            \
-        putchar('\n');                                                  \
-}
+int __mc_log(int loglevel, const char *file, size_t line,
+              const char *format, ...);
+
+#define MC_LOG(loglevel, ...)                                   \
+        __mc_log(loglevel, __FILE__, __LINE__, __VA_ARGS__)
 
 #else /* DEBUG */
 

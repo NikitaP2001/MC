@@ -101,14 +101,4 @@ enum parser_symbol {
 #define PARSER_KEYWORD(type) (type + psym_first_keyw)
 #define PARSER_PUNCTUATOR(type) (type + psym_first_punc)
 
-static inline _Bool parser_symbol_not_terminal(enum parser_symbol sym)
-{
-        return (sym >= psym_first_nonterm && sym <= psym_last_nonterm);
-}
-
-static inline _Bool parser_symbol_is_terminal(enum parser_symbol sym)
-{
-        return (sym >= psym_first_term && sym <= psym_last_term);
-}
-
 #endif /* _SYMBOL_H_ */

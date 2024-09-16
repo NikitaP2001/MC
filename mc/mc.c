@@ -56,3 +56,20 @@ _Bool mc_isinit()
 {
         return mc_is_init;
 }
+
+#ifdef DEBUG
+
+int __mc_log(int loglevel, const char *file, size_t line,
+              const char *format, ...)
+{
+        va_list args;
+        if (loglevel <= MC_CRIT) __debugbreak();
+        printf(mc_get_log_fmt(loglevel), file, line);
+        va_start(args, format);
+        vprintf(format, args);
+        putchar('\n');
+        va_end(args);
+        return 0;
+}
+
+#endif

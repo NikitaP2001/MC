@@ -48,6 +48,17 @@ parser_stack_top(struct parser *ps)
         return result;
 }
 
+static inline _Bool parser_stack_empty(struct parser *ps)
+{
+        return stack_empty(&ps->stack);
+}
+
+static inline enum parser_symbol 
+parser_stack_topsym(struct parser *ps)
+{
+        return parser_stack_top(ps)->sym; 
+}
+
 static inline
 struct pt_node *parser_stack_pop(struct parser *ps)
 {
@@ -145,6 +156,20 @@ parser_error(struct parser *ps, char *message)
         return ps->ops.error(ps->data, message);
 }
 
+#ifdef DEBUG
+
+#define PARSER_ERROR(ps, message)                               \
+        (MC_LOG(MC_DEBUG, "syntax error detected"),             \
+                ps->ops.error(ps->data, message))
+
+#else
+
+#define PARSER_ERROR(ps, message)                               \
+        ps->ops.error(ps->data, message)
+
+#endif
+
+
 static mc_status_t parser_direct_declarator_array(struct parser *ps, 
                                                   struct pt_node *dir_decl)
 {
@@ -156,7 +181,7 @@ static mc_status_t parser_direct_declarator_array(struct parser *ps,
         if (type_lst_first[sym]) {
                 status = parser_type_qualifier_list(ps);
                 if (!MC_SUCC(status)) {
-                        return parser_error(ps, "invalid type qualifier list");
+                        return PARSER_ERROR(ps, "invalid type qualifier list");
                 }
                 pt_node_child_add(dir_decl, parser_stack_pop(ps));
         } else if (sym == PARSER_KEYWORD(keyw_static)) {
@@ -166,19 +191,19 @@ static mc_status_t parser_direct_declarator_array(struct parser *ps,
                 if (type_lst_first[parser_fetch_symbol(ps)]) {
                         status = parser_type_qualifier_list(ps);
                         if (!MC_SUCC(status)) {
-                                return parser_error(ps, 
+                                return PARSER_ERROR(ps, 
                                         "invalid type qualifier list");
                         }
                         pt_node_child_add(dir_decl, parser_stack_pop(ps));
                 }
 
                 if (assig_first[parser_fetch_symbol(ps)]) {
-                        return parser_error(ps, 
+                        return PARSER_ERROR(ps, 
                                 "expected assignment expression");
                 }
                 status = parser_assignment_expression(ps);
                 if (!MC_SUCC(status)) {
-                        return parser_error(ps, 
+                        return PARSER_ERROR(ps, 
                                 "invalid assignment expression");
                 }
                 pt_node_child_add(dir_decl, parser_stack_pop(ps));
@@ -190,9 +215,10 @@ static mc_status_t parser_direct_declarator_array(struct parser *ps,
         } else if (assig_first[sym]) {
                 status = parser_assignment_expression(ps);
                 if (!MC_SUCC(status)) {
-                        return parser_error(ps, 
+                        return PARSER_ERROR(ps, 
                                 "invalid assignment expression");
                 }
+
                 pt_node_child_add(dir_decl, parser_stack_pop(ps));
                 return MC_OK;
         } else {
@@ -203,7 +229,7 @@ static mc_status_t parser_direct_declarator_array(struct parser *ps,
         if (assig_first[sym]) {
                 status = parser_assignment_expression(ps);
                 if (!MC_SUCC(status)) {
-                        return parser_error(ps, 
+                        return PARSER_ERROR(ps, 
                                 "invalid assignment expression");
                 }
                 pt_node_child_add(dir_decl, parser_stack_pop(ps));
@@ -212,13 +238,13 @@ static mc_status_t parser_direct_declarator_array(struct parser *ps,
                         pt_node_create_leaf(parser_pull_token(ps)));
 
                 if (!assig_first[parser_fetch_symbol(ps)]) {
-                        return parser_error(ps, 
+                        return PARSER_ERROR(ps, 
                                 "expected assignment expression");
                 }
 
                 status = parser_assignment_expression(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "invalid assignment expression");
                         return MC_FAIL;
                 }
@@ -239,7 +265,7 @@ static mc_status_t parser_identifier_list(struct parser *ps)
 
         do {
                 if (parser_fetch_symbol(ps) != psym_identifier) {
-                        status = parser_error(ps, "expected identifier");
+                        status = PARSER_ERROR(ps, "expected identifier");
                         goto fail;
                 }
                 pt_node_child_add(id_lst, 
@@ -247,6 +273,7 @@ static mc_status_t parser_identifier_list(struct parser *ps)
 
         } while (parser_fetch_symbol(ps) == PARSER_PUNCTUATOR(punc_comma) 
                 && parser_pull_token(ps));
+        assert(parser_stack_topsym(ps) == psym_identifier_list);
 
         return MC_OK;
 fail:
@@ -266,12 +293,12 @@ static mc_status_t parser_direct_declarator_parameter(struct parser *ps,
                 parser_fetch_token(ps)) != psym_typedef_name)) {
                 status = parser_parameter_type_list(ps);
                 if (!MC_SUCC(status))
-                        return parser_error(ps, "invalid parameter type list");
+                        return PARSER_ERROR(ps, "invalid parameter type list");
                 pt_node_child_add(dir_decl, parser_stack_pop(ps));
         } else if (is_id) {
                 status = parser_identifier_list(ps);
                 if (!MC_SUCC(status))
-                        return parser_error(ps, "invalid identifier list");
+                        return PARSER_ERROR(ps, "invalid identifier list");
                 pt_node_child_add(dir_decl, parser_stack_pop(ps));
         } 
 
@@ -294,24 +321,24 @@ static mc_status_t parser_direct_declarator(struct parser *ps)
                 parser_pull_token(ps);
 
                 if (!decl_first[parser_fetch_symbol(ps)]) {
-                        status = parser_error(ps, "expected declarator");
+                        status = PARSER_ERROR(ps, "expected declarator");
                         goto fail;
                 }
                 status = parser_declarator(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid declarator");
+                        status = PARSER_ERROR(ps, "invalid declarator");
                         goto fail;
                 }
                 pt_node_child_add(dir_decl, parser_stack_pop(ps));
 
                 if (parser_fetch_symbol(ps) 
                         != PARSER_PUNCTUATOR(punc_right_rnd_br)) {
-                        status = parser_error(ps, "invalid declarator");
+                        status = PARSER_ERROR(ps, "invalid declarator");
                         goto fail;
                 }
                 parser_pull_token(ps);
         } else {
-                status = parser_error(ps, 
+                status = PARSER_ERROR(ps, 
                         "expected ( declarator ) or identifier");
                 goto fail;
         }
@@ -330,7 +357,7 @@ static mc_status_t parser_direct_declarator(struct parser *ps)
                                 goto fail;
                         if (parser_fetch_symbol(ps) 
                                 != PARSER_PUNCTUATOR(punc_right_sq_br)) {
-                                status = parser_error(ps, "expected ] symbol");
+                                status = PARSER_ERROR(ps, "expected ] symbol");
                                 goto fail;
                         }
                 } else if (sym == PARSER_PUNCTUATOR(punc_left_rnd_br)) {
@@ -340,7 +367,7 @@ static mc_status_t parser_direct_declarator(struct parser *ps)
                                 goto fail;
                         if (parser_fetch_symbol(ps) 
                                 != PARSER_PUNCTUATOR(punc_right_rnd_br)) {
-                                status = parser_error(ps, "expected ) symbol");
+                                status = PARSER_ERROR(ps, "expected ) symbol");
                                 goto fail;
                         }
                 }
@@ -348,6 +375,7 @@ static mc_status_t parser_direct_declarator(struct parser *ps)
                 /* pull ] or ) */
                 parser_pull_token(ps);
         }
+        assert(parser_stack_topsym(ps) == psym_direct_declarator);
 
         return MC_OK;
 fail:
@@ -366,23 +394,24 @@ static mc_status_t parser_declarator(struct parser *ps)
         if (ptr_first[parser_fetch_symbol(ps)]) {
                 status = parser_pointer(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid pointer");
+                        status = PARSER_ERROR(ps, "invalid pointer");
                         goto fail;
                 }
                 pt_node_child_add(decl, parser_stack_pop(ps));       
         }
 
         if (!dir_decl_first[parser_fetch_symbol(ps)]) {
-                status = parser_error(ps, "expected direct declarator");
+                status = PARSER_ERROR(ps, "expected direct declarator");
                 goto fail;
         }
 
         status = parser_direct_declarator(ps);
         if (!MC_SUCC(status)) {
-                status = parser_error(ps, "invalid direct declarator");
+                status = PARSER_ERROR(ps, "invalid direct declarator");
                 goto fail;
         }
         pt_node_child_add(decl, parser_stack_pop(ps));       
+        assert(parser_stack_topsym(ps) == psym_declarator);
 
         return MC_OK;
 fail:
@@ -408,7 +437,7 @@ static mc_status_t parser_enumerator(struct parser *ps)
 
         status = parser_enumeration_constant(ps);
         if (!MC_SUCC(status)) {
-                status = parser_error(ps, "invalid enumeration constant");
+                status = PARSER_ERROR(ps, "invalid enumeration constant");
                 goto fail;
         }
         pt_node_child_add(enumerator, parser_stack_pop(ps));
@@ -417,17 +446,18 @@ static mc_status_t parser_enumerator(struct parser *ps)
                 parser_pull_token(ps);
 
                 if (!const_expr_first[parser_fetch_symbol(ps)]) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "expected constant expression");
                         goto fail;
                 }
                 status = parser_constant_expression(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid constant expression");
+                        status = PARSER_ERROR(ps, "invalid constant expression");
                         goto fail;
                 }
                 pt_node_child_add(enumerator, parser_stack_pop(ps));
         }
+        assert(parser_stack_topsym(ps) == psym_enumerator);
 
         return MC_OK;
 fail:
@@ -444,19 +474,20 @@ static mc_status_t parser_enumerator_list(struct parser *ps)
 
         do {
                 if (!enum_first[parser_fetch_symbol(ps)]) {
-                        status = parser_error(ps, "expected enumerator");
+                        status = PARSER_ERROR(ps, "expected enumerator");
                         goto fail;
                 }
 
                 status = parser_enumerator(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid enumerator");
+                        status = PARSER_ERROR(ps, "invalid enumerator");
                         goto fail;
                 }
                 pt_node_child_add(enum_lst, parser_stack_pop(ps));
 
         } while (parser_fetch_symbol(ps) == PARSER_PUNCTUATOR(punc_comma) 
                 && parser_pull_token(ps));
+        assert(parser_stack_topsym(ps) == psym_enumerator_list);
 
         return MC_OK;
 fail:
@@ -483,13 +514,13 @@ static mc_status_t parser_enum_specifier(struct parser *ps)
                 parser_pull_token(ps);
 
                 if (!enum_lst[parser_fetch_symbol(ps)]) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "expected enumerator list");
                         goto fail;
                 }
                 status = parser_enumerator_list(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid enumerator list");
+                        status = PARSER_ERROR(ps, "invalid enumerator list");
                         goto fail;
                 }
                 pt_node_child_add(enum_spec, parser_stack_pop(ps));
@@ -500,15 +531,16 @@ static mc_status_t parser_enum_specifier(struct parser *ps)
                 
                 if (parser_fetch_symbol(ps) 
                         != PARSER_PUNCTUATOR(punc_right_ql_br)) {
-                        status = parser_error(ps, "expected } symbol");
+                        status = PARSER_ERROR(ps, "expected } symbol");
                         goto fail;
                 }
                 parser_pull_token(ps);
 
         } else if (pt_node_child_empty(enum_spec)) {
-                status = parser_error(ps, "expected { enumerator-list }");
+                status = PARSER_ERROR(ps, "expected { enumerator-list }");
                 goto fail;
         }
+        assert(parser_stack_topsym(ps) == psym_enum_specifier);
 
         return MC_OK;
 fail:
@@ -541,13 +573,13 @@ static mc_status_t parser_type_specifier(struct parser *ps)
         if (str_or_un[sym]) {
                 status = parser_struct_or_union_specifier(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "expected struct or union");
+                        status = PARSER_ERROR(ps, "expected struct or union");
                         goto fail;
                 }
         } else if (enum_spec[sym]) {
                 status = parser_enum_specifier(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "expected enum specifier");
+                        status = PARSER_ERROR(ps, "expected enum specifier");
                         goto fail;
                 }
         } else if (tdef_spec[sym]) {
@@ -558,6 +590,7 @@ static mc_status_t parser_type_specifier(struct parser *ps)
                 parser_stack_push(ps, val);
         }
         pt_node_child_add(spec, parser_stack_pop(ps));
+        assert(parser_stack_topsym(ps) == psym_type_specifier);
 
         return MC_OK;
 fail:
@@ -603,19 +636,20 @@ static mc_status_t parser_argument_expression_list(struct parser *ps)
 
         do {
                 if (!assig_expr[parser_fetch_symbol(ps)]) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "expected assignment expresiion");
                         goto fail;
                 }
                 status = parser_assignment_expression(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "invalid assignment expresiion");
                         goto fail;
                 }
                 pt_node_child_add(expr_list, parser_stack_pop(ps));
         } while (parser_fetch_symbol(ps) == PARSER_PUNCTUATOR(punc_comma) 
                 && parser_pull_token(ps));
+        assert(parser_stack_topsym(ps) == psym_argument_expression_list);
 
         return MC_OK;
 fail:
@@ -633,11 +667,12 @@ static mc_status_t parser_type_qualifier_list(struct parser *ps)
         do {
                 status = parser_type_qualifier(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid type qualifier");
+                        status = PARSER_ERROR(ps, "invalid type qualifier");
                         goto fail;
                 }
                 pt_node_child_add(q_lst, parser_stack_pop(ps));       
         } while (type_q_first[parser_fetch_symbol(ps)]);
+        assert(parser_stack_topsym(ps) == psym_type_qualifier_list);
 
         return MC_OK;
 fail:
@@ -659,7 +694,7 @@ static mc_status_t parser_pointer(struct parser *ps)
                 if (q_lst_first[parser_fetch_symbol(ps)]) {
                         status = parser_type_qualifier_list(ps);
                         if (!MC_SUCC(status)) {
-                                status = parser_error(ps, 
+                                status = PARSER_ERROR(ps, 
                                         "invalid type qualifier list");
                                 goto fail;
                         }
@@ -667,6 +702,7 @@ static mc_status_t parser_pointer(struct parser *ps)
                 }
 
         } while (parser_fetch_symbol(ps) == PARSER_PUNCTUATOR(punc_comma));
+        assert(parser_stack_topsym(ps) == psym_pointer);
 
         return MC_OK;
 fail:
@@ -706,7 +742,7 @@ static mc_status_t parser_parameter_declaration(struct parser *ps)
 
         status = parser_declaration_specifiers(ps);
         if (!MC_SUCC(status)) {
-                status = parser_error(ps, 
+                status = PARSER_ERROR(ps, 
                         "invalid declaration specifiers");
                 goto fail;
         }
@@ -721,7 +757,7 @@ static mc_status_t parser_parameter_declaration(struct parser *ps)
         if (sym == PARSER_PUNCTUATOR(punc_left_sq_br)) {
                 status = parser_abstract_declarator(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "invalid abstract declarator");
                         goto fail;
                 }
@@ -737,7 +773,7 @@ static mc_status_t parser_parameter_declaration(struct parser *ps)
 
                 status = parser_declarator(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "invalid declarator");
                         goto fail;
                 }
@@ -745,16 +781,17 @@ static mc_status_t parser_parameter_declaration(struct parser *ps)
         } else if (sym == PARSER_PUNCTUATOR(punc_right_rnd_br)) {
                 status = parser_abstract_declarator(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "invalid abstract declarator");
                         goto fail;
                 }
                 pt_node_child_add(param_decl, parser_stack_pop(ps));
         } else {
-                status = parser_error(ps, 
+                status = PARSER_ERROR(ps, 
                         "expected ) symbol or identifier");
                 goto fail;
         }
+        assert(parser_stack_topsym(ps) == psym_parameter_declaration);
 
         return MC_OK;
 fail:
@@ -771,20 +808,21 @@ static mc_status_t parser_parameter_list(struct parser *ps)
 
         do {
                 if (!param_dec_first[parser_fetch_symbol(ps)]) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "expected parameter declaration");
                         goto fail;
                 }
 
                 status = parser_parameter_declaration(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "invalid parameter declaration");
                         goto fail;
                 }
                 pt_node_child_add(param_lst, parser_stack_pop(ps));       
         } while (parser_fetch_symbol(ps) == PARSER_PUNCTUATOR(punc_comma) 
                 && parser_pull_token(ps));
+        assert(parser_stack_topsym(ps) == psym_parameter_list);
 
         return MC_OK;
 fail:
@@ -800,7 +838,7 @@ static mc_status_t parser_parameter_type_list(struct parser *ps)
 
         status = parser_parameter_list(ps);
         if (!MC_SUCC(status)) {
-                status = parser_error(ps, "invalid parameter list");
+                status = PARSER_ERROR(ps, "invalid parameter list");
                 goto fail;
         }
         pt_node_child_add(pt_lst, parser_stack_pop(ps));       
@@ -809,12 +847,13 @@ static mc_status_t parser_parameter_type_list(struct parser *ps)
                 parser_pull_token(ps);
 
                 if (parser_fetch_symbol(ps) != PARSER_PUNCTUATOR(punc_dots)) {
-                        status = parser_error(ps, "expected ... after ,");
+                        status = PARSER_ERROR(ps, "expected ... after ,");
                         goto fail;
                 }
                 pt_node_child_add(pt_lst, 
                         pt_node_create_leaf(parser_pull_token(ps)));
         }
+        assert(parser_stack_topsym(ps) == psym_parameter_type_list);
 
         return MC_OK;
 fail:
@@ -838,21 +877,21 @@ static mc_status_t parser_direct_abstract_declarator(struct parser *ps)
 
         if (abs_decl_first[parser_fetch_symbol(ps)]) {
                 if (first->type != PARSER_PUNCTUATOR(punc_left_rnd_br)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "unexpected [ before abstract declarator");
                         goto fail;
                 }
 
                 status = parser_abstract_declarator(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid abstract declarator");
+                        status = PARSER_ERROR(ps, "invalid abstract declarator");
                         goto fail;
                 }
                 pt_node_child_add(abs_decl, parser_stack_pop(ps));       
 
                 if (parser_fetch_symbol(ps) 
                         != PARSER_PUNCTUATOR(punc_right_rnd_br)) {
-                        status = parser_error(ps, "expected ) symbol");
+                        status = PARSER_ERROR(ps, "expected ) symbol");
                         goto fail;
                 }
                 parser_pull_token(ps);
@@ -862,13 +901,13 @@ static mc_status_t parser_direct_abstract_declarator(struct parser *ps)
                 enum parser_symbol sym = parser_fetch_symbol(ps);
                 if (assig_expr_first[sym]) {
                         if (first->type != PARSER_PUNCTUATOR(punc_left_sq_br)) {
-                                status = parser_error(ps, 
+                                status = PARSER_ERROR(ps, 
                                         "unexpected ( before assignment expression");
                                 goto fail;
                         }
                         status = parser_assignment_expression(ps); 
                         if (!MC_SUCC(status)) {
-                                status = parser_error(ps, 
+                                status = PARSER_ERROR(ps, 
                                         "invalid assignment expression");
                                 goto fail;
                         }
@@ -876,20 +915,20 @@ static mc_status_t parser_direct_abstract_declarator(struct parser *ps)
 
                         if (parser_fetch_symbol(ps)
                                 != PARSER_PUNCTUATOR(punc_right_sq_br)) {
-                                status = parser_error(ps, 
+                                status = PARSER_ERROR(ps, 
                                         "missing ] from [assignment-expression]");
                                 goto fail;
                         }
                         parser_pull_token(ps);
                 } else if (param_lst_first[sym]) {
                         if (first->type != PARSER_PUNCTUATOR(punc_left_rnd_br)) {
-                                status = parser_error(ps, 
+                                status = PARSER_ERROR(ps, 
                                         "unexpected [ before parameter type list");
                                 goto fail;
                         }
                         status = parser_parameter_type_list(ps);
                         if (!MC_SUCC(status)) {
-                                status = parser_error(ps, 
+                                status = PARSER_ERROR(ps, 
                                         "invalid parameter type list");
                                 goto fail;
                         }
@@ -897,7 +936,7 @@ static mc_status_t parser_direct_abstract_declarator(struct parser *ps)
 
                         if (parser_fetch_symbol(ps)
                                 != PARSER_PUNCTUATOR(punc_right_rnd_br)) {
-                                status = parser_error(ps, 
+                                status = PARSER_ERROR(ps, 
                                         "missing ) from (parameter-type-list)");
                                 goto fail;
                         }
@@ -905,7 +944,7 @@ static mc_status_t parser_direct_abstract_declarator(struct parser *ps)
 
                 } else if (sym == PARSER_PUNCTUATOR(punc_mul)) {
                         if (first->type != PARSER_PUNCTUATOR(punc_left_sq_br)) {
-                                status = parser_error(ps, 
+                                status = PARSER_ERROR(ps, 
                                         "unexpected ( before * ");
                                 goto fail;
                         }
@@ -915,13 +954,13 @@ static mc_status_t parser_direct_abstract_declarator(struct parser *ps)
 
                         if (parser_fetch_symbol(ps)
                                 != PARSER_PUNCTUATOR(punc_right_sq_br)) {
-                                status = parser_error(ps, "missing ] from [*]");
+                                status = PARSER_ERROR(ps, "missing ] from [*]");
                                 goto fail;
                         }
                         parser_pull_token(ps);
                 } else if (sym == PARSER_PUNCTUATOR(punc_right_sq_br)) {
                         if (first->type != PARSER_PUNCTUATOR(punc_left_sq_br)) {
-                                status = parser_error(ps, 
+                                status = PARSER_ERROR(ps, 
                                         "unexpected ( before ] ");
                                 goto fail;
                         }
@@ -932,7 +971,7 @@ static mc_status_t parser_direct_abstract_declarator(struct parser *ps)
                                 pt_node_create_leaf(parser_pull_token(ps)));
                 } else if (sym == PARSER_PUNCTUATOR(punc_right_rnd_br)) {
                         if (first->type != PARSER_PUNCTUATOR(punc_left_rnd_br)) {
-                                status = parser_error(ps, 
+                                status = PARSER_ERROR(ps, 
                                         "unexpected [ )");
                                 goto fail;
                         }
@@ -942,11 +981,12 @@ static mc_status_t parser_direct_abstract_declarator(struct parser *ps)
                         pt_node_child_add(abs_decl, 
                                 pt_node_create_leaf(parser_pull_token(ps)));
                 } else {
-                        status = parser_error(ps, "expected at least ] or )");
+                        status = PARSER_ERROR(ps, "expected at least ] or )");
                         goto fail;
                 }
         } while (d_abs_decl_first[parser_fetch_symbol(ps)] 
                 && (first = parser_pull_token(ps)));
+        assert(parser_stack_topsym(ps) == psym_direct_abstract_declarator);
 
         return MC_OK;
 fail:
@@ -966,7 +1006,7 @@ static mc_status_t parser_abstract_declarator(struct parser *ps)
         if (pointer_first[parser_fetch_symbol(ps)]) {
                 status = parser_pointer(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid pointer");
+                        status = PARSER_ERROR(ps, "invalid pointer");
                         goto fail;
                 }
                 pt_node_child_add(abs_decl, parser_stack_pop(ps));       
@@ -975,17 +1015,18 @@ static mc_status_t parser_abstract_declarator(struct parser *ps)
         if (dir_abs_decl_first[parser_fetch_symbol(ps)]) {
                 status = parser_direct_abstract_declarator(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "invalid direct abstract declarator");
                         goto fail;
                 }
                 pt_node_child_add(abs_decl, parser_stack_pop(ps));       
 
         } else if (pt_node_child_empty(abs_decl)) {
-                status = parser_error(ps, 
+                status = PARSER_ERROR(ps, 
                         "direct abstract declarator expected");
                 goto fail;
         }
+        assert(parser_stack_topsym(ps) == psym_abstract_declarator);
 
         return MC_OK;
 fail:
@@ -1001,7 +1042,7 @@ static mc_status_t parser_type_name(struct parser *ps)
 
         mc_status_t status = parser_specifier_qualifier_list(ps);
         if (!MC_SUCC(status)) {
-                status = parser_error(ps, 
+                status = PARSER_ERROR(ps, 
                         "invalid specifier qualifier list");
                 goto fail;
         }
@@ -1010,12 +1051,13 @@ static mc_status_t parser_type_name(struct parser *ps)
         if (abs_decl_first[parser_fetch_symbol(ps)]) {
                 status = parser_abstract_declarator(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "invalid abstract declarator");
                         goto fail;
                 }
                 pt_node_child_add(type_name, parser_stack_pop(ps));
         }
+        assert(parser_stack_topsym(ps) == psym_type_name);
 
         return MC_OK;
 fail:
@@ -1034,13 +1076,13 @@ static mc_status_t parser_designator(struct parser *ps)
                 == PARSER_PUNCTUATOR(punc_left_sq_br)) {
 
                 if (!const_first[parser_fetch_symbol(ps)]) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "expected constant expression");
                         goto fail;
                 }
                 status = parser_constant_expression(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "invalid constant expression");
                         goto fail;
                 }
@@ -1048,17 +1090,18 @@ static mc_status_t parser_designator(struct parser *ps)
 
                 if (parser_fetch_symbol(ps) 
                         != PARSER_PUNCTUATOR(punc_left_sq_br)) {
-                        status = parser_error(ps, "expected ] symbol");
+                        status = PARSER_ERROR(ps, "expected ] symbol");
                 }
                 parser_pull_token(ps);
         } else {
                 if (parser_fetch_symbol(ps) != psym_identifier) {
-                        status = parser_error(ps, "expected identifier");
+                        status = PARSER_ERROR(ps, "expected identifier");
                         goto fail;
                 }
                 pt_node_child_add(desig, 
                         pt_node_create_leaf(parser_pull_token(ps)));
         }
+        assert(parser_stack_topsym(ps) == psym_designator);
 
         return MC_OK;
 fail:
@@ -1076,11 +1119,12 @@ static mc_status_t parser_designator_list(struct parser *ps)
         do {
                 status = parser_designator(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid designator");
+                        status = PARSER_ERROR(ps, "invalid designator");
                         goto fail;
                 }
                 pt_node_child_add(desig_lst, parser_stack_pop(ps));
         } while (desig_first[parser_fetch_symbol(ps)]);
+        assert(parser_stack_topsym(ps) == psym_designator_list);
 
         return MC_OK; 
 fail:
@@ -1095,16 +1139,17 @@ static mc_status_t parser_designation(struct parser *ps)
 
         mc_status_t status = parser_designator_list(ps);
         if (!MC_SUCC(status)) {
-                status = parser_error(ps, "invalid designator");
+                status = PARSER_ERROR(ps, "invalid designator");
                 goto fail;
         }
         pt_node_child_add(designation, parser_stack_pop(ps));
 
         if (parser_fetch_symbol(ps) != PARSER_PUNCTUATOR(punc_assign)) {
-                status = parser_error(ps, "expected = symbol");
+                status = PARSER_ERROR(ps, "expected = symbol");
                 goto fail;
         }
         parser_pull_token(ps);
+        assert(parser_stack_topsym(ps) == psym_designation);
 
         return MC_OK;
 fail:
@@ -1122,7 +1167,7 @@ static mc_status_t parser_initializer(struct parser *ps)
                 parser_pull_token(ps);
                 status = parser_initializer_list(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid initializer list");
+                        status = PARSER_ERROR(ps, "invalid initializer list");
                         goto fail; 
                 }
                 pt_node_child_add(init, parser_stack_pop(ps));
@@ -1131,19 +1176,20 @@ static mc_status_t parser_initializer(struct parser *ps)
                         parser_pull_token(ps);
 
                 if (parser_fetch_symbol(ps) 
-                        == PARSER_PUNCTUATOR(punc_right_ql_br)) {
-                        status = parser_error(ps, "expected } symbol");
+                        != PARSER_PUNCTUATOR(punc_right_ql_br)) {
+                        status = PARSER_ERROR(ps, "expected } symbol");
                         goto fail; 
                 }
                 parser_pull_token(ps);
         } else {
                 status = parser_assignment_expression(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid assignment expr");
+                        status = PARSER_ERROR(ps, "invalid assignment expr");
                         goto fail; 
                 }
                 pt_node_child_add(init, parser_stack_pop(ps));
         }
+        assert(parser_stack_topsym(ps) == psym_initializer);
 
         return MC_OK;
 fail:
@@ -1163,7 +1209,7 @@ static mc_status_t parser_initializer_list(struct parser *ps)
                 if (desig_first[parser_fetch_symbol(ps)]) {
                         status = parser_designation(ps);
                         if (!MC_SUCC(status)) {
-                                status = parser_error(ps, 
+                                status = PARSER_ERROR(ps, 
                                         "invalid designation");
                                 goto fail;
                         }
@@ -1171,18 +1217,19 @@ static mc_status_t parser_initializer_list(struct parser *ps)
                 }
 
                 if (!initializer_first[parser_fetch_symbol(ps)]) {
-                        status = parser_error(ps, "expected inializer");
+                        status = PARSER_ERROR(ps, "expected inializer");
                         goto fail;
                 }
 
                 status = parser_initializer(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid initializer");
+                        status = PARSER_ERROR(ps, "invalid initializer");
                         goto fail;
                 }
                 pt_node_child_add(init_lst, parser_stack_pop(ps));
         } while (parser_fetch_symbol(ps) == PARSER_PUNCTUATOR(punc_comma) 
                 && parser_pull_token(ps));
+        assert(parser_stack_topsym(ps) == psym_initializer_list);
 
         return MC_OK;
 fail:
@@ -1201,25 +1248,26 @@ static mc_status_t parser_primary_expression(struct parser *ps)
         if (first->type == PARSER_PUNCTUATOR(punc_left_rnd_br)) {
 
                 if (!expr_first[parser_fetch_symbol(ps)]) {
-                        status = parser_error(ps, "expected expression");
+                        status = PARSER_ERROR(ps, "expected expression");
                         goto fail;
                 }
                 status = parser_expression(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid expression");
+                        status = PARSER_ERROR(ps, "invalid expression");
                         goto fail;
                 }
                 pt_node_child_add(expr, parser_stack_pop(ps));
 
                 if (parser_fetch_symbol(ps) 
                         != PARSER_PUNCTUATOR(punc_right_rnd_br)) {
-                        status = parser_error(ps, "expected ) symbol");
+                        status = PARSER_ERROR(ps, "expected ) symbol");
                         goto fail;
                 }
                 parser_pull_token(ps);
         } else {
                 pt_node_child_add(expr, pt_node_create_leaf(first));
         }
+        assert(parser_stack_topsym(ps) == psym_primary_expression);
 
         return MC_OK;
 fail:
@@ -1254,14 +1302,14 @@ static mc_status_t parser_postfix_expression(struct parser *ps)
                 if (!is_parsed_type_name) {
                         status = parser_type_name(ps);
                         if (!MC_SUCC(status)) {
-                                status = parser_error(ps, "invalid type name");
+                                status = PARSER_ERROR(ps, "invalid type name");
                                 goto fail;
                         }
                         pt_node_child_add(expr, parser_stack_pop(ps));
 
                         if (parser_fetch_symbol(ps) 
                                 != PARSER_PUNCTUATOR(punc_right_rnd_br)) {
-                                status = parser_error(ps, "expected ) symbol");
+                                status = PARSER_ERROR(ps, "expected ) symbol");
                                 goto fail;
                         }
                         parser_pull_token(ps);
@@ -1269,19 +1317,19 @@ static mc_status_t parser_postfix_expression(struct parser *ps)
                 /* parse { initializer list }*/
                 if (parser_fetch_symbol(ps) 
                         != PARSER_PUNCTUATOR(punc_left_ql_br)) {
-                        status = parser_error(ps, "expected { symbol");
+                        status = PARSER_ERROR(ps, "expected { symbol");
                         goto fail;
                 }
                 parser_pull_token(ps);
 
                 if (!init_lst_first[parser_fetch_symbol(ps)]) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "expected initializer list");
                         goto fail;
                 }
                 status = parser_initializer_list(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "invalid initializer list");
                         goto fail;
                 }
@@ -1289,7 +1337,7 @@ static mc_status_t parser_postfix_expression(struct parser *ps)
 
                 if (parser_fetch_symbol(ps) 
                         != PARSER_PUNCTUATOR(punc_right_ql_br)) {
-                        status = parser_error(ps, "expected } symbol");
+                        status = PARSER_ERROR(ps, "expected } symbol");
                         goto fail;
                 }
                 parser_pull_token(ps);
@@ -1302,7 +1350,7 @@ static mc_status_t parser_postfix_expression(struct parser *ps)
         if (pt_node_child_empty(expr)) {
                 status = parser_primary_expression(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "invalid initializer list");
                         goto fail;
                 }
@@ -1321,7 +1369,7 @@ static mc_status_t parser_postfix_expression(struct parser *ps)
                                 parser_pull_token(ps)));                
                         
                         if (parser_fetch_symbol(ps) != psym_identifier) {
-                                status = parser_error(ps, 
+                                status = PARSER_ERROR(ps, 
                                         "expected identifier");
                                 goto fail;
                         }
@@ -1331,22 +1379,20 @@ static mc_status_t parser_postfix_expression(struct parser *ps)
                         parser_pull_token(ps);
 
                         if (!expr_first[parser_fetch_symbol(ps)]) {
-                                status = parser_error(ps, "expected expression");
+                                status = PARSER_ERROR(ps, "expected expression");
                                 goto fail;
                         }
 
                         status = parser_expression(ps);
-                        if (!status) {
-                                status = parser_error(ps, "invalid expression");
+                        if (!MC_SUCC(status)) {
+                                status = PARSER_ERROR(ps, "invalid expression");
                                 goto fail;
                         }
-                        assert(parser_stack_top(ps)->sym 
-                                == psym_expression);
                         pt_node_child_add(expr, parser_stack_pop(ps));
 
                         if (parser_fetch_symbol(ps) 
                                 != PARSER_PUNCTUATOR(punc_right_sq_br)) {
-                                status = parser_error(ps, "expected ] symbol");
+                                status = PARSER_ERROR(ps, "expected ] symbol");
                                 goto fail;
                         }
                         parser_pull_token(ps);
@@ -1356,7 +1402,7 @@ static mc_status_t parser_postfix_expression(struct parser *ps)
                         if (arg_expr_lst[parser_fetch_symbol(ps)]) {
                                 status = parser_argument_expression_list(ps);
                                 if (!MC_SUCC(status)) {
-                                        status = parser_error(ps, 
+                                        status = PARSER_ERROR(ps, 
                                                 "invalid argument expression list");
                                         goto fail;
                                 }
@@ -1365,13 +1411,14 @@ static mc_status_t parser_postfix_expression(struct parser *ps)
 
                         if (parser_fetch_symbol(ps) 
                                 != PARSER_PUNCTUATOR(punc_right_rnd_br)) {
-                                status = parser_error(ps, "expected ) symbol");
+                                status = PARSER_ERROR(ps, "expected ) symbol");
                                 goto fail;
 
                         }
                         parser_pull_token(ps);
                 }
         }
+        assert(parser_stack_topsym(ps) == psym_postfix_expression);
 
         return MC_OK;
 fail:
@@ -1384,6 +1431,7 @@ static mc_status_t parser_unary_operator(struct parser *ps)
         struct pt_node *op = pt_node_create(psym_cast_expression);
         parser_stack_push(ps, op);
         pt_node_child_add(op, pt_node_create_leaf(parser_pull_token(ps)));
+        assert(parser_stack_topsym(ps) == psym_cast_expression);
         return MC_OK;
 }
 
@@ -1406,10 +1454,9 @@ static mc_status_t parser_unary_expression(struct parser *ps)
                 status = parser_postfix_expression(ps);
                 if (!status) {
                         parser_lookahead_restore(ps, NULL);
-                        status = parser_error(ps, "invalid postfix expression");
+                        status = PARSER_ERROR(ps, "invalid postfix expression");
                         goto fail;
                 }
-                assert(parser_stack_top(ps)->sym == psym_postfix_expression);
                 pt_node_child_add(expr, parser_stack_pop(ps));
                 return MC_OK;
         } else if (u_expr != NULL) {
@@ -1424,7 +1471,7 @@ static mc_status_t parser_unary_expression(struct parser *ps)
                                 pt_node_create_leaf(parser_pull_token(ps)));
 
                         if (!unary_expr_first[parser_fetch_symbol(ps)]) {
-                                status = parser_error(ps, 
+                                status = PARSER_ERROR(ps, 
                                         "expected unary expression");
                                 goto fail;
                         }
@@ -1437,13 +1484,13 @@ static mc_status_t parser_unary_expression(struct parser *ps)
                                 parser_pull_token(ps);
 
                                 if (!type_name_first[parser_fetch_symbol(ps)]) {
-                                        status = parser_error(ps, 
+                                        status = PARSER_ERROR(ps, 
                                                 "expected type name");
                                         goto fail;
                                 }
                                 status = parser_type_name(ps);
                                 if (!MC_SUCC(status)) {
-                                        status = parser_error(ps, 
+                                        status = PARSER_ERROR(ps, 
                                                 "invalid type name");
                                         goto fail;
                                 }
@@ -1451,34 +1498,34 @@ static mc_status_t parser_unary_expression(struct parser *ps)
 
                                 if (parser_fetch_symbol(ps) != 
                                         PARSER_PUNCTUATOR( punc_right_rnd_br)) {
-                                        status = parser_error(ps, 
+                                        status = PARSER_ERROR(ps, 
                                                 "expected ) symbol");       
                                 }
                                 parser_pull_token(ps);
                                 break;
                         } else if (!unary_expr_first[sym]) {
-                                status = parser_error(ps, 
+                                status = PARSER_ERROR(ps, 
                                         "expected unary expression");
                                 goto fail;
                         }
                 } else if (unary_op_first[sym]) {
                         status = parser_unary_operator(ps);
                         if (!MC_SUCC(status)) {
-                                status = parser_error(ps, 
+                                status = PARSER_ERROR(ps, 
                                         "invalid unary operator");
                                 goto fail;
                         }
                         pt_node_child_add(expr, parser_stack_pop(ps));
 
                         if (!cast_expr_first[parser_fetch_symbol(ps)]) {
-                                status = parser_error(ps, 
+                                status = PARSER_ERROR(ps, 
                                         "expected cast expression");
                                 goto fail;
                         }
 
                         status = parser_cast_expression(ps);
                         if (!MC_SUCC(status)) {
-                                status = parser_error(ps, 
+                                status = PARSER_ERROR(ps, 
                                         "invalid cast expression");
                                 goto fail;
                         }
@@ -1487,7 +1534,7 @@ static mc_status_t parser_unary_expression(struct parser *ps)
                 } else {
                         status = parser_postfix_expression(ps);
                         if (!MC_SUCC(status)) {
-                                status = parser_error(ps,
+                                status = PARSER_ERROR(ps,
                                         "invalid postfix expression");
                                 goto fail;
                         }
@@ -1496,6 +1543,7 @@ static mc_status_t parser_unary_expression(struct parser *ps)
                 }
 
         } while (unary_expr_first[sym = parser_fetch_symbol(ps)]);
+        assert(parser_stack_topsym(ps) == psym_unary_expression);
 
         return MC_OK;
 fail:
@@ -1516,15 +1564,19 @@ static mc_status_t parser_cast_expression(struct parser *ps)
                 expr = pt_node_create(psym_cast_expression);
         parser_stack_push(ps, expr);
 
-        if (pt_node_child_type(expr, 0) == psym_unary_expression)
-                return MC_OK;
+        if (!pt_node_child_empty(expr)) {
+                if (pt_node_child_type(expr, 0) == psym_unary_expression)
+                        return MC_OK;
 
-        assert(pt_node_child_type(expr, 0) == psym_type_name);
+                assert(pt_node_child_type(expr, 0) == psym_type_name);
+        }
+        
         enum parser_symbol sym = parser_fetch_symbol(ps);
         if (!cast_expr_first[sym])
                 goto fail;
 
-        /* we need to differ unary-expression in from, from ( type-name )
+        /* we need to differ type-name in postfix-expression from
+         * one in cast-expression. 
          * note, that one (type-name) could already be in expr */
         do {
                 struct token *tok;
@@ -1558,8 +1610,6 @@ static mc_status_t parser_cast_expression(struct parser *ps)
                                         parser_lookahead_restore(ps, old_lk);
                                         goto fail;
                                 }       
-                                assert(parser_stack_top(ps)->sym 
-                                        == psym_unary_expression);
 
                                 old_lk = parser_lookahead_swap(ps, old_lk);
                                 assert(old_lk == NULL);
@@ -1581,10 +1631,11 @@ static mc_status_t parser_cast_expression(struct parser *ps)
         if (pt_node_child_type(expr, pt_node_child_count(expr) - 1) 
                 != psym_unary_expression)
                 goto fail;
+        assert(parser_stack_topsym(ps) == psym_cast_expression);
 
         return MC_OK;
 fail:
-        status = parser_error(ps, "expected unary expr");
+        status = PARSER_ERROR(ps, "expected unary expr");
         parser_stack_restore(ps, expr);
         return status;
 }
@@ -1614,10 +1665,11 @@ static mc_status_t parser_multiplicative_expression(struct parser *ps)
         } while (cast_expr_first[parser_fetch_symbol(ps)]);
         if (pt_node_child_count(expr) % 2 == 0)
                 goto fail;
+        assert(parser_stack_topsym(ps) == psym_multiplicative_expression);
 
         return MC_OK;
 fail:
-        status = parser_error(ps, "expected cast expr");
+        status = PARSER_ERROR(ps, "expected cast expr");
         parser_stack_restore(ps, expr);
         return status;
 }
@@ -1646,10 +1698,11 @@ static mc_status_t parser_additive_expression(struct parser *ps)
         } while (add_expr_first[parser_fetch_symbol(ps)]);
         if (pt_node_child_count(expr) % 2 == 0)
                 goto fail;
+        assert(parser_stack_topsym(ps) == psym_additive_expression);
 
         return MC_OK;
 fail:
-        status = parser_error(ps, "expected multiplicative expr");
+        status = PARSER_ERROR(ps, "expected multiplicative expr");
         parser_stack_restore(ps, expr);
         return status;
 }
@@ -1678,10 +1731,11 @@ static mc_status_t parser_shift_expression(struct parser *ps)
         } while (add_expr_first[parser_fetch_symbol(ps)]);
         if (pt_node_child_count(expr) % 2 == 0)
                 goto fail;
+        assert(parser_stack_topsym(ps) == psym_shift_expression);
 
         return MC_OK;
 fail:
-        status = parser_error(ps, "expected additive expr");
+        status = PARSER_ERROR(ps, "expected additive expr");
         parser_stack_restore(ps, expr);
         return status;
 }
@@ -1712,10 +1766,11 @@ static mc_status_t parser_relational_expression(struct parser *ps)
         } while (shift_first[parser_fetch_symbol(ps)]);
         if (pt_node_child_count(expr) % 2 == 0)
                 goto fail;
+        assert(parser_stack_topsym(ps) == psym_relational_expression);
 
         return MC_OK;
 fail:
-        status = parser_error(ps, "expected shift expr");
+        status = PARSER_ERROR(ps, "expected shift expr");
         parser_stack_restore(ps, expr);
         return status;
 }
@@ -1744,10 +1799,11 @@ static mc_status_t parser_equality_expression(struct parser *ps)
         } while (rel_expr[parser_fetch_symbol(ps)]);
         if (pt_node_child_count(expr) % 2 == 0)
                 goto fail;
+        assert(parser_stack_topsym(ps) == psym_equality_expression);
 
         return MC_OK;
 fail:
-        status = parser_error(ps, "expected relational expr");
+        status = PARSER_ERROR(ps, "expected relational expr");
         parser_stack_restore(ps, expr);
         return status;
 }
@@ -1774,10 +1830,11 @@ static mc_status_t parser_and_expression(struct parser *ps)
                         goto fail;
                 pt_node_child_add(expr, parser_stack_pop(ps));
         }
+        assert(parser_stack_topsym(ps) == psym_and_expression);
 
         return MC_OK;
 fail:
-        status = parser_error(ps, "expected equality expr");
+        status = PARSER_ERROR(ps, "expected equality expr");
         parser_stack_restore(ps, expr);
         return status;
 }
@@ -1804,10 +1861,11 @@ static mc_status_t parser_exclusive_or_expression(struct parser *ps)
                         goto fail;
                 pt_node_child_add(expr, parser_stack_pop(ps));
         }
+        assert(parser_stack_topsym(ps) == psym_exclusive_or_expression);
 
         return MC_OK;
 fail:
-        status = parser_error(ps, "expected and expr");
+        status = PARSER_ERROR(ps, "expected and expr");
         parser_stack_restore(ps, expr);
         return status;
 }
@@ -1834,10 +1892,11 @@ static mc_status_t parser_inclusive_or_expression(struct parser *ps)
                         goto fail;
                 pt_node_child_add(expr, parser_stack_pop(ps));
         }
+        assert(parser_stack_topsym(ps) == psym_inclusive_or_expression);
 
         return MC_OK;
 fail:
-        status = parser_error(ps, "expected exclusive or expr");
+        status = PARSER_ERROR(ps, "expected exclusive or expr");
         parser_stack_restore(ps, expr);
         return status;
 }
@@ -1864,10 +1923,11 @@ static mc_status_t parser_logical_and_expression(struct parser *ps)
                         goto fail;
                 pt_node_child_add(expr, parser_stack_pop(ps));
         }
+        assert(parser_stack_topsym(ps) == psym_logical_and_expression);
 
         return MC_OK;
 fail:
-        status = parser_error(ps, "expected inclusive or expr");
+        status = PARSER_ERROR(ps, "expected inclusive or expr");
         parser_stack_restore(ps, expr);
         return status;
 }
@@ -1894,10 +1954,11 @@ static mc_status_t parser_logical_or_expression(struct parser *ps)
                         goto fail;
                 pt_node_child_add(expr, parser_stack_pop(ps));
         }
+        assert(parser_stack_topsym(ps) == psym_logical_or_expression);
 
         return MC_OK;
 fail:
-        status = parser_error(ps, "invalid logical and expr");
+        status = PARSER_ERROR(ps, "invalid logical and expr");
         parser_stack_restore(ps, expr);
         return status;
 }
@@ -1908,6 +1969,7 @@ static mc_status_t parser_assignment_operator(struct parser *ps)
         parser_stack_push(ps, assign_op);
         struct pt_node *punc = pt_node_create_leaf(parser_pull_token(ps));
         pt_node_child_add(assign_op, punc);
+        assert(parser_stack_topsym(ps) == psym_assignment_operator);
         return MC_OK;
 }
 
@@ -1939,7 +2001,7 @@ static mc_status_t parser_assignment_expression(struct parser *ps)
                 if (type_name_first[sym]) {
                         status = parser_type_name(ps);
                         if (!MC_SUCC(status)) {
-                                status = parser_error(ps, "invalid type name");
+                                status = PARSER_ERROR(ps, "invalid type name");
                                 goto fail;
                         }
                         /* add type name to lookahead symbol */
@@ -1947,7 +2009,7 @@ static mc_status_t parser_assignment_expression(struct parser *ps)
 
                         if (parser_fetch_symbol(ps) 
                                 != PARSER_PUNCTUATOR(punc_right_rnd_br)) {
-                                status = parser_error(ps, "expected )");
+                                status = PARSER_ERROR(ps, "expected )");
                                 goto fail;
                         }
                         parser_pull_token(ps);
@@ -1963,11 +2025,10 @@ static mc_status_t parser_assignment_expression(struct parser *ps)
                 parser_lookahead_set_type(ps, psym_unary_expression);
                 status = parser_unary_expression(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "invalid unary expression");
                         goto fail;
                 }
-                assert(parser_stack_top(ps)->sym == psym_unary_expression);
         }
         if (unary_expr && assig_op_first[parser_fetch_symbol(ps)]) {
                 pt_node_child_add(assig_expr, parser_stack_pop(ps));
@@ -1977,13 +2038,13 @@ static mc_status_t parser_assignment_expression(struct parser *ps)
                 pt_node_child_add(assig_expr, parser_stack_pop(ps));
 
                 if (!assig_expr_first[parser_fetch_symbol(ps)]) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "expected assignment expression");
                         goto fail;
                 }
                 status = parser_assignment_expression(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "invalid assignment expression");
                         goto fail;
                 }
@@ -1998,7 +2059,7 @@ static mc_status_t parser_assignment_expression(struct parser *ps)
                 parser_lookahead_set_type(ps, psym_cast_expression);
                 status = parser_conditional_expression(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "invalid conditional expression");
                         goto fail;
                 }
@@ -2008,6 +2069,7 @@ static mc_status_t parser_assignment_expression(struct parser *ps)
         /* lookahed symbol restored and consumed */
         old_lk = parser_lookahead_swap(ps, old_lk);
         assert(old_lk == NULL);
+        assert(parser_stack_topsym(ps) == psym_assignment_expression);
         
         return MC_OK;
 fail:
@@ -2033,10 +2095,11 @@ static mc_status_t parser_expression(struct parser *ps)
                 pt_node_child_add(expr, parser_stack_pop(ps));
         } while (parser_fetch_symbol(ps) == PARSER_PUNCTUATOR(punc_comma) 
                 && parser_pull_token(ps));
+        assert(parser_stack_topsym(ps) == psym_expression);
 
         return MC_OK;
 fail:
-        status = parser_error(ps, "expected assignment expr");
+        status = PARSER_ERROR(ps, "expected assignment expr");
         parser_stack_restore(ps, expr);
         return status;
 }
@@ -2045,14 +2108,14 @@ static mc_status_t parser_conditional_expression(struct parser *ps)
 {
         static const uint8_t expr_first[] = { EXPRESSION };
         static const uint8_t cond_expr_first[] = { CONDITIONAL_EXPRESSION };
-        struct pt_node *cond_expr = pt_node_create(psym_constant_expression);
+        struct pt_node *cond_expr = pt_node_create(psym_conditional_expression);
         parser_stack_push(ps, cond_expr);
         
         mc_status_t status;
         do {
                 status = parser_logical_or_expression(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid logical OR expr");
+                        status = PARSER_ERROR(ps, "invalid logical OR expr");
                         goto fail;
                 }
                 pt_node_child_add(cond_expr, parser_stack_pop(ps));
@@ -2062,12 +2125,12 @@ static mc_status_t parser_conditional_expression(struct parser *ps)
                 parser_pull_token(ps);
 
                 if (!expr_first[parser_fetch_symbol(ps)]) {
-                        status = parser_error(ps, "expected expression");
+                        status = PARSER_ERROR(ps, "expected expression");
                         goto fail;
                 }
                 status = parser_expression(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid expression");
+                        status = PARSER_ERROR(ps, "invalid expression");
                         goto fail;
                 }
                 pt_node_child_add(cond_expr, parser_stack_pop(ps));
@@ -2077,10 +2140,11 @@ static mc_status_t parser_conditional_expression(struct parser *ps)
                 parser_pull_token(ps);
 
                 if (!cond_expr_first[parser_fetch_symbol(ps)]) {
-                        status = parser_error(ps, "expected conditional expr");
+                        status = PARSER_ERROR(ps, "expected conditional expr");
                         goto fail;
                 }
         } while (1);
+        assert(parser_stack_topsym(ps) == psym_conditional_expression);
 
         return MC_OK;
 fail:
@@ -2095,9 +2159,10 @@ static mc_status_t parser_constant_expression(struct parser *ps)
         mc_status_t status = parser_conditional_expression(ps);
         if (!MC_SUCC(status)) {
                 parser_stack_restore(ps, const_expr);
-                return parser_error(ps, "invalid conditional expr");
+                return PARSER_ERROR(ps, "invalid conditional expr");
         }
         pt_node_child_add(const_expr, parser_stack_pop(ps));
+        assert(parser_stack_topsym(ps) == psym_constant_expression);
         return MC_OK;
 }
 
@@ -2112,7 +2177,7 @@ static mc_status_t parser_struct_declarator(struct parser *ps)
         if (decl_first[parser_fetch_symbol(ps)]) {
                 status = parser_declarator(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid declarator");
+                        status = PARSER_ERROR(ps, "invalid declarator");
                         goto fail;
                 }
                 pt_node_child_add(st_decl, parser_stack_pop(ps));
@@ -2122,20 +2187,21 @@ static mc_status_t parser_struct_declarator(struct parser *ps)
         if (sym == PARSER_PUNCTUATOR(punc_colon)) {
                 parser_pull_token(ps);
                 if (!constex_first[parser_fetch_symbol(ps)]) {
-                        status = parser_error(ps, "expected const expr");
+                        status = PARSER_ERROR(ps, "expected const expr");
                         goto fail;
                 }
                 status = parser_constant_expression(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid const expr");
+                        status = PARSER_ERROR(ps, "invalid const expr");
                         goto fail;
                 }
                 pt_node_child_add(st_decl, parser_stack_pop(ps));
         } else if (pt_node_child_empty(st_decl)) {
-                status = parser_error(ps, 
+                status = PARSER_ERROR(ps, 
                         "after missing declarator(opt) expected :");
                 goto fail;
         }
+        assert(parser_stack_topsym(ps) == psym_struct_declarator);
 
         return MC_OK;
 fail:
@@ -2161,10 +2227,11 @@ static mc_status_t parser_struct_declarator_list(struct parser *ps)
                 pt_node_child_add(st_decl_lst, parser_stack_pop(ps));
         } while (parser_fetch_symbol(ps) == PARSER_PUNCTUATOR(punc_comma) 
                 && parser_pull_token(ps));
+        assert(parser_stack_topsym(ps) == psym_struct_declarator_list);
 
         return MC_OK;
 fail:
-        status = parser_error(ps, "expected struct declarator");
+        status = PARSER_ERROR(ps, "expected struct declarator");
         parser_stack_restore(ps, st_decl_lst);
         return status;
 }
@@ -2174,7 +2241,8 @@ static mc_status_t parser_specifier_qualifier_list(struct parser *ps)
         static const uint8_t type_spec[] = { TYPE_SPECIFIER };
         static const uint8_t type_qual[] = { TYPE_QUALIFIER };
         mc_status_t status = MC_OK;
-        struct pt_node *spec_ql_l = pt_node_create(psym_struct_declaration);
+        struct pt_node *spec_ql_l 
+                = pt_node_create(psym_specifier_qualifier_list);
         parser_stack_push(ps, spec_ql_l);
         enum parser_symbol sym;
         while ((sym = parser_fetch_symbol(ps))) {
@@ -2189,13 +2257,14 @@ static mc_status_t parser_specifier_qualifier_list(struct parser *ps)
                         break;
                 }
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "expected type specifier or qualifier");
                         goto fail;
                 }
                 pt_node_child_add(spec_ql_l, parser_stack_pop(ps));
         }
         assert(!pt_node_child_empty(spec_ql_l));
+        assert(parser_stack_topsym(ps) == psym_specifier_qualifier_list);
 
         return MC_OK;
 fail:
@@ -2210,23 +2279,24 @@ static mc_status_t parser_struct_declaration(struct parser *ps)
         parser_stack_push(ps, st_decl);
         mc_status_t status = parser_specifier_qualifier_list(ps);
         if (!MC_SUCC(status)) {
-                status = parser_error(ps, "expected specifier/qualifier");
+                status = PARSER_ERROR(ps, "expected specifier/qualifier");
                 goto fail;
         }
         pt_node_child_add(st_decl, parser_stack_pop(ps));
         if (!st_decl_l[parser_fetch_symbol(ps)]
                 || !MC_SUCC(status = parser_struct_declarator_list(ps))) {
-                status = parser_error(ps, "expected struct declarator");
+                status = PARSER_ERROR(ps, "expected struct declarator");
                 goto fail;
         }
         pt_node_child_add(st_decl, parser_stack_pop(ps));
 
         if (parser_fetch_symbol(ps) != PARSER_PUNCTUATOR(punc_semicolon)) {
-                status = parser_error(ps, 
+                status = PARSER_ERROR(ps, 
                         "expected ; at the end of struct declaration");
                 goto fail;
         }
         parser_pull_token(ps);
+        assert(parser_stack_topsym(ps) == psym_struct_declaration);
 
         return MC_OK;
 fail:
@@ -2247,11 +2317,12 @@ static mc_status_t parser_struct_declaration_list(struct parser *ps)
         while ((sym = parser_fetch_symbol(ps)) && st_decl[sym]) {
                 status = parser_struct_declaration(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid struct declaration");
+                        status = PARSER_ERROR(ps, "invalid struct declaration");
                         goto fail;
                 }
                 pt_node_child_add(st_decl_lst, parser_stack_pop(ps));
         }
+        assert(parser_stack_topsym(ps) == psym_struct_declaration_list);
         return MC_OK;
 fail:
         parser_stack_restore(ps, st_decl_lst);
@@ -2282,29 +2353,31 @@ static mc_status_t parser_struct_or_union_specifier(struct parser *ps)
 
                 sym = parser_fetch_symbol(ps);
                 if (!st_decl_l[sym]) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                         "expected struct declaration list inside {}");
                         goto fail;
                 }
                 status = parser_struct_declaration_list(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                         "invalid struct declaration list");
                         goto fail;
                 }
+                pt_node_child_add(spec, parser_stack_pop(ps));
 
                 sym = parser_fetch_symbol(ps);
                 if (sym != PARSER_PUNCTUATOR(punc_right_ql_br)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                         "missing closing } bracer");
                         goto fail;
                 }
                 parser_pull_token(ps);
         } else if (id_val == NULL) {
-                status = parser_error(ps, 
+                status = PARSER_ERROR(ps, 
                         "no identifier, so struct declaration list expected");
                 goto fail;
         }
+        assert(parser_stack_topsym(ps) == psym_struct_or_union_specifier);
 
         return status;
 fail:
@@ -2350,11 +2423,12 @@ static mc_status_t parser_declaration_specifiers(struct parser *ps)
                         break;
                 }
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid specifier");
+                        status = PARSER_ERROR(ps, "invalid specifier");
                         goto fail;
                 }
                 pt_node_child_add(decl_spec, parser_stack_pop(ps));
         }
+        assert(parser_stack_topsym(ps) == psym_declaration_specifiers);
         return MC_OK;
 fail:
         parser_stack_restore(ps, decl_spec);
@@ -2372,11 +2446,12 @@ static mc_status_t parser_declaration_list(struct parser *ps)
         do {
                 status = parser_declaration(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid declaration");
+                        status = PARSER_ERROR(ps, "invalid declaration");
                         goto fail;
                 }
                 pt_node_child_add(decl, parser_stack_pop(ps));
         } while (decl_first[sym = parser_fetch_symbol(ps)]);
+        assert(parser_stack_topsym(ps) == psym_declaration_list);
 
         return MC_OK;
 fail:
@@ -2400,14 +2475,14 @@ static mc_status_t parser_labeled_statement(struct parser *ps)
         if (sym == PARSER_KEYWORD(keyw_case)) {
 
                 if (!const_first[parser_fetch_symbol(ps)]) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "expected constant expression");
                         goto fail;
                 }
 
                 status = parser_constant_expression(ps); 
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "invalid constant expression");
                         goto fail;
                 }
@@ -2415,21 +2490,22 @@ static mc_status_t parser_labeled_statement(struct parser *ps)
         }
 
         if (parser_fetch_symbol(ps) != PARSER_PUNCTUATOR(punc_colon)) {
-                status = parser_error(ps, "expected : symbol");
+                status = PARSER_ERROR(ps, "expected : symbol");
                 goto fail;
         }
         parser_pull_token(ps);
 
         if (!stmt_first[parser_fetch_symbol(ps)]) {
-                status = parser_error(ps, "expected statement");
+                status = PARSER_ERROR(ps, "expected statement");
                 goto fail;
         }
         status = parser_statement(ps);
         if (!MC_SUCC(status)) {
-                status = parser_error(ps, "invalid statement");
+                status = PARSER_ERROR(ps, "invalid statement");
                 goto fail;
         }
         pt_node_child_add(labeled, parser_stack_pop(ps));
+        assert(parser_stack_topsym(ps) == psym_labeled_statement);
 
         return MC_OK;
 fail:
@@ -2446,17 +2522,18 @@ static mc_status_t parser_expression_statement(struct parser *ps)
         if (parser_fetch_symbol(ps) != PARSER_PUNCTUATOR(punc_semicolon)) {
                 status = parser_expression(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid expression");
+                        status = PARSER_ERROR(ps, "invalid expression");
                         goto fail;
                 }
                 pt_node_child_add(expr, parser_stack_pop(ps));
         }
 
         if (parser_fetch_symbol(ps) != PARSER_PUNCTUATOR(punc_semicolon)) {
-                status = parser_error(ps, "expected ; symbol");
+                status = PARSER_ERROR(ps, "expected ; symbol");
                 goto fail;
         }
         parser_pull_token(ps);
+        assert(parser_stack_topsym(ps) == psym_expression_statement);
 
         return MC_OK;
 fail:
@@ -2477,39 +2554,39 @@ static mc_status_t parser_selection_statement(struct parser *ps)
                 parser_pull_token(ps)));
 
         if (parser_fetch_symbol(ps) != PARSER_PUNCTUATOR(punc_left_rnd_br)) {
-                status = parser_error(ps, "expected ( symbol");
+                status = PARSER_ERROR(ps, "expected ( symbol");
                 goto fail;
         }
         /* pull ( symbol */
         parser_pull_token(ps);
 
         if (!expr_first[parser_fetch_symbol(ps)]) {
-                status = parser_error(ps, "expected expression");
+                status = PARSER_ERROR(ps, "expected expression");
                 goto fail;
         }
 
         status = parser_expression(ps);
         if (!MC_SUCC(status)) {
-                status = parser_error(ps, "invalid expression");
+                status = PARSER_ERROR(ps, "invalid expression");
                 goto fail;
         }
         pt_node_child_add(selection, parser_stack_pop(ps));
 
         if (parser_fetch_symbol(ps) != PARSER_PUNCTUATOR(punc_right_rnd_br)) {
-                status = parser_error(ps, "expected ) symbol");
+                status = PARSER_ERROR(ps, "expected ) symbol");
                 goto fail;
         }
         /* pull ) symbol */
         parser_pull_token(ps);
 
         if (!stmt_first[parser_fetch_symbol(ps)]) {
-                status = parser_error(ps, "expected statement");
+                status = PARSER_ERROR(ps, "expected statement");
                 goto fail;
         }
 
         status = parser_statement(ps);
         if (!MC_SUCC(status)) {
-                status = parser_error(ps, "invalid statement");
+                status = PARSER_ERROR(ps, "invalid statement");
                 goto fail;
         }
         pt_node_child_add(selection, parser_stack_pop(ps));
@@ -2518,17 +2595,18 @@ static mc_status_t parser_selection_statement(struct parser *ps)
                 parser_pull_token(ps);
 
                 if (!stmt_first[parser_fetch_symbol(ps)]) {
-                        status = parser_error(ps, "expected statement");
+                        status = PARSER_ERROR(ps, "expected statement");
                         goto fail;
                 }
 
                 status = parser_statement(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid statement");
+                        status = PARSER_ERROR(ps, "invalid statement");
                         goto fail;
                 }
                 pt_node_child_add(selection, parser_stack_pop(ps));
         }
+        assert(parser_stack_topsym(ps) == psym_selection_statement);
 
         return MC_OK;
 fail:
@@ -2549,39 +2627,40 @@ static mc_status_t parser_iteration_while(struct parser *ps)
                 parser_pull_token(ps)));
 
         if (parser_fetch_symbol(ps) != PARSER_PUNCTUATOR(punc_left_rnd_br)) {
-                status = parser_error(ps, "expected ( symbol");
+                status = PARSER_ERROR(ps, "expected ( symbol");
                 goto fail;
         }
         parser_pull_token(ps);
 
         if (!expr_first[parser_fetch_symbol(ps)]) {
-                status = parser_error(ps, "expected expression");
+                status = PARSER_ERROR(ps, "expected expression");
                 goto fail;
         }
         status = parser_expression(ps);
         if (!MC_SUCC(status)) {
-                status = parser_error(ps, "invalid expression");
+                status = PARSER_ERROR(ps, "invalid expression");
                 goto fail;
         }
         pt_node_child_add(iter, parser_stack_pop(ps));
 
         if (parser_fetch_symbol(ps) != PARSER_PUNCTUATOR(punc_right_rnd_br)) {
-                status = parser_error(ps, "expected ) symbol");
+                status = PARSER_ERROR(ps, "expected ) symbol");
                 goto fail;
         }
         parser_pull_token(ps);
 
         if (!stmt_first[parser_fetch_symbol(ps)]) {
-                status = parser_error(ps, "expected statement");
+                status = PARSER_ERROR(ps, "expected statement");
                 goto fail;
         }
 
         status = parser_statement(ps);
         if (!MC_SUCC(status)) {
-                status = parser_error(ps, "invalid statement");
+                status = PARSER_ERROR(ps, "invalid statement");
                 goto fail;
         }
         pt_node_child_add(iter, parser_stack_pop(ps));
+        assert(parser_stack_topsym(ps) == psym_iteration_statement);
 
         return MC_OK;
 fail:
@@ -2603,7 +2682,7 @@ static mc_status_t parser_iteration_for(struct parser *ps)
                 parser_pull_token(ps)));
 
         if (parser_fetch_symbol(ps) != PARSER_PUNCTUATOR(punc_left_rnd_br)) {
-                status = parser_error(ps, "expected ( symbol");
+                status = PARSER_ERROR(ps, "expected ( symbol");
                 goto fail;
         }
         parser_pull_token(ps);
@@ -2617,7 +2696,7 @@ static mc_status_t parser_iteration_for(struct parser *ps)
         if ((decl_first[sym] && sym != psym_identifier) || is_declaration) {
                 status = parser_declaration(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid declaration");
+                        status = PARSER_ERROR(ps, "invalid declaration");
                         goto fail;
                 }
                 pt_node_child_add(iter, parser_stack_pop(ps));
@@ -2627,7 +2706,7 @@ static mc_status_t parser_iteration_for(struct parser *ps)
         if (expr_first[sym]) {
                 status = parser_expression(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid expression");
+                        status = PARSER_ERROR(ps, "invalid expression");
                         goto fail;
                 }
                 pt_node_child_add(iter, parser_stack_pop(ps));
@@ -2635,7 +2714,7 @@ static mc_status_t parser_iteration_for(struct parser *ps)
         }
 
         if (parser_fetch_symbol(ps) != PARSER_PUNCTUATOR(punc_semicolon)) {
-                status = parser_error(ps, "expected ; in for (...; ");
+                status = PARSER_ERROR(ps, "expected ; in for (...; ");
                 goto fail;
         }
         parser_pull_token(ps);
@@ -2643,7 +2722,7 @@ static mc_status_t parser_iteration_for(struct parser *ps)
         if (expr_first[sym = parser_fetch_symbol(ps)]) {
                 status = parser_expression(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "expected expression");
+                        status = PARSER_ERROR(ps, "expected expression");
                         goto fail;
                 }
                 pt_node_child_add(iter, parser_stack_pop(ps));
@@ -2655,7 +2734,7 @@ static mc_status_t parser_iteration_for(struct parser *ps)
                 if (expr_first[sym = parser_fetch_symbol(ps)]) {
                         status = parser_expression(ps);
                         if (!MC_SUCC(status)) {
-                                status = parser_error(ps, "invalid expression");
+                                status = PARSER_ERROR(ps, "invalid expression");
                                 goto fail;
                         }
                         pt_node_child_add(iter, parser_stack_pop(ps));
@@ -2664,21 +2743,22 @@ static mc_status_t parser_iteration_for(struct parser *ps)
         }
 
         if (sym != PARSER_PUNCTUATOR(punc_right_rnd_br)) {
-                status = parser_error(ps, "expected ) symbol");
+                status = PARSER_ERROR(ps, "expected ) symbol");
                 goto fail;
         }
         parser_pull_token(ps);
 
-        if (stmt_first[parser_fetch_symbol(ps)]) {
-                status = parser_error(ps, "expected statement");
+        if (!stmt_first[parser_fetch_symbol(ps)]) {
+                status = PARSER_ERROR(ps, "expected statement");
                 goto fail;
         }
         status = parser_statement(ps);
         if (!MC_SUCC(status)) {
-                status = parser_error(ps, "invalid statement");
+                status = PARSER_ERROR(ps, "invalid statement");
                 goto fail;
         }
         pt_node_child_add(iter, parser_stack_pop(ps));
+        assert(parser_stack_topsym(ps) == psym_iteration_statement);
 
         return MC_OK;
 fail:
@@ -2699,51 +2779,52 @@ static mc_status_t parser_iteration_do(struct parser *ps)
                 parser_pull_token(ps)));
 
         if (stmt_first[parser_fetch_symbol(ps)]) {
-                status = parser_error(ps, "expected statement");
+                status = PARSER_ERROR(ps, "expected statement");
                 goto fail;
         }
 
         status = parser_statement(ps);
         if (!MC_SUCC(status)) {
-                status = parser_error(ps, "invalid statement");
+                status = PARSER_ERROR(ps, "invalid statement");
                 goto fail;
         }
         pt_node_child_add(iter, parser_stack_pop(ps));
 
         if (parser_fetch_symbol(ps) != PARSER_KEYWORD(keyw_while)) {
-                status = parser_error(ps, "expected while after stmt");
+                status = PARSER_ERROR(ps, "expected while after stmt");
                 goto fail;
         }
         parser_pull_token(ps);
 
         if (parser_fetch_symbol(ps) != PARSER_PUNCTUATOR(punc_left_rnd_br)) {
-                status = parser_error(ps, "expected ( symbol");
+                status = PARSER_ERROR(ps, "expected ( symbol");
                 goto fail;
         }
         parser_pull_token(ps);
 
         if (!expr_first[parser_fetch_symbol(ps)]) {
-                status = parser_error(ps, "expected expression");
+                status = PARSER_ERROR(ps, "expected expression");
                 goto fail;
         }
         status = parser_expression(ps);
         if (!MC_SUCC(status)) {
-                status = parser_error(ps, "invalid expression");
+                status = PARSER_ERROR(ps, "invalid expression");
                 goto fail;
         }
         pt_node_child_add(iter, parser_stack_pop(ps));
 
         if (parser_fetch_symbol(ps) != PARSER_PUNCTUATOR(punc_right_rnd_br)) {
-                status = parser_error(ps, "expected ) symbol");
+                status = PARSER_ERROR(ps, "expected ) symbol");
                 goto fail;
         }
         parser_pull_token(ps);
 
         if (parser_fetch_symbol(ps) != PARSER_PUNCTUATOR(punc_semicolon)) {
-                status = parser_error(ps, "expected ; symbol");
+                status = PARSER_ERROR(ps, "expected ; symbol");
                 goto fail;
         }
         parser_pull_token(ps);
+        assert(parser_stack_topsym(ps) == psym_iteration_statement);
 
         return MC_OK;
 fail:
@@ -2781,7 +2862,7 @@ static mc_status_t parser_jump_statement(struct parser *ps)
                 case PARSER_KEYWORD(keyw_goto):
                 {
                         if (parser_fetch_symbol(ps) != psym_identifier) {
-                                status = parser_error(ps, "expected identifier");
+                                status = PARSER_ERROR(ps, "expected identifier");
                                 goto fail;
                         }
                         pt_node_child_add(jump, 
@@ -2799,7 +2880,7 @@ static mc_status_t parser_jump_statement(struct parser *ps)
 
                         status = parser_expression(ps);
                         if (!MC_SUCC(status)) {
-                                status = parser_error(ps, "invalid expression");
+                                status = PARSER_ERROR(ps, "invalid expression");
                                 goto fail;
                         }
                         pt_node_child_add(jump, parser_stack_pop(ps));
@@ -2812,10 +2893,11 @@ static mc_status_t parser_jump_statement(struct parser *ps)
                 }
         }
         if (parser_fetch_symbol(ps) != PARSER_PUNCTUATOR(punc_semicolon)) {
-                status = parser_error(ps, "expected identifier");
+                status = PARSER_ERROR(ps, "expected identifier");
                 goto fail;
         }
         parser_pull_token(ps);
+        assert(parser_stack_topsym(ps) == psym_jump_statement);
         return MC_OK;
 fail:
         parser_stack_restore(ps, jump);
@@ -2848,46 +2930,47 @@ static mc_status_t parser_statement(struct parser *ps)
         if (comp_first[sym]) {
                 status = parser_compound_statement(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid compound statement");
+                        status = PARSER_ERROR(ps, "invalid compound statement");
                         goto fail;
                 }
                 pt_node_child_add(stmt , parser_stack_pop(ps));
         } else if (select_first[sym]) {
                 status = parser_selection_statement(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid selection statement");
+                        status = PARSER_ERROR(ps, "invalid selection statement");
                         goto fail;
                 }
                 pt_node_child_add(stmt , parser_stack_pop(ps));
         } else if (iter_first[sym]) {
                 status = parser_iteration_statement(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid iteration statement");
+                        status = PARSER_ERROR(ps, "invalid iteration statement");
                         goto fail;
                 }
                 pt_node_child_add(stmt , parser_stack_pop(ps));
         } else if (jump_first[sym]) {
                 status = parser_jump_statement(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid jump statement");
+                        status = PARSER_ERROR(ps, "invalid jump statement");
                         goto fail;
                 }
                 pt_node_child_add(stmt , parser_stack_pop(ps));
         } else if (expr_first[sym] && !is_labeled_stmt) {
                 status = parser_expression_statement(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid expression statement");
+                        status = PARSER_ERROR(ps, "invalid expression statement");
                         goto fail;
                 }
                 pt_node_child_add(stmt , parser_stack_pop(ps));
         } else {
                 status = parser_labeled_statement(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid labeled statement");
+                        status = PARSER_ERROR(ps, "invalid labeled statement");
                         goto fail;
                 }
                 pt_node_child_add(stmt , parser_stack_pop(ps));
         }
+        assert(parser_stack_topsym(ps) == psym_statement);
 
         return MC_OK;
 fail:
@@ -2913,18 +2996,19 @@ static mc_status_t parser_block_item(struct parser *ps)
         if (stmt_first[parser_fetch_symbol(ps)] && !is_declaration) {
                 status = parser_statement(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid statement");
+                        status = PARSER_ERROR(ps, "invalid statement");
                         goto fail;
                 }
                 pt_node_child_add(blk_itm , parser_stack_pop(ps));
         } else {
                 status = parser_declaration(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid declaration");
+                        status = PARSER_ERROR(ps, "invalid declaration");
                         goto fail;
                 }
                 pt_node_child_add(blk_itm , parser_stack_pop(ps));
         }
+        assert(parser_stack_topsym(ps) == psym_block_item);
         return MC_OK;
 fail:
         parser_stack_restore(ps, blk_itm);
@@ -2943,11 +3027,12 @@ static mc_status_t parser_block_item_list(struct parser *ps)
         do {
                 status = parser_block_item(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid block item");
+                        status = PARSER_ERROR(ps, "invalid block item");
                         goto fail;
                 }
                 pt_node_child_add(blk_itm_lst , parser_stack_pop(ps));
         } while (stmt_first[sym = parser_fetch_symbol(ps)] || decl_first[sym]);
+        assert(parser_stack_topsym(ps) == psym_block_item_list);
 
         return MC_OK;
 fail:
@@ -2969,17 +3054,18 @@ static mc_status_t parser_compound_statement(struct parser *ps)
         if (stmt_first[sym] || decl_first[sym]) {
                 status = parser_block_item_list(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid block item list");
+                        status = PARSER_ERROR(ps, "invalid block item list");
                         goto fail;
                 }
                 pt_node_child_add(comp_stmt, parser_stack_pop(ps));
                 sym = parser_fetch_symbol(ps);
         }
         if (sym != PARSER_PUNCTUATOR(punc_right_ql_br)) {
-                status = parser_error(ps, "expected } symbol");
+                status = PARSER_ERROR(ps, "expected } symbol");
                 goto fail;
         }
         parser_pull_token(ps);
+        assert(parser_stack_topsym(ps) == psym_compound_statement);
 
         return MC_OK;
 fail:
@@ -3003,7 +3089,7 @@ static mc_status_t parser_function_definition(struct parser *ps)
         if (decl_list[sym]) {
                 status = parser_declaration_list(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid declaration list");
+                        status = PARSER_ERROR(ps, "invalid declaration list");
                         goto fail;
                 }
                 pt_node_child_add(func_def, parser_stack_pop(ps));
@@ -3011,15 +3097,16 @@ static mc_status_t parser_function_definition(struct parser *ps)
         }
 
         if (!comp_stmt[sym]) {
-                status = parser_error(ps, "expected compound statement");
+                status = PARSER_ERROR(ps, "expected compound statement");
                 goto fail;
         }
         status = parser_compound_statement(ps);
         if (!MC_SUCC(status)) {
-                status = parser_error(ps, "invalid compound statement");
+                status = PARSER_ERROR(ps, "invalid compound statement");
                 goto fail;
         }
         pt_node_child_add(func_def, parser_stack_pop(ps));
+        assert(parser_stack_topsym(ps) == psym_function_definition);
 
         return MC_OK;
 fail:
@@ -3040,7 +3127,7 @@ static mc_status_t parser_init_declarator(struct parser *ps)
         if (pt_node_child_empty(decl)) {
                 status = parser_declarator(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid declarator");
+                        status = PARSER_ERROR(ps, "invalid declarator");
                         goto fail;
                 }
                 pt_node_child_add(decl, parser_stack_pop(ps));
@@ -3050,17 +3137,18 @@ static mc_status_t parser_init_declarator(struct parser *ps)
                 parser_pull_token(ps);
 
                 if (!init_first[parser_fetch_symbol(ps)]) {
-                        status = parser_error(ps, "expected initializer");
+                        status = PARSER_ERROR(ps, "expected initializer");
                         goto fail;
                 }
 
                 status = parser_initializer(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid initializer");
+                        status = PARSER_ERROR(ps, "invalid initializer");
                         goto fail;
                 }
                 pt_node_child_add(decl, parser_stack_pop(ps));
         }
+        assert(parser_stack_topsym(ps) == psym_init_declarator);
 
         return MC_OK;
 fail:
@@ -3072,12 +3160,12 @@ static mc_status_t parser_init_declarator_list(struct parser *ps)
 {
         mc_status_t status;
         static const uint8_t decl_first[] = { DECLARATOR };
-        struct pt_node *decl_lst = pt_node_create(psym_declaration);
+        struct pt_node *decl_lst = pt_node_create(psym_init_declarator_list);
         parser_stack_push(ps, decl_lst);
 
         status = parser_init_declarator(ps);
         if (!MC_SUCC(status)) {
-                status = parser_error(ps, "invalid init declarator");
+                status = PARSER_ERROR(ps, "invalid init declarator");
                 goto fail;
         }
         pt_node_child_add(decl_lst, parser_stack_pop(ps));
@@ -3088,18 +3176,19 @@ static mc_status_t parser_init_declarator_list(struct parser *ps)
 
         do {
                 if (!decl_first[parser_fetch_symbol(ps)]) {
-                        status = parser_error(ps, "expected init declarator");
+                        status = PARSER_ERROR(ps, "expected init declarator");
                         goto fail;
                 }
 
                 status = parser_init_declarator(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid init declarator");
+                        status = PARSER_ERROR(ps, "invalid init declarator");
                         goto fail;
                 }
                 pt_node_child_add(decl_lst, parser_stack_pop(ps));
         } while (parser_fetch_symbol(ps) == PARSER_PUNCTUATOR(punc_comma) 
                 && parser_pull_token(ps));
+        assert(parser_stack_topsym(ps) == psym_init_declarator_list);
 
         return MC_OK;
 fail:
@@ -3123,7 +3212,7 @@ static mc_status_t parser_declaration(struct parser *ps)
         if (empty_lookahead) {
                 status = parser_declaration_specifiers(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "invalid declaration specifiers");
                         goto fail;
                 }
@@ -3132,7 +3221,7 @@ static mc_status_t parser_declaration(struct parser *ps)
                 if (decl_first[parser_fetch_symbol(ps)]) {
                         status = parser_declarator(ps);
                         if (!MC_SUCC(status)) {
-                                status = parser_error(ps, "invalid declarator");
+                                status = PARSER_ERROR(ps, "invalid declarator");
                                 goto fail;
                         }
                         pt_node_child_add(decl, parser_stack_pop(ps));
@@ -3148,7 +3237,7 @@ static mc_status_t parser_declaration(struct parser *ps)
 
                 status = parser_init_declarator_list(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid init-declarator list");
+                        status = PARSER_ERROR(ps, "invalid init-declarator list");
                         parser_lookahead_restore(ps, old_lk);
                         goto fail;
                 }
@@ -3159,10 +3248,11 @@ static mc_status_t parser_declaration(struct parser *ps)
         }
 
         if (parser_fetch_symbol(ps) != PARSER_PUNCTUATOR(punc_semicolon)) {
-                status = parser_error(ps, "expected ; symbol");
+                status = PARSER_ERROR(ps, "expected ; symbol");
                 goto fail;
         }
         parser_pull_token(ps);
+        assert(parser_stack_topsym(ps) == psym_declaration);
 
         return MC_OK;
 fail:
@@ -3190,10 +3280,9 @@ static mc_status_t parser_external_declaration(struct parser *ps)
         /* first common lookahead symbol */
         mc_status_t status = parser_declaration_specifiers(ps);
         if (!MC_SUCC(status)) {
-                status = parser_error(ps, "expected declaration-specifiers");
+                status = PARSER_ERROR(ps, "expected declaration-specifiers");
                 goto fail;
         }
-        assert(parser_stack_top(ps)->sym == psym_declaration_specifiers);
         /* add decl spec to lookahead symbol */
         parser_lookahead_add(ps, parser_stack_pop(ps));
 
@@ -3202,10 +3291,9 @@ static mc_status_t parser_external_declaration(struct parser *ps)
         if (decl_first[sym]) {
                 status = parser_declarator(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid declarator");
+                        status = PARSER_ERROR(ps, "invalid declarator");
                         goto fail;
                 }
-                assert(parser_stack_top(ps)->sym == psym_declarator);
 
                 /* add declarator to lookahead symbol */
                 parser_lookahead_add(ps, parser_stack_pop(ps));
@@ -3218,30 +3306,29 @@ static mc_status_t parser_external_declaration(struct parser *ps)
                 parser_lookahead_set_type(ps, psym_declaration);
                 status = parser_declaration(ps);
                 if (!MC_SUCC(status)) {
-                        status = parser_error(ps, "invalid declaration");
+                        status = PARSER_ERROR(ps, "invalid declaration");
                         goto fail;
                 }
 
-                assert(parser_stack_top(ps)->sym == psym_declaration);
                 pt_node_child_add(ext_decl, parser_stack_pop(ps));
 
         } else if (declarator) {
                 parser_lookahead_set_type(ps, psym_function_definition);
                 status = parser_function_definition(ps);
                 if (!MC_SUCC(status)) {
-                        parser_error(ps, "invalid function-definition");
+                        PARSER_ERROR(ps, "invalid function-definition");
                         goto fail;
                 }
-                assert(parser_stack_top(ps)->sym == psym_function_definition);
                 pt_node_child_add(ext_decl, parser_stack_pop(ps));
         } else {
-                status = parser_error(ps, "unexpected ?token");
+                status = PARSER_ERROR(ps, "unexpected ?token");
                 goto fail;
         }
 
         /* lookahed symbol restored and consumed */
         old_lk = parser_lookahead_swap(ps, old_lk);
         assert(old_lk == NULL);
+        assert(parser_stack_topsym(ps) == psym_external_declaration);
 
         return MC_OK;
 fail:
@@ -3264,12 +3351,11 @@ struct pt_node *parser_translation_unit(struct parser *ps)
                 status = parser_external_declaration(ps);
 
                 if (MC_SUCC(status)) {
-                        assert(parser_stack_top(ps)->sym 
-                                == psym_translation_unit);
                         child = parser_stack_pop(ps);
                         pt_node_child_add(unit, child);
+                        assert(parser_stack_empty(ps));
                 } else {
-                        status = parser_error(ps, 
+                        status = PARSER_ERROR(ps, 
                                 "invalid external-declaration");
                 }
         }

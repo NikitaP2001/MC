@@ -50,6 +50,12 @@ stack_push(struct stack *st, const void *data)
         st->size += 1;
 }
 
+static inline _Bool
+stack_empty(struct stack *st)
+{
+        return (st->size == 0);
+}
+
 static inline void
 stack_top(_IN struct stack *st, _OUT void *result)
 {
