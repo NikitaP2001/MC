@@ -76,6 +76,12 @@ if (strcmp(arg1, arg2) != 0) {                                                  
         *result = false;                                                        \
 }
 
+#define TEST_FAILTURE(...)                                                      \
+        printf(__VA_ARGS__);                                                    \
+        *result = false;                                                        \
+        return;
+
+
 static inline double test_get_time()
 {
         double time = (double)clock();

@@ -256,26 +256,19 @@ static int64_t token_chrname_esc_value(const char *value, size_t *pos)
         return result;
 }
 
-static wchar_t token_char_to_wchar(int64_t value)
+static inline mc_wchar_t token_char_to_wchar(int64_t value)
 {
-        wchar_t wres;
-        char esc_temp = (char)value;
-        assert(value <= UCHAR_MAX);
-        if (mbtowc(&wres, &esc_temp, 1) == -1) {
-                wres = TOKEN_ERROR;
-                MC_LOG(MC_WARN, "char to wchar convertation failed");
-        }
-        return wres;
+        return (mc_wchar_t)value;
 }
 
 static size_t token_esc_val_to_wchars(_IN int64_t esc_val, 
-                                      _OUT wchar_t *result)
+                                      _OUT mc_wchar_t *result)
 {
         size_t n_sym;
-        const int64_t chr_base = (int64_t)WCHAR_MAX + 1;
+        const int64_t chr_base = (int64_t)MC_WCHAR_MAX + 1;
         for (n_sym = 0; n_sym < TOKEN_ESC_VAL_MAX_LEN && esc_val != 0; n_sym++) {
                 result[n_sym] = esc_val % chr_base;
-                esc_val >>= sizeof(wchar_t) * CHAR_BIT;
+                esc_val >>= sizeof(mc_wchar_t) * CHAR_BIT;
         }
         if (esc_val != 0)
                 MC_LOG(MC_WARN, "value %lld not fully written", esc_val);
@@ -312,7 +305,7 @@ static int64_t token_escape_value(_IN const char *value,
                                   _INOUT size_t *pos)
 {
         int64_t esc_val;
-        int64_t chr_base = (is_wstr ? WCHAR_MAX : UCHAR_MAX) + 1;
+        int64_t chr_base = (is_wstr ? MC_WCHAR_MAX : MC_UCHAR_MAX) + 1;
         esc_val = token_hex_esc_value(value, pos);
         if (TOKEN_SUCC(esc_val) || esc_val == TOKEN_ERROR) {
                 if (TOKEN_SUCC(esc_val))
@@ -350,7 +343,7 @@ static int64_t token_escape_value(_IN const char *value,
  * TOKEN_ERROR - error detected */
 static int token_wescape_sequence(_IN struct pp_token *tok, 
                                   _INOUT size_t *pos, 
-                                  _OUT wchar_t *result)
+                                  _OUT mc_wchar_t *result)
 {
         size_t status = *pos;
         int64_t esc_val;
@@ -414,15 +407,15 @@ static struct token*
 token_wchar_strlit(struct convert_context *ctx, size_t length)
 {
         size_t wstr_len = length + 1;
-        size_t raw_len = wstr_len * sizeof(wchar_t);
-        wchar_t value[TOKEN_ESC_VAL_MAX_LEN];
+        size_t raw_len = wstr_len * sizeof(mc_wchar_t);
+        mc_wchar_t value[TOKEN_ESC_VAL_MAX_LEN];
         struct token *tok = token_create(convert_pos(ctx));
         struct pp_token *pos;
         size_t buf_pos = 0;
         _Bool not_last = true;
 
         /* TODO: estimate maximum possible size, to not to use realloc */
-        wchar_t *buffer = calloc(raw_len, sizeof(wchar_t));
+        mc_wchar_t *buffer = calloc(raw_len, sizeof(mc_wchar_t));
         tok->type = tok_strlit;
 
         size_t val_pos = token_strlit_start(convert_pos(ctx));
@@ -447,13 +440,10 @@ token_wchar_strlit(struct convert_context *ctx, size_t length)
 
                 if (buf_pos + offset >= wstr_len) {
                         wstr_len = buf_pos + offset + 1;
-                        raw_len = wstr_len * sizeof(wchar_t);
+                        raw_len = wstr_len * sizeof(mc_wchar_t);
                         buffer = realloc(buffer, raw_len);
                 }
-                for (size_t i = 0; i < buf_pos + 1; i++)
-                        printf("%02x ", ((char*)buffer)[i]);
-                putchar('\n');
-                memcpy(&buffer[buf_pos], value, offset * sizeof(wchar_t));
+                memcpy(&buffer[buf_pos], value, offset * sizeof(mc_wchar_t));
                 buf_pos += offset;
 
                 if (val_pos >= pos->length - 1) {
@@ -462,7 +452,7 @@ token_wchar_strlit(struct convert_context *ctx, size_t length)
                 }
         }
         tok->value.var_raw.value = (char *)buffer;
-        tok->value.var_raw.length = (buf_pos + 1) * sizeof(wchar_t);
+        tok->value.var_raw.length = (buf_pos + 1) * sizeof(mc_wchar_t);
         return tok;
 
 fail:
@@ -820,17 +810,17 @@ token_number(struct convert_context *ctx)
 
 static _Bool token_wchr_literal_value(struct pp_token* tok, int64_t *lit_val)
 {
-        wchar_t esc_val[TOKEN_ESC_VAL_MAX_LEN];
+        mc_wchar_t esc_val[TOKEN_ESC_VAL_MAX_LEN];
         size_t val_pos = WSTRLIT_START_OFFSET;
         int64_t const_val = 0;
-        int char_bsize = CHAR_BIT * sizeof(wchar_t);
+        int char_bsize = CHAR_BIT * sizeof(mc_wchar_t);
 
         while (val_pos < tok->length - 1) {
                 int offset = token_wescape_sequence(tok, &val_pos, esc_val);
                 if (offset == TOKEN_ESCAPE_UNMATCH) {
                         const_val <<= char_bsize;
                         char char_val = tok->value[val_pos++];
-                        wchar_t wchar_val = token_char_to_wchar(char_val);
+                        mc_wchar_t wchar_val = token_char_to_wchar(char_val);
                         const_val |= wchar_val;
                 } else if (TOKEN_SUCC(offset)) {
                         for (int esc_pos = 0; esc_pos < offset; esc_pos++) {
@@ -983,7 +973,7 @@ static void token_print_constant(struct constant_value c_val)
                 printf("0x%llx", c_val.data.var_uint);
         else if (token_const_is_char(c_val.type)) {
                 if (c_val.type == const_wchar_t)
-                        printf("%lc", (wchar_t)c_val.data.var_int);
+                        printf("%lc", (mc_wchar_t)c_val.data.var_int);
                 else
                         printf("%c", (char)c_val.data.var_int);
         } else
