@@ -271,6 +271,16 @@ TEST_CASE(token, valid_token_sequence)
      remove(TFILE_NAME);
 }
 
+TEST_CASE(token, strlit_no_end)
+{
+
+}
+
+TEST_CASE(token, strlit_multiline)
+{
+
+}
+
 TEST_CASE(token, wstrl_uchr_names)
 {
      struct filesys fs;
@@ -601,6 +611,8 @@ int main()
      TEST_RUN(token, valid_token_sequence);
      TEST_RUN(token, wstrl_uchr_names);
      TEST_RUN(token, strl_uchr_names);
+     TEST_RUN(token, strlit_no_end);
+     TEST_RUN(token, strlit_multiline);
      TEST_RUN(token, integer_esc_seq);
      TEST_RUN(token, winteger_esc_seq);
      TEST_RUN(token, simple_esc_seq);
