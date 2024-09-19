@@ -57,13 +57,15 @@ _Bool mc_isinit()
         return mc_is_init;
 }
 
+#define TRAP_ABORT() __asm__ volatile ("int3;")
+
 #ifdef DEBUG
 
 int __mc_log(int loglevel, const char *file, size_t line,
               const char *format, ...)
 {
         va_list args;
-        if (loglevel <= MC_CRIT) __debugbreak();
+        if (loglevel <= MC_CRIT) TRAP_ABORT();
         printf(mc_get_log_fmt(loglevel), file, line);
         va_start(args, format);
         vprintf(format, args);

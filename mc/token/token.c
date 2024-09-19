@@ -22,9 +22,11 @@ static struct token *token_create(struct pp_token *first)
         return tok;
 }
 
+#define TOKEN_TYPE_VALUE_RAW(type) (type == tok_identifier || type == tok_strlit)
+
 void token_destroy(struct token *tok)
 {
-        if (tok->value.var_raw.is_alloc)
+        if (TOKEN_TYPE_VALUE_RAW(tok->type) && tok->value.var_raw.is_alloc)
                 free(tok->value.var_raw.value);
         free(tok);
 }
@@ -270,7 +272,7 @@ static size_t token_esc_val_to_wchars(_IN int64_t esc_val,
                                       _OUT wchar_t *result)
 {
         size_t n_sym;
-        const int chr_base = WCHAR_MAX + 1;
+        const int64_t chr_base = (int64_t)WCHAR_MAX + 1;
         for (n_sym = 0; n_sym < TOKEN_ESC_VAL_MAX_LEN && esc_val != 0; n_sym++) {
                 result[n_sym] = esc_val % chr_base;
                 esc_val >>= sizeof(wchar_t) * CHAR_BIT;
@@ -448,6 +450,9 @@ token_wchar_strlit(struct convert_context *ctx, size_t length)
                         raw_len = wstr_len * sizeof(wchar_t);
                         buffer = realloc(buffer, raw_len);
                 }
+                for (size_t i = 0; i < buf_pos + 1; i++)
+                        printf("%02x ", ((char*)buffer)[i]);
+                putchar('\n');
                 memcpy(&buffer[buf_pos], value, offset * sizeof(wchar_t));
                 buf_pos += offset;
 
@@ -694,7 +699,7 @@ static void token_const_value_type(_IN struct pp_num_info info,
                         val->type |= const_int;
                 else if (i_val <= LONG_MAX && i_val >= LONG_MIN)
                         val->type |= const_long_int;
-                else if (i_val <= LONG_LONG_MAX && i_val >= LONG_LONG_MIN)
+                else if (i_val <= LLONG_MAX && i_val >= LLONG_MIN)
                         val->type |= const_long_long_int;
         }
         
@@ -994,7 +999,7 @@ void token_print_content(struct token *tok)
         switch (tok->type) {
                 case tok_keyword:
                 {
-                        printf(token_keywords[t_val.var_keyw]);
+                        printf("%s", token_keywords[t_val.var_keyw]);
                         break;
                 }
                 case tok_identifier:
@@ -1012,7 +1017,7 @@ void token_print_content(struct token *tok)
                 }
                 case tok_punctuator:
                 {
-                        printf(token_punctuators[t_val.var_punc]);
+                        printf("%s", token_punctuators[t_val.var_punc]);
                         break;
                 }
                 default:

@@ -68,8 +68,8 @@ extern const char token_simple_esc_chars[];
 struct constant_value {
         enum constant_type type;
         union {
-                int64_t var_int;
-                uint64_t var_uint;
+                long long int var_int;
+                unsigned long long int var_uint;
                 long double var_long_double;
         } data;
 };

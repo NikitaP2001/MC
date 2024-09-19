@@ -75,4 +75,6 @@ void mc_free();
 
 _Bool mc_isinit();
 
+typedef long long unsigned int mc_u64_t ;
+
 #endif /* _MC_H_ */

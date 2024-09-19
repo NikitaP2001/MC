@@ -273,12 +273,57 @@ TEST_CASE(token, valid_token_sequence)
 
 TEST_CASE(token, strlit_no_end)
 {
+     struct filesys fs;
+     struct pp_context pp;
+     struct convert_context ctx;
+     fs_init(&fs);
+     fs_add_local(&fs, "./");
 
+     pp_init(&pp, &fs);
+
+     const char test[] = "\"no end quote";
+     ASSERT_TRUE(write_file(TFILE_NAME, test, LEN_OF(test)));
+     enum mc_status status = pp_run(&pp, TFILE_NAME);
+     ASSERT_TRUE(MC_SUCC(status));
+
+     convert_init(&ctx, &pp);
+     ASSERT_FALSE(MC_SUCC(convert_run(&ctx)));
+     struct token *tok = convert_get_token(&ctx);
+     ASSERT_EQ(tok, NULL);
+
+     convert_free(&ctx);
+     pp_free(&pp);
+     fs_free(&fs);
+     remove(TFILE_NAME);
 }
 
 TEST_CASE(token, strlit_multiline)
 {
+     struct filesys fs;
+     struct pp_context pp;
+     struct convert_context ctx;
+     fs_init(&fs);
+     fs_add_local(&fs, "./");
 
+     pp_init(&pp, &fs);
+
+     const char test[] = "\"first line \"\n"
+                         "\"seconds\"";
+     ASSERT_TRUE(write_file(TFILE_NAME, test, LEN_OF(test)));
+     enum mc_status status = pp_run(&pp, TFILE_NAME);
+     ASSERT_TRUE(MC_SUCC(status));
+
+     convert_init(&ctx, &pp);
+     ASSERT_FALSE(MC_SUCC(convert_run(&ctx)));
+     struct token *tok = convert_get_token(&ctx);
+     ASSERT_NE(tok, NULL);
+     EXPECT_EQ(tok->type, tok_strlit);
+     EXPECT_STR_EQ(tok->value.var_raw.value, "first line second");
+
+     convert_free(&ctx);
+     pp_free(&pp);
+     fs_free(&fs);
+     remove(TFILE_NAME);
 }
 
 TEST_CASE(token, wstrl_uchr_names)

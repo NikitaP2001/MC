@@ -16,14 +16,14 @@
 #define ASSERT_TRUE(arg)                                                        \
 if (!arg) {                                                                     \
         TEST_ASSERT_INFO;                                                       \
-        printf(#arg" (%llx) <=> false\n", (uint64_t)arg);                       \
+        printf(#arg" (%llx) <=> false\n", (mc_u64_t)arg);                       \
         *result = false;                                                        \
         return;                                                                 \
 }
 #define ASSERT_FALSE(arg)                                                       \
 if (!arg) {                                                                     \
         TEST_ASSERT_INFO;                                                       \
-        printf(#arg" (%llx) <=> true\n", (uint64_t)arg);                        \
+        printf(#arg" (%llx) <=> true\n", (mc_u64_t)arg);                        \
         *result = false;                                                        \
         return;                                                                 \
 }
@@ -31,7 +31,7 @@ if (!arg) {                                                                     
 if (arg1 != arg2) {                                                             \
         TEST_ASSERT_INFO;                                                       \
         printf(#arg1" (%llx) != "#arg2" (%llx)\n",                              \
-                (uint64_t)arg1, (uint64_t)arg2);                                \
+                (mc_u64_t)arg1, (mc_u64_t)arg2);                                \
         *result = false;                                                        \
         return;                                                                 \
 }
@@ -40,7 +40,7 @@ if (arg1 != arg2) {                                                             
 if (arg1 == arg2) {                                                             \
         TEST_ASSERT_INFO;                                                       \
         printf(#arg1" (%llx) == "#arg2" (%llx)\n",                              \
-                (uint64_t)arg1, (uint64_t)arg2);                                \
+                (mc_u64_t)arg1, (mc_u64_t)arg2);                                \
         *result = false;                                                        \
         return;                                                                 \
 }
@@ -57,16 +57,16 @@ if (strcmp(arg1, arg2) != 0) {                                                  
 if (arg1 != arg2) {                                                             \
         TEST_EXPECT_INFO;                                                       \
         fputs(#arg1, stdout);                                                   \
-        printf(" (%llx) != ", (uint64_t)arg1);                                  \
+        printf(" (%llx) != ", (mc_u64_t)arg1);                                  \
         fputs(#arg2, stdout);                                                   \
-        printf(" (%llx)\n", (uint64_t)arg2);                                    \
+        printf(" (%llx)\n", (mc_u64_t)arg2);                                    \
         *result = false;                                                        \
 }
 #define EXPECT_NE(arg1, arg2)                                                   \
 if (arg1 == arg2) {                                                             \
         TEST_EXPECT_INFO;                                                       \
         printf(#arg1" (%llx) == "#arg2" (%llx)\n",                              \
-                (uint64_t)arg1, (uint64_t)arg2);                                \
+                (mc_u64_t)arg1, (mc_u64_t)arg2);                                \
         *result = false;                                                        \
 }
 #define EXPECT_STR_EQ(arg1, arg2)                                               \
@@ -78,11 +78,8 @@ if (strcmp(arg1, arg2) != 0) {                                                  
 
 static inline double test_get_time()
 {
-        struct timespec res = {0};
-        clock_gettime(CLOCK_MONOTONIC, &res);
-        double t_sec = (double)res.tv_nsec * 1e-9;
-        t_sec += (double)res.tv_sec;
-	return t_sec * 1000;
+        double time = (double)clock();
+	return time / CLOCKS_PER_SEC * 1000;
 }
 
 #define TCASE_NAME(module, case) module ## _ ## case
