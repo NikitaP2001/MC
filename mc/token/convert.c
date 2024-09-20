@@ -43,6 +43,7 @@ void convert_error(struct convert_context *ctx, const char *format, ...)
 {
         va_list args;
         struct pp_token *tok_beg = ctx->pos;
+        ctx->status = MC_SYNTAX_ERR;
 
         printf("%s:%lu: ", fs_file_path(tok_beg->src_file), 
                 pp_token_line(tok_beg));

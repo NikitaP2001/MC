@@ -21,7 +21,7 @@ if (!arg) {                                                                     
         return;                                                                 \
 }
 #define ASSERT_FALSE(arg)                                                       \
-if (!arg) {                                                                     \
+if (arg) {                                                                      \
         TEST_ASSERT_INFO;                                                       \
         printf(#arg" (%llx) <=> true\n", (mc_u64_t)arg);                        \
         *result = false;                                                        \

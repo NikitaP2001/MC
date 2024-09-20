@@ -918,7 +918,9 @@ struct token* token_convert_next(struct convert_context *ctx)
                                 convert_error(ctx, "invalid punctuator");
                         break;
                 case pp_other:
-                        if (pp_token_valcmp(convert_pos(ctx), "\n") != 0)
+                        if (pp_token_valcmp(convert_pos(ctx), "\"") == 0)
+                                convert_error(ctx, "missing closing quote");
+                        else if (pp_token_valcmp(convert_pos(ctx), "\n") != 0)
                                 MC_LOG(MC_CRIT, "Should be new-ln only");
                         break;
                 default:

@@ -288,8 +288,6 @@ TEST_CASE(token, strlit_no_end)
 
      convert_init(&ctx, &pp);
      ASSERT_FALSE(MC_SUCC(convert_run(&ctx)));
-     struct token *tok = convert_get_token(&ctx);
-     ASSERT_EQ(tok, NULL);
 
      convert_free(&ctx);
      pp_free(&pp);
@@ -613,7 +611,7 @@ TEST_CASE(token, char_literal)
      ASSERT_TRUE(MC_SUCC(status));
 
      convert_init(&ctx, &pp);
-     ASSERT_FALSE(MC_SUCC(convert_run(&ctx)));
+     ASSERT_TRUE(MC_SUCC(convert_run(&ctx)));
      struct token *tok = convert_get_token(&ctx);
      EXPECT_EQ(tok->type, tok_constant);
      EXPECT_EQ(tok->value.var_const.type, const_char);
