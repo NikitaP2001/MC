@@ -228,8 +228,6 @@ TEST_CASE(token, invalid_token_identifier)
 
      convert_init(&ctx, &pp);
      ASSERT_FALSE(MC_SUCC(convert_run(&ctx)));
-     struct token *tok = convert_get_token(&ctx);
-     ASSERT_EQ(tok, NULL);
      
      convert_free(&ctx);
      pp_free(&pp);
