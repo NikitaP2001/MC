@@ -95,6 +95,12 @@ struct pp_num_info {
         enum pp_num_base base;
         enum pp_num_size size;
         enum pp_num_sign sign;
+        size_t length;
+        _Bool is_valid;
+        _Bool is_exp_part;  /*  decimal float has exponent part */
+        _Bool is_frac_const; /* hex or dec float with dot . */
+        _Bool is_bin_exp_part; /* he float has exp exponent part */
+        char __prev_char;
 };
 
 /* in one quick pass tries to induce type of num constatnt 

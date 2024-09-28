@@ -50,7 +50,6 @@ void convert_error(struct convert_context *ctx, const char *format, ...)
 
         va_start(args, format);
         vprintf(format, args);
-        putchar('\n');
         pp_print_token_line(tok_beg);
 
         va_end(args);

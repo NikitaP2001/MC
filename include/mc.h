@@ -97,4 +97,10 @@ typedef mc_u8_t                mc_char_t;
 #define MC_UCHAR_MAX          MC_U8_MAX
 #define MC_UCHAR_MIN          MC_U8_MIN
 
+/* is character an octal digit */
+static inline _Bool isodigit(int c)
+{
+        return (isdigit(c) && c < 8);
+}
+
 #endif /* _MC_H_ */
