@@ -7,6 +7,9 @@
 #include <pp/token.h>
 #include <pp/lexer.h>
 
+#define PP_TOKEN_FRAC_SIZE_MIN 1
+#define PP_TOKEN_HEX_PREFIX_SIZE 2
+
 static void 
 pp_token_set_value(struct pp_token *token, const struct pp_lexer *before)
 {
@@ -131,54 +134,98 @@ static _Bool pp_token_num_int_type(_IN char curr_chr,
                 }
                 info->is_bin_exp_part = true;
                 info->type = pp_num_float;
-        } else if ((!is_hex && !isxdigit(curr_chr)) 
-                || (!is_dec && !isdigit(curr_chr)) {
+        } else if ((is_hex && !isxdigit(curr_chr)) 
+                || (is_dec && !isdigit(curr_chr))) {
                 /* at least one digit for these one`s */
                 if (!isxdigit(info->__prev_char))
                         info->is_valid = false;
-                break;
-        } else if (!is_oct && !isodigit(curr_chr)))
                 return false;
+        } else if (is_oct && !isodigit(curr_chr))
+                return false;
+        return true;
+}
+
+static _Bool pp_token_num_float_decimal(_IN char curr_chr, 
+                                        _INOUT struct pp_num_info *info)
+{
+        if (info->is_exp_part) {
+                if (info->__prev_char == 'E') {
+                        if (curr_chr != '-' && curr_chr != '+' && !isdigit(curr_chr)) {
+                                /* at least one digit expected */
+                                info->is_valid = false;
+                                return false;
+                        }
+                } else if (!isdigit(curr_chr)){
+                        if (!isdigit(info->__prev_char))
+                                info->is_valid = false;
+                        return false;
+                }
+        } else {
+                if (!isdigit(curr_chr)) {
+                        if (info->__prev_char == '.') {
+                        /* no digits before dot (sure no prefix for decimal) */
+                                if (info->length == PP_TOKEN_FRAC_SIZE_MIN)
+                                        info->is_valid = false;
+                                return false;
+                        }
+                        if (curr_chr == 'E')
+                                info->is_exp_part = true;        
+                        else
+                                return false;
+                }
+        }
+        return true;
+}
+
+static _Bool pp_token_num_float_hex(_IN char curr_chr, 
+                                     _INOUT struct pp_num_info *info)
+{
+        if (info->is_bin_exp_part) {
+                if (info->__prev_char == 'P') {
+                        if (curr_chr != '-' && curr_chr != '+' && !isdigit(curr_chr)) {
+                                /* at least one digit expected */
+                                info->is_valid = false;
+                                return false;
+                        }
+                } else if (!isdigit(curr_chr)){
+                        if (!isdigit(info->__prev_char))
+                                info->is_valid = false;
+                        return false;
+                }
+        } else {
+                if (!isxdigit(curr_chr)) {
+                        if (info->__prev_char == '.') {
+                        /* no digits before dot (sure no prefix for decimal) */
+                                if (info->length == PP_TOKEN_FRAC_SIZE_MIN 
+                                        + PP_TOKEN_HEX_PREFIX_SIZE)
+                                        info->is_valid = false;
+                                return false;
+                        }
+                        if (curr_chr == 'E')
+                                info->is_exp_part = true;        
+                        else
+                                return false;
+                }
+        }
         return true;
 }
 
 static _Bool pp_token_num_float_type(_IN char curr_chr, 
                                      _INOUT struct pp_num_info *info)
 {
-        if (info->type = pp_num_hex) {
-
-                /* fractional const go first */
-                if (curr_chr == '.')
-                        return false;
-
-        } else if (info->base == pp_num_decimal) {
-                /* fractional const should go first */
-                if (curr_chr == '.')
-                        return false;
-
-                if (info->is_exp_part) {
-                        if (info->__prev_char == 'E') {
-                                if (curr_chr != '-' && curr_chr != '+' && !isdigit(curr_chr)) {
-                                        /* at least one digit expected */
-                                        info->is_valid = false;
-                                        return false;
-                                }
-                        } else if (!isdigit(curr_chr)){
-                                if (!isdigit(info->__prev_char))
-                                        info->is_valid = false;
-                                return false;
-                        }
-
-                } else {
-                        /* to do now ...*/
-                }
-
-        } else {
-                /* octal fp const is invalid in C99 */
-                info->is_valid = false;
+        /* fractional const go first */
+        if (curr_chr == '.')
                 return false;
-        }
-        return true;
+
+        if (info->base == pp_num_hex)
+                return pp_token_num_float_hex(curr_chr, info);                
+
+        if (info->base == pp_num_decimal)
+                return pp_token_num_float_decimal(curr_chr, info);                
+
+        /* octal fp const is invalid in C99 */
+        info->is_valid = false;
+        return false;
 }
 
 static void pp_token_num_type(_IN const char *restrict val, 
@@ -189,11 +236,12 @@ static void pp_token_num_type(_IN const char *restrict val,
         for ( ; info->length < length; info->length++) {
                 curr_chr = toupper(val[info->length]);
 
-                if (info->type = pp_num_integer 
-                        && !pp_token_num_int_type(curr_chr, info))
-                        break;
-                else if (!pp_token_num_int_type(curr_chr, info))
-                        break;
+                if (info->type == pp_num_integer) {
+                        if (!pp_token_num_int_type(curr_chr, info))
+                                return;
+                } else if (!pp_token_num_float_type(curr_chr, info)) {
+                        return;
+                }
                 info->__prev_char = curr_chr;
         }
 }
@@ -206,62 +254,81 @@ static void pp_token_num_float_suffix(_IN char last_chr,
                 info->size = pp_num_size_float;
         else if (last_chr == 'L')
                 info->size = pp_num_size_long;
+        else
+                return;
+        info->length += 1;
 }
 
 static void pp_token_num_int_suffix(_IN const char *restrict val, 
                                     _IN size_t length,
                                     _OUT struct pp_num_info *info)
 {
-        char curr_chr, prev_chr = '\0';
+        char curr_chr;
 
-        for (int pos = length - 1; pos >= 0; pos--) {
-                curr_chr = val[pos];
-                if (curr_chr == 'L' || curr_chr == 'l') {
-                        if (curr_chr == prev_chr)
+        for ( ; info->length < length; info->length++) {
+                curr_chr = toupper(val[info->length]);
+                if (curr_chr == 'L') {
+                        if (info->__prev_char == 'L') {
+                                if (info->size == pp_num_size_long_long) {
+                                        info->is_valid = false;
+                                        break;
+                                }
                                 info->size = pp_num_size_long_long;
-                        else 
+                        } else {
+                                if (info->size != pp_num_size_no) {
+                                        info->is_valid = false;
+                                        break;
+                                }
                                 info->size = pp_num_size_long;
-                } else if (toupper(curr_chr) == 'U') {
+                        }
+                } else if (curr_chr == 'U') {
+                        if (info->sign == pp_num_unsigned) {
+                                info->is_valid = false;
+                                break;
+                        }
                         info->sign = pp_num_unsigned;
-                } else {
-                        break;
                 }
-                prev_chr = curr_chr;
+                info->__prev_char = curr_chr;
         }
 }
 
-
 static void pp_num_info_init(struct pp_num_info *info)
 {
-        info->type = pp_num_integer,
-        info->size = pp_num_size_no,
-        info->sign = pp_num_signed,
-        info->is_valid = true,
-        info->length = 0
+        info->type = pp_num_integer;
+        info->size = pp_num_size_no;
+        info->sign = pp_num_signed;
+        info->is_valid = true;
+        info->length = 0;
         info->is_exp_part = false;
         info->is_frac_const = false;
         info->is_bin_exp_part = false;
         info->__prev_char = '\0';
 }
 
-
 struct pp_num_info pp_token_num_parse(struct pp_token *tok)
 {
         const char *val = tok->value;
-        int tok_len = tok->length;
-        struct pp_num_info inf;
+        size_t tok_len = tok->length;
+        struct pp_num_info info;
         assert(tok->type == pp_number);
         assert(tok_len > 0);
 
-        pp_num_info_init(&inf);
+        pp_num_info_init(&info);
         pp_token_num_base(val, &info);
-        pp_token_num_type(val, tok->length, &info);
-        if (info.type == pp_num_float)
-                pp_token_num_float_suffix(val[tok_len - 1], &info);
-        else
-                pp_token_num_int_suffix(val, tok_len, &info);
+        if (info.is_valid) {
 
-        if (info->length < tok_len)
-                info->is_valid = false;
+                pp_token_num_type(val, tok->length, &info);
+
+                if (info.is_valid) {
+                        if (info.type == pp_num_float)
+                                pp_token_num_float_suffix(val[tok_len - 1], 
+                                        &info);
+                        else
+                                pp_token_num_int_suffix(val, tok_len, &info);
+                }
+        }
+
+        if (info.length < tok_len)
+                info.is_valid = false;
         return info;
 }

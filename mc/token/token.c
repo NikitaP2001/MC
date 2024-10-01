@@ -790,15 +790,17 @@ token_number(struct convert_context *ctx)
 
         tok->type = tok_constant;
         struct pp_num_info info = pp_token_num_parse(pos);
-        if (info.type == pp_num_integer) {
-                if (info.sign == pp_num_signed)
-                        status = token_parse_signed_int(buffer, info, 
-                                val_const);
-                else
-                        status = token_parse_unsigned_int(buffer, info, 
-                                val_const);
-        } else {
-                status = token_parse_float(buffer, info, val_const);
+        if ((status = info.is_valid)) {
+                if (info.type == pp_num_integer) {
+                        if (info.sign == pp_num_signed)
+                                status = token_parse_signed_int(buffer, info, 
+                                        val_const);
+                        else
+                                status = token_parse_unsigned_int(buffer, info,
+                                        val_const);
+                } else {
+                        status = token_parse_float(buffer, info, val_const);
+                }
         }
         if (!status) {
                 token_destroy(tok);

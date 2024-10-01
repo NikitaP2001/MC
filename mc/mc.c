@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include <mc.h>
 #include <token.h>
 
@@ -33,28 +35,91 @@ const char* mc_get_log_fmt(enum MC_LOG_LEVEL loglevel)
         }
 }
 
-static _Bool mc_is_init = false;
+static struct {
+
+        _Bool mc_is_init;
+
+        /* mc print related messages log level is applied 
+        * depending on last logged mc_msg level */
+        enum MC_LOG_LEVEL last_level;
+
+        enum MC_LOG_LEVEL level;
+
+} mc_global;
+
+static inline _Bool mc_log_isopen()
+{
+        return (mc_global.last_level <= mc_global.level);
+}
+
+/* Relate to last logged event using mc_msg */
+int mc_printf(const char *format, ...)
+{
+        int n_print = 0;
+        va_list args;
+        assert(mc_isinit());
+
+        if (mc_log_isopen()) {
+                va_start(args, format);
+                n_print = vprintf(format, args);
+                va_end(args);
+        }
+        return n_print;
+}
+
+/* Relate to last logged event using mc_msg */
+int mc_putchar(int c)
+{
+        int c_put = EOF;
+        assert(mc_isinit());
+        if (mc_log_isopen())
+                c_put = putchar(c);
+        return c_put;
+}
+
+int mc_vprintf(const char *format, va_list args)
+{
+        int n_print = 0;
+        assert(mc_isinit());
+        if (mc_log_isopen())
+                n_print = vprintf(format, args);
+        return n_print;
+}
+
+int mc_msg(enum MC_LOG_LEVEL level, const char *format, ...)
+{
+        int n_print = 0;
+        va_list args;
+        mc_global.last_level = level;
+        if (mc_log_isopen()) {
+                va_start(args, format);
+                n_print = vprintf(format, args);
+                va_end(args);
+        }
+        return n_print;
+}
 
 void mc_init()
 {
-        if (!mc_is_init) {
+        if (!mc_isinit()) {
                 token_global_init();
-                mc_is_init = true;
+                mc_global.mc_is_init = true;
+                mc_global.last_level = MC_FATAL;
+                mc_global.level = MC_FATAL;
         }
-        
 }
 
 void mc_free()
 {
-        if (mc_is_init) {
+        if (mc_isinit()) {
                 token_global_free();
-                mc_is_init = false;
+                mc_global.mc_is_init = false;
         }
 }
 
 _Bool mc_isinit()
 {
-        return mc_is_init;
+        return mc_global.mc_is_init;
 }
 
 #define TRAP_ABORT() __asm__ volatile ("int3;")
@@ -66,11 +131,14 @@ int __mc_log(int loglevel, const char *file, size_t line,
 {
         va_list args;
         if (loglevel <= MC_CRIT) TRAP_ABORT();
-        printf(mc_get_log_fmt(loglevel), file, line);
-        va_start(args, format);
-        vprintf(format, args);
-        putchar('\n');
-        va_end(args);
+        if (loglevel <= (int)mc_global.level) {
+                printf(mc_get_log_fmt(loglevel), file, line);
+                va_start(args, format);
+                vprintf(format, args);
+                putchar('\n');
+                va_end(args);
+        }
+        
         return 0;
 }
 

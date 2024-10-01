@@ -7,7 +7,7 @@
 static inline 
 void pp_print_line_number(line_num_t line)
 {
-        printf("    %lu | ", line);
+        mc_printf("    %lu | ", line);
 }
 
 static void
@@ -26,17 +26,17 @@ pp_print_tokens(struct pp_token *tok_beg, struct pp_token *tok_end)
                 }
                 chr_beg -= 1;
         }
-        putchar('\n');
+        mc_putchar('\n');
         pp_print_line_number(file_line++);
 
         for ( ; chr_beg <= chr_end; chr_beg++) {
-                putchar(*chr_beg);
+                mc_putchar(*chr_beg);
                 if (*chr_beg == '\n' && chr_beg < chr_end)
                         pp_print_line_number(file_line++);
 
         }
         if (*chr_end != '\n')
-                putchar('\n');
+                mc_putchar('\n');
 
 }
 

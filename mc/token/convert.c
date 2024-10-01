@@ -45,11 +45,11 @@ void convert_error(struct convert_context *ctx, const char *format, ...)
         struct pp_token *tok_beg = ctx->pos;
         ctx->status = MC_SYNTAX_ERR;
 
-        printf("%s:%lu: ", fs_file_path(tok_beg->src_file), 
+        mc_msg(MC_ERR, "%s:%lu: ", fs_file_path(tok_beg->src_file), 
                 pp_token_line(tok_beg));
 
         va_start(args, format);
-        vprintf(format, args);
+        mc_vprintf(format, args);
         pp_print_token_line(tok_beg);
 
         va_end(args);

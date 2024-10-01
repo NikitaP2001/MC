@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <pp.h>
 #include <fs.h>
@@ -77,9 +78,21 @@ TEST_CASE(token, numbers_int_valid)
      fs_add_local(&fs, "./");
      pp_init(&pp, &fs);
 
-     const char test[] = " 1234 1234l 1234LL 0x125 0x125L 0x125LL"
-                         " 113u 113ul 113ull";
-     ASSERT_TRUE(write_file(TFILE_NAME, test, LEN_OF(test)));
+     const char *format ="%d %ldl %lldLL "
+                         "0x%x 0x%lxl 0x%llxLL "
+                         "%uu %lulu %llullu";
+
+     int size = snprintf(NULL, 0, format, 
+          INT_MAX - 1, LONG_MAX - 1, LLONG_MAX - 1, 
+          INT_MAX - 1, LONG_MAX - 1, LLONG_MAX - 1, 
+          UINT_MAX - 1, ULONG_MAX - 1, ULONG_LONG_MAX - 1);
+     char *test = malloc(size + 1);
+     snprintf(test, size + 1, format,
+          INT_MAX - 1, LONG_MAX - 1, LLONG_MAX - 1, 
+          INT_MAX - 1, LONG_MAX - 1, LLONG_MAX - 1, 
+          UINT_MAX - 1, ULONG_MAX - 1, ULONG_LONG_MAX - 1);
+
+     ASSERT_TRUE(write_file(TFILE_NAME, test, strlen(test)));
      enum mc_status status = pp_run(&pp, TFILE_NAME);
      ASSERT_TRUE(MC_SUCC(status));
 
@@ -88,47 +101,47 @@ TEST_CASE(token, numbers_int_valid)
      struct token *tok = convert_get_token(&ctx);
      ASSERT_EQ(tok->type, tok_constant);
      ASSERT_EQ(tok->value.var_const.type, const_int)
-     ASSERT_EQ(tok->value.var_const.data.var_int, 1234);
+     ASSERT_EQ(tok->value.var_const.data.var_int, INT_MAX - 1);
 
      tok = list_next(tok);
      ASSERT_EQ(tok->type, tok_constant);
      ASSERT_EQ(tok->value.var_const.type, const_long_int);
-     ASSERT_EQ(tok->value.var_const.data.var_int, 1234);
+     ASSERT_EQ(tok->value.var_const.data.var_int, LONG_MAX - 1);
 
      tok = list_next(tok);
      ASSERT_EQ(tok->type, tok_constant);
      ASSERT_EQ(tok->value.var_const.type, const_long_long_int);
-     ASSERT_EQ(tok->value.var_const.data.var_int, 1234);
+     ASSERT_EQ(tok->value.var_const.data.var_int, LLONG_MAX - 1);
 
      tok = list_next(tok);
      ASSERT_EQ(tok->type, tok_constant);
      ASSERT_EQ(tok->value.var_const.type, const_int);
-     ASSERT_EQ(tok->value.var_const.data.var_int, 0x125);
+     ASSERT_EQ(tok->value.var_const.data.var_int, INT_MAX - 1);
 
      tok = list_next(tok);
      ASSERT_EQ(tok->type, tok_constant);
      ASSERT_EQ(tok->value.var_const.type, const_long_int);
-     ASSERT_EQ(tok->value.var_const.data.var_int, 0x125);
+     ASSERT_EQ(tok->value.var_const.data.var_int, LONG_MAX - 1);
 
      tok = list_next(tok);
      ASSERT_EQ(tok->type, tok_constant);
      ASSERT_EQ(tok->value.var_const.type, const_long_long_int);
-     ASSERT_EQ(tok->value.var_const.data.var_int, 0x125);
+     ASSERT_EQ(tok->value.var_const.data.var_int, LLONG_MAX - 1);
 
      tok = list_next(tok);
      ASSERT_EQ(tok->type, tok_constant);
      ASSERT_EQ(tok->value.var_const.type, const_uint);
-     ASSERT_EQ(tok->value.var_const.data.var_uint, 113);
+     ASSERT_EQ(tok->value.var_const.data.var_uint, UINT_MAX - 1);
 
      tok = list_next(tok);
      ASSERT_EQ(tok->type, tok_constant);
      ASSERT_EQ(tok->value.var_const.type, const_ulong_int);
-     ASSERT_EQ(tok->value.var_const.data.var_uint, 113);
+     ASSERT_EQ(tok->value.var_const.data.var_uint, ULONG_MAX - 1);
 
      tok = list_next(tok);
      ASSERT_EQ(tok->type, tok_constant);
      ASSERT_EQ(tok->value.var_const.type, const_ulong_long_int);
-     ASSERT_EQ(tok->value.var_const.data.var_uint, 113);   
+     ASSERT_EQ(tok->value.var_const.data.var_uint, ULONG_LONG_MAX - 1);   
      
      convert_free(&ctx);
      pp_free(&pp);

@@ -2,6 +2,7 @@
 #define _MC_H_
 #include <stdio.h>
 #include <stdint.h>
+#include <ctype.h>
 
 enum mc_status {
         MC_OK = 0,
@@ -46,20 +47,24 @@ enum MC_LOG_LEVEL {
         MC_DEBUG = 4,
 };
 
+/* Relate to last logged event using mc_msg */
+int mc_printf(const char *format, ...);
+
+int mc_vprintf(const char *format, va_list args);
+
+/* Relate to last logged event using mc_msg */
+int mc_putchar(int c);
+
+int mc_msg(enum MC_LOG_LEVEL level, const char *format, ...);
+
 #ifdef DEBUG
-
 const char* mc_get_log_fmt(enum MC_LOG_LEVEL loglevel);
-
 int __mc_log(int loglevel, const char *file, size_t line,
               const char *format, ...);
-
 #define MC_LOG(loglevel, ...)                                   \
         __mc_log(loglevel, __FILE__, __LINE__, __VA_ARGS__)
-
 #else /* DEBUG */
-
 #define MC_LOG(...) do {} while (0)
-
 #endif /* DEBUG */
 
 #define UNUSED(var) (void)(var)
