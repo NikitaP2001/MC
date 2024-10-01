@@ -16,14 +16,14 @@
 #define ASSERT_TRUE(arg)                                                        \
 if (!arg) {                                                                     \
         TEST_ASSERT_INFO;                                                       \
-        printf(#arg" (%llx) <=> false\n", (mc_u64_t)arg);                       \
+        printf(#arg" (%llx) <=> true\n", (mc_u64_t)arg);                        \
         *result = false;                                                        \
         return;                                                                 \
 }
 #define ASSERT_FALSE(arg)                                                       \
 if (arg) {                                                                      \
         TEST_ASSERT_INFO;                                                       \
-        printf(#arg" (%llx) <=> true\n", (mc_u64_t)arg);                        \
+        printf(#arg" (%llx) <=> false\n", (mc_u64_t)arg);                       \
         *result = false;                                                        \
         return;                                                                 \
 }

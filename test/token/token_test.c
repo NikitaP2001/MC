@@ -292,7 +292,7 @@ TEST_CASE(token, strlit_no_end)
 
      pp_init(&pp, &fs);
 
-     const char test[] = "\"no end quote";
+     const char test[] = "\"no end quote \n } \n \"";
      ASSERT_TRUE(write_file(TFILE_NAME, test, LEN_OF(test)));
      enum mc_status status = pp_run(&pp, TFILE_NAME);
      ASSERT_TRUE(MC_SUCC(status));
@@ -656,7 +656,7 @@ TEST_CASE(token, char_literal)
 
 int main()
 {
-     mc_init();
+     mc_init(0, NULL);
      TEST_RUN(token, char_literal);
      TEST_RUN(token, numbers_float_valid);
      TEST_RUN(token, int_suffix_invalid);

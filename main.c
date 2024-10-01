@@ -71,9 +71,9 @@ enum parser_symbol get_symbol(void *pp_data, struct token *name)
         return psym_identifier;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-        mc_init();
+        mc_init(argc, argv);
         struct filesys fs;
         struct pp_context pp;
         struct convert_context ctx;

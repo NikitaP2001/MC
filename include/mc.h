@@ -45,6 +45,7 @@ enum MC_LOG_LEVEL {
         MC_ERR = 2,
         MC_WARN = 3,
         MC_DEBUG = 4,
+        MC_LVL_MAX = MC_DEBUG,
 };
 
 /* Relate to last logged event using mc_msg */
@@ -74,7 +75,7 @@ int __mc_log(int loglevel, const char *file, size_t line,
 #endif
 
 /* one time initialization of the compiler module */
-void mc_init();
+void mc_init(int argc, char *argv[]);
 
 void mc_free();
 

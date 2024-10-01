@@ -247,7 +247,7 @@ TEST_CASE(lexer, punctuators)
 
 void run_pp_lexer()
 {
-        mc_init();
+        mc_init(0, NULL);
         TEST_RUN(lexer, header_name);
         TEST_RUN(lexer, header_name_multiline);
         TEST_RUN(lexer, header_name_escline);

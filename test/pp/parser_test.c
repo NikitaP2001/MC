@@ -173,7 +173,7 @@ TEST_CASE(pp_parser, macro_if_elif)
 
 void run_pp_parser()
 {
-        mc_init();
+        mc_init(0, NULL);
         TEST_RUN(pp_parser, multiline_macro);
         TEST_RUN(pp_parser, macro_if_elif);
         TEST_RUN(pp_parser, func_def);

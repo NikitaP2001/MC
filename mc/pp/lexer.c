@@ -332,7 +332,8 @@ static void pp_fetch_quotation(struct pp_lexer *pp, char qchar)
                                 continue;
                         *pp = pp_save;
 
-                        if (pp->pos[0] == '\\' || pp->pos[0] == '\0') {
+                        if (pp->pos[0] == '\\' || pp->pos[0] == '\0' 
+                                || pp->pos[0] == '\n') {
                                 pp_seterror(pp);
                                 return;
                         }
@@ -456,7 +457,9 @@ void pp_lexer_free(struct pp_lexer *pp)
         fs_release_file(pp->src_file);
 }
 
-
+/* TODO: this module should be redone, properly using lookahead
+ * and char tables, like in parser, instead of this stupid
+ * state saves */
 struct pp_token *pp_lexer_get_token(struct pp_lexer *pp)
 {
         struct pp_token *token = NULL;

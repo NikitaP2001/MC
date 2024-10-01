@@ -1,3 +1,5 @@
+#include <string.h>
+#include <stdlib.h>
 #include <assert.h>
 
 #include <mc.h>
@@ -21,17 +23,17 @@ const char* mc_get_log_fmt(enum MC_LOG_LEVEL loglevel)
 {
         switch (loglevel) {
         case MC_FATAL:
-                return "[fatal] %s.%d: ";
+                return "[fatal] %s:%d: ";
         case MC_CRIT:
-                return "[crit] %s.%d: ";
+                return "[crit] %s:%d: ";
         case MC_ERR:
-                return "[err] %s.%d: ";
+                return "[err] %s:%d: ";
         case MC_WARN:
-                return "[warn] %s.%d: ";
+                return "[warn] %s:%d: ";
         case MC_DEBUG:
-                return "[trace] %s.%d: ";
+                return "[trace] %s:%d: ";
         default:
-                return "%s.%d: ";
+                return "%s:%d: ";
         }
 }
 
@@ -99,13 +101,28 @@ int mc_msg(enum MC_LOG_LEVEL level, const char *format, ...)
         return n_print;
 }
 
-void mc_init()
+void mc_init_args(int argc, char *argv[])
+{
+        for (int iarg = 0; iarg < argc; iarg++) {
+                if (strcmp(argv[iarg], "-M") == 0 && iarg + 1 < argc) {
+                        long level = strtol(argv[++iarg], NULL, 0);
+                        if (level <= MC_LVL_MAX && level > 0)
+                                mc_global.level = level;
+                        else 
+                                mc_msg(MC_ERR, "failed to parse arg -M");
+                }
+        }
+}
+
+void mc_init(int argc, char *argv[])
 {
         if (!mc_isinit()) {
                 token_global_init();
                 mc_global.mc_is_init = true;
                 mc_global.last_level = MC_FATAL;
                 mc_global.level = MC_FATAL;
+                if (argc != 0 && argv != NULL)
+                        mc_init_args(argc, argv);
         }
 }
 
