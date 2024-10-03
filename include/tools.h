@@ -3,9 +3,7 @@
 #include <stdint.h>
 #include <limits.h>
 
-#define PEARSON_TABLE_SIZE 256
-
-uint8_t pearson_hash(const char *data, size_t length);
+#include <tools/hashtable.h>
 
 static inline int64_t max(int64_t num1, int64_t num2)
 {

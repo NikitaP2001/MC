@@ -81,32 +81,13 @@ void mc_free();
 
 _Bool mc_isinit();
 
-/* integer types related to target environment */
-typedef long long unsigned int mc_u64_t;
-typedef unsigned int           mc_u32_t;
-typedef unsigned short int     mc_u16_t;
-typedef unsigned char          mc_u8_t;
-typedef mc_u16_t               mc_wchar_t;
-typedef mc_u8_t                mc_char_t;
-
-#define MC_U64_MAX            ULLONG_MAX
-#define MC_U64_MIN            ULLONG_MIN
-#define MC_U32_MAX            UINT_MAX
-#define MC_U32_MIN            UINT_MIN
-#define MC_U16_MAX            USHRT_MAX
-#define MC_U16_MIN            USHRT_MIN
-#define MC_U8_MAX             UCHAR_MAX
-#define MC_U8_MIN             UCHAR_MIN
-
-#define MC_WCHAR_MAX          MC_U16_MAX
-#define MC_WCHAR_MIN          MC_U16_MIN
-#define MC_UCHAR_MAX          MC_U8_MAX
-#define MC_UCHAR_MIN          MC_U8_MIN
-
 /* is character an octal digit */
 static inline _Bool isodigit(int c)
 {
         return (isdigit(c) && c < 8);
 }
+
+#define container_of(ptr, type, member)                  \
+        (type *)((char *)ptr - offsetof(type, member))   \
 
 #endif /* _MC_H_ */

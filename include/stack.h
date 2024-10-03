@@ -79,4 +79,9 @@ void stack_free(struct stack *st)
         free(st->storage);
 }
 
+static inline void *stack_raw(struct stack *st)
+{
+        return st->storage;
+}
+
 #endif /* _STACK_H_ */

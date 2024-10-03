@@ -19,6 +19,12 @@ struct pt_node {
         struct token *value;
 };
 
+#define PT_NODE_FOREACH_CHILD(node)                                             \
+        for (uint16_t i = 0,  *entry = (uint16_t *)node->childs.nodes[i];       \
+                i < node->childs.size;                                          \
+                i++, entry = (uint16_t *)node->childs.nodes[i])
+
+
 static inline uint16_t pt_node_child_count(struct pt_node *node)
 {
         return node->childs.size;
@@ -49,6 +55,12 @@ static inline struct pt_node *pt_node_child_last(struct pt_node *node)
 {
         assert(node->childs.size != 0);
         return node->childs.nodes[node->childs.size - 1];
+}
+
+static inline struct pt_node *pt_node_child_first(struct pt_node *node)
+{
+        assert(node->childs.size != 0);
+        return node->childs.nodes[0];
 }
 
 #endif /* _PARSE_TREE_H_ */

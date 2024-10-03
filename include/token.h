@@ -1,5 +1,8 @@
 #ifndef _TOKEN_H_
 #define _TOKEN_H_
+#include <string.h>
+#include <assert.h>
+
 #include <mc.h>
 #include <pp.h>
 #include <tools.h>
@@ -244,6 +247,25 @@ void token_global_init();
 void token_global_free();
 
 void token_print(struct token *tok);
+
+static inline int token_val_cmp(struct token *first, struct token *second)
+{
+        file_size_t len_first = first->value.var_raw.length;
+        file_size_t len_second = second->value.var_raw.length;
+        if (len_first != len_second)
+                return (int64_t)len_first - (int64_t)len_second;
+
+        return strncmp(first->value.var_raw.value, 
+                second->value.var_raw.value, len_first);
+}
+
+static inline 
+enum keyword_type 
+token_get_keyword(struct token *t_kw)
+{
+        assert(t_kw->type == tok_keyword);
+        return t_kw->value.var_keyw;
+}
 
 #ifdef DEBUG
 void token_print_content(struct token *tok);

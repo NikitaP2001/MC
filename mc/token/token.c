@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <math.h>
 
+#include <mc/limits.h>
 #include <tools.h>
 #include <token.h>
 #include <pp/node.h>

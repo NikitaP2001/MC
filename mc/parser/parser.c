@@ -59,6 +59,13 @@ parser_stack_topsym(struct parser *ps)
         return parser_stack_top(ps)->sym; 
 }
 
+static inline size_t
+parser_stack_content(struct parser *ps, struct pt_node ***node)
+{
+        *node = (struct pt_node **)stack_raw(&ps->stack);
+        return ps->stack.size;
+}
+
 static inline
 struct pt_node *parser_stack_pop(struct parser *ps)
 {
@@ -143,11 +150,30 @@ parser_fetch_symbol(struct parser *ps)
                 return psym_invalid;
 }
 
-enum parser_symbol parser_get_symbol(struct parser *ps, 
-                                     struct token *name)
+static inline _Bool parser_is_typedef(struct parser *ps, 
+                                      struct token *id)
 {
-        struct parser_ops ops = ps->ops; 
-        return ops.get_symbol(ps->data, name);
+        struct pt_node **path;
+        size_t length = parser_stack_content(ps, &path);
+        return typedef_table_contains(&ps->htbl_typedef, id, path, length);
+}
+
+static void parser_add_typedef(struct parser *ps, 
+                                      struct token *id)
+{
+        struct pt_node *decl = parser_stack_pop(ps);
+        /* we are watching declaration parent, so pop then restore */
+        struct pt_node *node = parser_stack_top(ps);
+        /* definitions in external decl relate to all translation unit,
+         * analogically with block item */
+        _Bool second_level = (node->sym == psym_external_declaration 
+                || node->sym == psym_block_item);
+        if (second_level)
+                parser_stack_pop(ps);
+        typedef_table_add(&ps->htbl_typedef, id, parser_stack_top(ps));
+        if (second_level)
+                parser_stack_push(ps, node);
+        parser_stack_push(ps, decl);
 }
 
 static inline _Bool
@@ -289,8 +315,8 @@ static mc_status_t parser_direct_declarator_parameter(struct parser *ps,
         enum parser_symbol sym = parser_fetch_symbol(ps);
 
         _Bool is_id = (sym == psym_identifier);
-        if ((param_first[sym] && !is_id) || (is_id && parser_get_symbol(ps,
-                parser_fetch_token(ps)) != psym_typedef_name)) {
+        if ((param_first[sym] && !is_id) || (is_id && parser_is_typedef(ps,
+                parser_fetch_token(ps)))) {
                 status = parser_parameter_type_list(ps);
                 if (!MC_SUCC(status))
                         return PARSER_ERROR(ps, "invalid parameter type list");
@@ -552,7 +578,7 @@ static mc_status_t parser_typedef_name(struct parser *ps)
 {
 
         struct token *tok_id = parser_pull_token(ps);
-        assert(parser_get_symbol(ps, tok_id) == psym_typedef_name);
+        assert(parser_is_typedef(ps, tok_id));
         struct pt_node *tf_name = pt_node_create(psym_type_name);
         parser_stack_push(ps, tf_name);
         pt_node_child_add(tf_name, pt_node_create_leaf(tok_id));
@@ -2247,8 +2273,8 @@ static mc_status_t parser_specifier_qualifier_list(struct parser *ps)
         enum parser_symbol sym;
         while ((sym = parser_fetch_symbol(ps))) {
                 if (type_spec[sym]) {
-                        if (sym == psym_identifier && parser_get_symbol(ps, 
-                                parser_fetch_token(ps)) != psym_typedef_name)
+                        if (sym == psym_identifier && !parser_is_typedef(ps, 
+                                parser_fetch_token(ps)))
                                 break;
                         status = parser_type_specifier(ps);
                 } else if (type_qual[sym]) {
@@ -2411,8 +2437,8 @@ static mc_status_t parser_declaration_specifiers(struct parser *ps)
                 if (st_class_spec[sym]) {
                         status = parser_storage_class_specifier(ps);
                 } else if (type_spec[sym]) {
-                        if (sym == psym_identifier && parser_get_symbol(ps, 
-                                parser_fetch_token(ps)) != psym_typedef_name)
+                        if (sym == psym_identifier && !parser_is_typedef(ps, 
+                                parser_fetch_token(ps)))
                                 break;
                         status = parser_type_specifier(ps);
                 } else if (type_qual[sym]) {
@@ -2689,8 +2715,8 @@ static mc_status_t parser_iteration_for(struct parser *ps)
 
         _Bool is_declaration = false;
         enum parser_symbol sym = parser_fetch_symbol(ps);
-        if (sym == psym_identifier && parser_get_symbol(ps, 
-                parser_fetch_token(ps)) == psym_typedef_name)
+        if (sym == psym_identifier && parser_is_typedef(ps, 
+                parser_fetch_token(ps)))
                 is_declaration = true;
         
         if ((decl_first[sym] && sym != psym_identifier) || is_declaration) {
@@ -2989,8 +3015,8 @@ static mc_status_t parser_block_item(struct parser *ps)
         enum parser_symbol sym = parser_fetch_symbol(ps);
         /* under declaration this could be typedef name OR identifier 
          * from expression from statement */
-        if (sym == psym_identifier && parser_get_symbol(ps, 
-                parser_fetch_token(ps)) == psym_typedef_name)
+        if (sym == psym_identifier && parser_is_typedef(ps, 
+                parser_fetch_token(ps)))
                 is_declaration = true;
 
         if (stmt_first[parser_fetch_symbol(ps)] && !is_declaration) {
@@ -3196,6 +3222,36 @@ fail:
         return status;
 }
 
+static void parser_typedef_init_list(struct parser *ps)
+{
+        /* pop because declaration should be on top when add */
+        struct pt_node *init_lst = parser_stack_pop(ps);
+        PT_NODE_FOREACH_CHILD(init_lst) {
+                struct pt_node *init_decl = (struct pt_node *)entry;
+                struct pt_node *dir_decl = init_decl;
+                struct pt_node *decl;
+
+                do {
+                        decl = pt_node_child_first(dir_decl);
+                        dir_decl = pt_node_child_last(decl);
+                } while (pt_node_child_first(dir_decl)->sym != psym_identifier);
+
+                parser_add_typedef(ps, pt_node_child_first(dir_decl)->value);
+        }
+        parser_stack_push(ps, init_lst);
+}
+
+static _Bool parser_decl_spec_is_typedef(struct pt_node *decl_spec)
+{
+        struct pt_node *node = pt_node_child_first(decl_spec);
+        if (node->sym == psym_storage_class_specifier) {
+                node = pt_node_child_first(node);
+                if (token_get_keyword(node->value) == keyw_typedef)
+                        return true;
+        }
+        return false;
+}
+
 /* in lookahead: declaration-specifiers and ?declarator */
 static mc_status_t parser_declaration(struct parser *ps)
 {
@@ -3241,6 +3297,8 @@ static mc_status_t parser_declaration(struct parser *ps)
                         parser_lookahead_restore(ps, old_lk);
                         goto fail;
                 }
+                if (parser_decl_spec_is_typedef(pt_node_child_first(decl)))
+                        parser_typedef_init_list(ps);
                 pt_node_child_add(decl, parser_stack_pop(ps));
 
                 old_lk = parser_lookahead_swap(ps, old_lk);
@@ -3340,6 +3398,7 @@ fail:
 struct pt_node *parser_translation_unit(struct parser *ps)
 {
         struct pt_node *unit = pt_node_create(psym_translation_unit);
+        parser_stack_push(ps, unit);
         mc_status_t status = MC_OK;
         enum parser_symbol sym;
 
@@ -3353,7 +3412,6 @@ struct pt_node *parser_translation_unit(struct parser *ps)
                 if (MC_SUCC(status)) {
                         child = parser_stack_pop(ps);
                         pt_node_child_add(unit, child);
-                        assert(parser_stack_empty(ps));
                 } else {
                         status = PARSER_ERROR(ps, 
                                 "invalid external-declaration");
@@ -3363,8 +3421,8 @@ struct pt_node *parser_translation_unit(struct parser *ps)
                 pt_node_destroy(unit);
                 unit = NULL;
         }
-        
-        return unit;
+        assert(parser_stack_topsym(ps) == psym_translation_unit);
+        return parser_stack_pop(ps);
 }
 
 void parser_init(struct parser *ps, struct parser_ops ops, void *user_data)
@@ -3372,9 +3430,15 @@ void parser_init(struct parser *ps, struct parser_ops ops, void *user_data)
         ps->ops = ops;
         ps->data = user_data;
         parser_stack_init(ps);
+        struct hash_table_ops hops = {
+                .get_key = typedef_table_hash,
+                .free = typedef_table_free,
+        };
+        hash_init(&ps->htbl_typedef, hops);
 }
 
 void parser_free(struct parser *ps)
 {
         parser_stack_free(ps);
+        hash_free(&ps->htbl_typedef);
 }

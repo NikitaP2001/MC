@@ -3,6 +3,8 @@
 #include <string.h>
 #include <time.h>
 
+#include <mc/types.h>
+
 #define TFILE_NAME "file.cc"
 
 #define LEN_OF(str) (sizeof(str) - 1)

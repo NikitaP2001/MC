@@ -1,9 +1,11 @@
 #ifndef _PARSER_H_
 #define _PARSER_H_
 #include <stdbool.h>
+
 #include <list.h>
 #include <parser/symbol.h>
 #include <parser/tree.h>
+#include <parser/typedef_table.h>
 #include <mc.h>
 #include <stack.h>
 
@@ -14,14 +16,6 @@ struct parser_ops {
         void                    (*put_token)(void *data, struct token *tok);
         struct token*           (*fetch_token)(void *data);
         mc_status_t             (*error)(void *data, const char *message);
-        enum parser_symbol      (*get_symbol)(void *data, struct token *name);
-        void                    (*add_symbol)(void *data, struct token *name);
-};
-
-struct parser_stack {
-        struct pt_node **node;
-        uint16_t size;
-        uint16_t capacity;
 };
 
 struct parser {
@@ -31,6 +25,7 @@ struct parser {
         struct pt_node *lookahead;
         struct parser_ops ops;
         void *data; /* some user provided data, is passed to ops */
+        struct hash_table htbl_typedef;
 };
 
 struct pt_node *parser_translation_unit(struct parser *ps);

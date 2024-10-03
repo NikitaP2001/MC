@@ -64,13 +64,6 @@ mc_status_t error_handler(void *pp_data, const char *message)
         return MC_FAIL;
 }
 
-enum parser_symbol get_symbol(void *pp_data, struct token *name)
-{
-        UNUSED(pp_data);
-        UNUSED(name);
-        return psym_identifier;
-}
-
 int main(int argc, char *argv[])
 {
         mc_init(argc, argv);
@@ -107,7 +100,6 @@ int main(int argc, char *argv[])
                 .put_token = put_token,
                 .fetch_token = fetch_token,
                 .error = error_handler,
-                .get_symbol = get_symbol,
         };
         parser_init(&ps, ops, &pctx);
         parser_translation_unit(&ps);
