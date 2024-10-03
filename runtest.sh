@@ -7,7 +7,8 @@ RESET='\033[0m'
 start_dir=$(pwd)
 
 # Change directory to the specific relative path
-cd build/test
+test_dir=$(realpath build/test)
+cd "$test_dir"
 
 echo "[==========] Running MC test suite"
 n_crash=0
@@ -15,8 +16,13 @@ n_crash=0
 shopt -s globstar 
 
 for file in **/*.exe; do
+        file=$(realpath "$file")
+        file_dir=$(dirname "$file")
 
-        "./$file"
+        cd "$file_dir"
+        "$file"
+        cd "$test_dir"
+
         exit_code=$?
         if [ $exit_code != 0 ]; then
                 n_crash=$((n_crash + 1))
