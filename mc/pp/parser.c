@@ -202,7 +202,7 @@ pp_parser_include(struct pp_parser *parser)
         pp_node_add_leaf(inc_ln, tok);
         tok = pp_parser_advance(parser);
 
-        if (pp_token_valcmp(tok, "include") != 0)
+        if (pp_token_valcmp(tok, PP_VAL_INCLUDE) != 0)
                 goto discard;
         pp_node_add_leaf(inc_ln, tok);
         pp_parser_advance(parser);
@@ -464,7 +464,7 @@ pp_parser_macroid(struct pp_parser *parser, struct pp_token *id)
                 macro = pp_parser_else(parser);
         else if (pp_token_valcmp(id, "endif") == 0)
                 macro = pp_parser_endif(parser);
-        else if (pp_token_valcmp(id, "include") == 0)
+        else if (pp_token_valcmp(id, PP_VAL_INCLUDE) == 0)
                 macro = pp_parser_include(parser);
         else if (pp_token_valcmp(id, "define") == 0)
                 macro = pp_parser_define(parser);
@@ -503,24 +503,45 @@ pp_parser_macro(struct pp_parser *parser)
         return macro;
 }
 
-static struct pp_node*
-pp_parser_text_line(struct pp_parser *parser)
+static _Bool
+pp_parser_line_toks(struct pp_parser *parser, struct pp_node *node)
 {
-        struct pp_node *node = pp_node_create(pp_text_line);
-
+        _Bool status = true;
         struct pp_node *toks = pp_parser_tokens(parser);
         if (toks != NULL)
                 pp_node_add_descendant(node, toks);
 
         struct pp_token *tok = pp_parser_token(parser);
         if (pp_token_valcmp(tok, "\n") != 0) {
-                pp_node_destroy(node);
-                node = NULL;
+                status = false;
         } else {
                 pp_node_add_leaf(node, tok);
                 pp_parser_advance(parser);
         }
+        return status;
+}
 
+static struct pp_node*
+pp_parser_text_line(struct pp_parser *parser)
+{
+        struct pp_node *node = pp_node_create(pp_text_line);
+
+        if (!pp_parser_line_toks(parser, node)) {
+                pp_node_destroy(node);
+                node = NULL;
+        }
+        return node;
+}
+
+static struct pp_node*
+pp_parser_non_directive(struct pp_parser *parser)
+{
+        struct pp_node *node = pp_node_create(pp_non_dir);
+
+        if (!pp_parser_line_toks(parser, node)) {
+                pp_node_destroy(node);
+                node = NULL;
+        }
         return node;
 }
 
@@ -540,9 +561,13 @@ pp_parser_fetch_node(struct pp_parser *parser)
         if (node != NULL)
                 return node;
 
-        if (tok != NULL && (tok->type != pp_punct 
-                || pp_token_valcmp(tok, "#") == 0))
-                node = pp_parser_text_line(parser);
+        if (tok != NULL) {
+                if (tok->type != pp_punct || pp_token_valcmp(tok, 
+                        PP_VAL_HASH) != 0)
+                        node = pp_parser_text_line(parser);
+                else 
+                        node = pp_parser_non_directive(parser);
+        }
 
         return node;
 }

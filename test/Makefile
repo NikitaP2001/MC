@@ -1,6 +1,7 @@
-MODULE := 
-DEPS := fs/test.exe pp/test.exe
+MODULE :=
+DEPS := fs/test.exe pp/test.exe token/test.exe
 
-SRC := 
+SRC :=
+CFLAGS += -I $(realpath .)/include -Wno-multichar
 
 include $(BLDRULES)

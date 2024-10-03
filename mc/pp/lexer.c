@@ -4,13 +4,12 @@
 #include <assert.h>
 
 #include <list.h>
-#include <pp/lexer.h>
-#include <pp/token.h>
+#include <pp.h>
+#include <token.h>
+#include <tools.h>
 
-/* Todo:
+/* TODO:
  * - replace pp->pos != '\0' with pp_eof inline */
-
-
 
 static void pp_seterror(struct pp_lexer *pp)
 {
@@ -88,17 +87,15 @@ static _Bool pp_isstr(struct pp_lexer *pp, const char *str)
         return result; 
 }
 
-
-static _Bool pp_is_one_of(char one, const char *of)
+int pp_is_one_of(char one, const char *of)
 {
         int of_len = strlen(of);
-        _Bool result = false;
+        int result = 0;
         for (int i = 0; i < of_len; i++) {
                 if (one == of[i]) {
-                        result = true;
+                        result = i + 1;
                         break;
                 }
-                        
         }
         return result;
 }
@@ -286,7 +283,7 @@ static void pp_fetch_escape_seq(struct pp_lexer *pp)
 {
         if (pp->pos[0] == '\\') {
                 pp_advance(pp, 1);
-                if (pp_is_one_of(*pp->pos, "'\"?\\abfnrtv")) {
+                if (pp_is_one_of(*pp->pos, token_simple_esc_chars)) {
                         pp_advance(pp, 1);
                         return;
                 }
@@ -301,20 +298,16 @@ static void pp_fetch_escape_seq(struct pp_lexer *pp)
                 }
 
                 if (pp->pos[0] == 'x') {
-                        if (pp_ishex(*pp->pos)) {
+                        if (pp_ishex(pp->pos[1])) {
                                 pp_advance(pp, 1);
                                 while (pp_ishex(*pp->pos))
                                         pp_advance(pp, 1);
                                 return;
                         }
                 }
-        }
-
-        pp_fetch_univ_char_name(pp);
-        if (pp_lexer_noerror(pp))
-                return;
-
-        pp_seterror(pp);
+                pp_seterror(pp);
+        } else
+                pp_seterror(pp);
 }
 
 
@@ -332,10 +325,15 @@ static void pp_fetch_quotation(struct pp_lexer *pp, char qchar)
                         pp_fetch_escape_seq(pp);
                         if (pp_lexer_noerror(pp))
                                 continue;
-                        else
-                                *pp = pp_save;
 
-                        if (pp->pos[0] == '\\' || pp->pos[0] == '\0') {
+                        *pp = pp_save;
+                        pp_fetch_univ_char_name(pp);
+                        if (pp_lexer_noerror(pp))
+                                continue;
+                        *pp = pp_save;
+
+                        if (pp->pos[0] == '\\' || pp->pos[0] == '\0' 
+                                || pp->pos[0] == '\n') {
                                 pp_seterror(pp);
                                 return;
                         }
@@ -361,54 +359,74 @@ static inline void pp_fetch_chrconst(struct pp_lexer *pp)
         pp_fetch_quotation(pp, '\'');
 }
 
+static const uint8_t pp_punc_lookup[256] = {
+        ['#'] = 1, ['%'] = 1, ['&'] = 1, ['('] = 1, [')'] = 1, ['*'] = 1,
+        ['+'] = 1, [','] = 1, ['-'] = 1, ['.'] = 1, ['/'] = 1, [':'] = 1,
+        [';'] = 1, ['<'] = 1, ['>'] = 1, ['?'] = 1, ['['] = 1, [']'] = 1,
+        ['^'] = 1, ['{'] = 1, ['|'] = 1, ['}'] = 1, ['~'] = 1, ['='] = 1,
+        ['!'] = 1,
+};
 
-static inline void pp_fetch_punctuator(struct pp_lexer *pp)
+static inline _Bool  pp_is_punc_char(char chr)
 {
-        if (pp_is_one_of(pp->pos[0], "[](){}~,;?")) {
-                pp_advance(pp, 1);
-                return;
+        return pp_punc_lookup[(uint8_t)chr];
+}
+
+/* TODO: prefix tree or DFA ?*/
+static void pp_fetch_punctuator(struct pp_lexer *pp)
+{
+        int max_punc_len;
+        for (max_punc_len = 0; max_punc_len < TOKEN_MAX_PUNC_LEN; 
+                max_punc_len++) {
+                if (!pp_is_punc_char(pp->pos[max_punc_len]))
+                        break;
         }
-
-        static const char *str_punct[] = {
-                "%:%:", "...", "<<=", ">>=",
-
-                "->", "++", "--", "<<", ">>",
-                "<=", ">=", "==", "!=", "&&",
-                "||", "*=", "/=", "%=", "+=",
-                "-=", "&=", "^=", "|=", "##",
-                "<:", ">:", "<%", "%>", "%:",
-                
-                ".", "!", "-", "+", "*", "&",
-                "<", ">", "^", "|", ":", "=",
-                "#", ","
-        };
-
-        for (size_t pi = 0; pi < sizeof(str_punct) / sizeof(char *); pi++) {
-                if (pp_isstr(pp, str_punct[pi])) {
-                        pp_advance(pp, strlen(str_punct[pi]));
+        for (int i = max_punc_len; i > 0; i--) {
+                int punc_num = trie_search(&token_punc_trie, &pp->pos[0], i);
+                if (punc_num != punc_invalid) {
+                        pp_advance(pp, i);
                         return;
                 }
         }
-
         pp_seterror(pp);
 }
 
-
-_Bool pp_lexer_init(struct pp_lexer *pp, struct fs_file *file)
+/* Take caution, we may leak ptr here */
+static void pp_lexer_reset(struct pp_lexer *pp)
 {
-        if (file->content == NULL)
-                pp->pos = source_read(file);
-        if (pp->pos == NULL)
-                return false;
-
         pp->first = NULL;
         pp->last = NULL;
         pp->line = 0;
         pp->file_line = 0;
         pp->state = true;
         pp->_escape = false;
+}
 
-        return true;
+
+_Bool pp_lexer_init(struct pp_lexer *pp, struct fs_file *file)
+{
+        _Bool status = true;
+        if (mc_isinit()) {
+                if (file->content == NULL)
+                        pp->pos = fs_file_read(file);
+                if (pp->pos != NULL) {
+                        pp->src_file = file;
+                        pp_lexer_reset(pp);
+                } else {
+                        status = false;
+                }
+        } else {
+                MC_LOG(MC_ERR, "mc global init failed");
+                status = false;
+        }
+        return status;
+}
+
+struct pp_token *pp_lexer_result(struct pp_lexer *pp)
+{
+        struct pp_token *result = pp->first;
+        pp_lexer_reset(pp);
+        return result;
 }
 
 
@@ -435,15 +453,18 @@ _Bool pp_lexer_noerror(const struct pp_lexer *pp)
 void pp_lexer_free(struct pp_lexer *pp)
 {
         if (pp->first != NULL)
-                list_destroy(pp->first, (list_free)pp_token_destroy);
+                pp_token_list_destroy(pp->first);
+        fs_release_file(pp->src_file);
 }
 
-
+/* TODO: this module should be redone, properly using lookahead
+ * and char tables, like in parser, instead of this stupid
+ * state saves */
 struct pp_token *pp_lexer_get_token(struct pp_lexer *pp)
 {
         struct pp_token *token = NULL;
 
-        while (pp_skipspace(pp) && pp_skipcomment(pp));
+        while (pp_skipspace(pp) || pp_skipcomment(pp));
         struct pp_lexer pp_save = *pp;
 
         /* header name */

@@ -19,6 +19,19 @@ pp_node_create(enum pp_node_type type)
         return node;
 }
 
+void pp_node_move(struct pp_node *dest, struct pp_node *src)
+{
+        *dest = *src;
+        list_setnext(dest, list_next(src));
+        list_setprev(dest, list_prev(src));
+        struct pp_node *prev = list_prev(src);
+        if (prev)
+                list_setnext(prev, dest);
+        struct pp_node *next = list_next(src);
+        if (next)
+                list_setprev(next, dest);
+}
+
 void
 pp_node_destroy(struct pp_node *node)
 {
@@ -233,4 +246,18 @@ pp_node_file_insert(struct pp_node *file, struct pp_node *node)
         } else
                 status = pp_node_group_insert(file->first_descendant, node);
         return status;
+}
+
+struct pp_token *pp_node_leftmost_leaf(struct pp_node *node)
+{
+        while (node->type != pp_leaf)
+                node = node->first_descendant;
+        return node->leaf_tok;
+}
+
+struct pp_token *pp_node_rightmost_leaf(struct pp_node *node)
+{
+        while (node->type != pp_leaf)
+                node = node->last_descendant;
+        return node->leaf_tok;
 }

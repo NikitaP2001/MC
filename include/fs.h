@@ -12,25 +12,11 @@
  * A source file that is not empty shall end in a new-line character.
  * note: current path limit is _MAX_PATH
  */
-
-/* note: source file and other fs places should be identified
- * by full path, which can be obtained using tools::fs_path */
 struct fs_file {
         struct list_head link;
+        struct filesys *fs;
+        size_t use_count;
         char *content;
-        char *path;
-
-        enum mc_status last_error;
-};
-
-enum mc_status source_lasterr(const struct fs_file *file);
-
-const char *source_read(struct fs_file *file);
-
-const char *source_name(struct fs_file *file);
-
-struct fs_dir {
-        struct list_head link;
         char *path;
 };
 
@@ -43,9 +29,48 @@ struct filesys {
         enum mc_status last_error;
 };
 
+static inline
+enum mc_status fs_file_lasterr(const struct fs_file *file)
+{
+        return file->fs->last_error;
+}
+
+static inline
+void fs_file_seterr(struct fs_file *file, enum mc_status status)
+{
+        file->fs->last_error = status;
+}
+
+const char *fs_file_read(struct fs_file *file);
+
+const char *fs_file_name(struct fs_file *file);
+
+static inline
+const char *
+fs_file_path(struct fs_file *file)
+{
+        return file->path;
+}
+
+struct fs_dir {
+        struct list_head link;
+        struct filesys *fs;
+        char *path;
+};
+
 void fs_init(struct filesys *fs);
 
-enum mc_status fs_lasterr(struct filesys *fs);
+static inline
+enum mc_status fs_lasterr(struct filesys *fs)
+{
+        return fs->last_error;
+}
+
+static inline
+enum mc_status fs_seterr(struct filesys *fs, enum mc_status status)
+{
+        return fs->last_error = status;
+}
 
 /* returns false if path is not valid */
 void fs_add_local(struct filesys *fs, 
@@ -65,8 +90,15 @@ const char *f_name);
 struct fs_file *fs_get_global(struct filesys *fs, 
 const char *f_name);
 
-void fs_release_file(struct filesys *fs, 
-struct fs_file *file);
+static inline 
+struct fs_file*
+fs_share_file(struct fs_file *file)
+{
+        file->use_count += 1;
+        return file;
+}
+
+void fs_release_file(struct fs_file *file);
 
 void fs_free(struct filesys *fs);
 
