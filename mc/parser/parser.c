@@ -3417,12 +3417,13 @@ struct pt_node *parser_translation_unit(struct parser *ps)
                                 "invalid external-declaration");
                 }
         }
-        if (pt_node_child_empty(unit)) {
+        if (pt_node_child_empty(unit) || !MC_SUCC(status)) {
                 pt_node_destroy(unit);
                 unit = NULL;
         }
         assert(parser_stack_topsym(ps) == psym_translation_unit);
-        return parser_stack_pop(ps);
+        parser_stack_pop(ps);
+        return unit;
 }
 
 void parser_init(struct parser *ps, struct parser_ops ops, void *user_data)

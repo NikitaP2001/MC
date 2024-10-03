@@ -48,55 +48,92 @@ struct token *fetch_token(void *pp_data)
 
 mc_status_t error_handler(void *pp_data, const char *message)
 {
-        struct parser_context *pctx = (struct parser_context *)pp_data;
-        if (pctx->last_error != pctx->curr) {
-                printf("error: %s", message);
-                if (pctx->last_pull != NULL)
-                        token_print(pctx->last_pull);
-                else
-                        token_print(pctx->curr);
-                pctx->last_error = pctx->curr;
-        }
+        UNUSED(message);
+        UNUSED(pp_data);
         return MC_FAIL;
 }
 
-TEST_CASE(parser, test1_general_valid)
-{
+struct parser_test_context {
         struct filesys fs;
         struct pp_context pp;
         struct convert_context ctx;
         struct parser ps;
-        fs_init(&fs);
-        fs_add_local(&fs, "./");
-        pp_init(&pp, &fs);
-
-        enum mc_status status = pp_run(&pp, "test1.tc");
-        ASSERT_TRUE(MC_SUCC(status));
-
-        convert_init(&ctx, &pp);
-        ASSERT_TRUE(MC_SUCC(convert_run(&ctx)));
         struct parser_context pctx; 
-        parser_context_init(&pctx, &ctx);
+};
 
+static void parser_test_init(struct parser_test_context *t_ctx, 
+                             const char *fname)
+{
+        fs_init(&t_ctx->fs);
+        fs_add_local(&t_ctx->fs, "./");
+        pp_init(&t_ctx->pp, &t_ctx->fs);
+
+        enum mc_status status = pp_run(&t_ctx->pp, fname);
+        assert(MC_SUCC(status));
+
+        convert_init(&t_ctx->ctx, &t_ctx->pp);
+        assert(MC_SUCC(convert_run(&t_ctx->ctx)));
+
+        parser_context_init(&t_ctx->pctx, &t_ctx->ctx);
         struct parser_ops ops = {
                 .pull_token     = pull_token,
                 .put_token      = put_token,
                 .fetch_token    = fetch_token,
                 .error          = error_handler,
         };
-        parser_init(&ps, ops, &pctx);
-        parser_translation_unit(&ps);
 
-        parser_free(&ps);
-        convert_free(&ctx);
-        pp_free(&pp);
-        fs_free(&fs);
-        remove(TFILE_NAME);
+        parser_init(&t_ctx->ps, ops, &t_ctx->pctx);
 }
+
+static void parser_test_free(struct parser_test_context *t_ctx)
+{
+        parser_free(&t_ctx->ps);
+        convert_free(&t_ctx->ctx);
+        pp_free(&t_ctx->pp);
+        fs_free(&t_ctx->fs);
+}
+
+TEST_CASE(parser, test1_general_valid)
+{
+        struct parser_test_context t_ctx;
+        parser_test_init(&t_ctx, "test1.tc");
+
+        struct pt_node *node = parser_translation_unit(&t_ctx.ps);
+        ASSERT_NE(node, NULL);
+
+        parser_test_free(&t_ctx);
+}
+
+TEST_CASE(parser, test2_typedef_valid)
+{
+        struct parser_test_context t_ctx;
+        parser_test_init(&t_ctx, "test2.tc");
+
+        struct pt_node *node = parser_translation_unit(&t_ctx.ps);
+        ASSERT_NE(node, NULL);
+
+        parser_test_free(&t_ctx);
+}
+
+TEST_CASE(parser, test3_typedef_valid)
+{
+        struct parser_test_context t_ctx;
+        parser_test_init(&t_ctx, "test3.tc");
+
+        struct pt_node *node = parser_translation_unit(&t_ctx.ps);
+        ASSERT_EQ(node, NULL);
+
+        parser_test_free(&t_ctx);
+}
+
+
 
 int main()
 {
      mc_init(0, NULL);
      TEST_RUN(parser, test1_general_valid);
+     TEST_RUN(parser, test2_typedef_valid);
+     TEST_RUN(parser, test3_typedef_valid);
+
      mc_free();
 }

@@ -12,3 +12,8 @@ void foo()
 		u8 c1;
 	}
 }
+
+void bar()
+{	
+	u8 c2;
+}

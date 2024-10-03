@@ -1,6 +1,6 @@
 MODULE := test.exe
 DEPS := 
-FILES := $(wildcard ./*.cc)
+FILES := $(wildcard ./*.tc)
 
 SRC := parser_test.c
 
