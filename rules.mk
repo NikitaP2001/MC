@@ -27,7 +27,6 @@ unexport DEPS
 # module - current module/s in current directory we are building now
 BLDMOD := $(foreach mod, $(MODULE), $(CUR_BLDIR)/$(mod))
 
-
 # BUILD RULES
 
 define make_dep
@@ -35,7 +34,8 @@ define make_dep
 endef
 
 .PHONY: project
-project: pr_deps $(OBJ) $(BLDMOD) 
+project: pr_deps $(OBJ) $(BLDMOD)
+	@$(foreach file, $(FILES), cp $(file) $(CUR_BLDIR)/$(file);)
 	@:
 
 .PHONY: pr_deps

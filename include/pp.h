@@ -17,7 +17,7 @@ struct pp_context {
         size_t err_count;
 };
 
-enum mc_status pp_run(struct pp_context *pp, char *start_file);
+enum mc_status pp_run(struct pp_context *pp, const char *start_file);
 
 struct pp_token* pp_get_tu_start();
 

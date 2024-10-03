@@ -100,7 +100,7 @@ pp_forward(struct pp_context *pp)
 }
 
 static struct pp_node*
-pp_file_parse(struct pp_context *pp, char *file_name, bool is_global)
+pp_file_parse(struct pp_context *pp, const char *file_name, bool is_global)
 {
         struct pp_token *token = NULL;
         struct pp_lexer lex;
@@ -289,7 +289,7 @@ pp_proc_root(struct pp_context *pp)
 }
 
 enum mc_status
-pp_run(struct pp_context *pp, char *start_file)
+pp_run(struct pp_context *pp, const char *start_file)
 {
         struct pp_node *root_file = pp_file_parse(pp, start_file, false);
         if (root_file == NULL) {
