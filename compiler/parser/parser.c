@@ -5,7 +5,7 @@
 #include <assert.h>
 
 #include <parser.h>
-#include <parser/tree.h>
+#include <parser/ast.h>
 #include "symset.h"
 #include "lookahead.h"
 
@@ -34,18 +34,20 @@ static inline void parser_stack_init(struct parser *ps)
                 sizeof(struct pt_node *));
 }
 
-static inline 
-void parser_stack_push(struct parser *ps, struct pt_node *node)
-{
-        stack_push(&ps->stack, &node);
-}
-
 static inline struct pt_node* 
 parser_stack_top(struct parser *ps)
 {
         struct pt_node *result;
         stack_top(&ps->stack, &result);
         return result;
+}
+
+static inline 
+void parser_stack_push(struct parser *ps, struct pt_node *node)
+{
+        if (!stack_empty(&ps->stack) && node->parent == NULL)
+                node->parent = parser_stack_top(ps);
+        stack_push(&ps->stack, &node);
 }
 
 static inline _Bool parser_stack_empty(struct parser *ps)
@@ -150,32 +152,6 @@ parser_fetch_symbol(struct parser *ps)
                 return psym_invalid;
 }
 
-static inline _Bool parser_is_typedef(struct parser *ps, 
-                                      struct token *id)
-{
-        struct pt_node **path;
-        size_t length = parser_stack_content(ps, &path);
-        return typedef_table_contains(&ps->htbl_typedef, id, path, length);
-}
-
-static void parser_add_typedef(struct parser *ps, 
-                                      struct token *id)
-{
-        struct pt_node *decl = parser_stack_pop(ps);
-        /* we are watching declaration parent, so pop then restore */
-        struct pt_node *node = parser_stack_top(ps);
-        /* definitions in external decl relate to all translation unit,
-         * analogically with block item */
-        _Bool second_level = (node->sym == psym_external_declaration 
-                || node->sym == psym_block_item);
-        if (second_level)
-                parser_stack_pop(ps);
-        typedef_table_add(&ps->htbl_typedef, id, parser_stack_top(ps));
-        if (second_level)
-                parser_stack_push(ps, node);
-        parser_stack_push(ps, decl);
-}
-
 static inline _Bool
 parser_error(struct parser *ps, char *message)
 {
@@ -194,6 +170,28 @@ parser_error(struct parser *ps, char *message)
         ps->ops.error(ps->data, message)
 
 #endif
+
+static inline _Bool parser_is_typedef(struct parser *ps, 
+                                      struct token *id)
+{
+        struct declaration *decl = symtable_get_declaration(&ps->id_tbl, 
+                id, parser_stack_top(ps));
+
+        if (decl != NULL)
+                return declaration_is_typedef(*decl);
+        return false;
+}
+
+static _Bool parser_identifier_defined(struct parser *ps, 
+                                       struct token *id)
+{
+        if (symtable_get_declaration(&ps->id_tbl, 
+                id, parser_stack_top(ps)) == NULL) {
+                PARSER_ERROR(ps, "unknown identifier");
+                return false;
+        }
+        return true;
+}
 
 
 static mc_status_t parser_direct_declarator_array(struct parser *ps, 
@@ -292,6 +290,10 @@ static mc_status_t parser_identifier_list(struct parser *ps)
         do {
                 if (parser_fetch_symbol(ps) != psym_identifier) {
                         status = PARSER_ERROR(ps, "expected identifier");
+                        goto fail;
+                }
+                if (!parser_identifier_defined(ps, parser_fetch_token(ps))) {
+                        status = MC_FAIL;
                         goto fail;
                 }
                 pt_node_child_add(id_lst, 
@@ -449,6 +451,8 @@ static mc_status_t parser_enumeration_constant(struct parser *ps)
 {
         struct pt_node *enum_const = pt_node_create(psym_enumeration_constant);
         parser_stack_push(ps, enum_const);
+        if (!parser_identifier_defined(ps, parser_fetch_token(ps)))
+                return MC_FAIL;
         pt_node_child_add(enum_const, pt_node_create_leaf(
                 parser_pull_token(ps)));
         return MC_OK;
@@ -578,7 +582,6 @@ static mc_status_t parser_typedef_name(struct parser *ps)
 {
 
         struct token *tok_id = parser_pull_token(ps);
-        assert(parser_is_typedef(ps, tok_id));
         struct pt_node *tf_name = pt_node_create(psym_type_name);
         parser_stack_push(ps, tf_name);
         pt_node_child_add(tf_name, pt_node_create_leaf(tok_id));
@@ -612,6 +615,7 @@ static mc_status_t parser_type_specifier(struct parser *ps)
                 status = parser_typedef_name(ps);
                 assert(MC_SUCC(status));
         } else {
+                /* one of the keywords of type specifier */
                 val = pt_node_create_leaf(parser_pull_token(ps));
                 parser_stack_push(ps, val);
         }
@@ -1291,6 +1295,11 @@ static mc_status_t parser_primary_expression(struct parser *ps)
                 }
                 parser_pull_token(ps);
         } else {
+                if (first->type == tok_identifier 
+                        && !parser_identifier_defined(ps, first)) {
+                        status = MC_FAIL;
+                        goto fail;
+                }
                 pt_node_child_add(expr, pt_node_create_leaf(first));
         }
         assert(parser_stack_topsym(ps) == psym_primary_expression);
@@ -2995,6 +3004,7 @@ static mc_status_t parser_statement(struct parser *ps)
                         goto fail;
                 }
                 pt_node_child_add(stmt , parser_stack_pop(ps));
+                symtable_add_label(&ps->id_tbl, pt_node_child_last(stmt));
         }
         assert(parser_stack_topsym(ps) == psym_statement);
 
@@ -3222,36 +3232,6 @@ fail:
         return status;
 }
 
-static void parser_typedef_init_list(struct parser *ps)
-{
-        /* pop because declaration should be on top when add */
-        struct pt_node *init_lst = parser_stack_pop(ps);
-        PT_NODE_FOREACH_CHILD(init_lst) {
-                struct pt_node *init_decl = (struct pt_node *)entry;
-                struct pt_node *dir_decl = init_decl;
-                struct pt_node *decl;
-
-                do {
-                        decl = pt_node_child_first(dir_decl);
-                        dir_decl = pt_node_child_last(decl);
-                } while (pt_node_child_first(dir_decl)->sym != psym_identifier);
-
-                parser_add_typedef(ps, pt_node_child_first(dir_decl)->value);
-        }
-        parser_stack_push(ps, init_lst);
-}
-
-static _Bool parser_decl_spec_is_typedef(struct pt_node *decl_spec)
-{
-        struct pt_node *node = pt_node_child_first(decl_spec);
-        if (node->sym == psym_storage_class_specifier) {
-                node = pt_node_child_first(node);
-                if (token_get_keyword(node->value) == keyw_typedef)
-                        return true;
-        }
-        return false;
-}
-
 /* in lookahead: declaration-specifiers and ?declarator */
 static mc_status_t parser_declaration(struct parser *ps)
 {
@@ -3297,10 +3277,10 @@ static mc_status_t parser_declaration(struct parser *ps)
                         parser_lookahead_restore(ps, old_lk);
                         goto fail;
                 }
-                if (parser_decl_spec_is_typedef(pt_node_child_first(decl)))
-                        parser_typedef_init_list(ps);
                 pt_node_child_add(decl, parser_stack_pop(ps));
-
+                status = symtable_add_declaration(&ps->id_tbl, decl);
+                if (!MC_SUCC(status))
+                        goto fail;
                 old_lk = parser_lookahead_swap(ps, old_lk);
                 assert(old_lk == NULL);
         }
@@ -3367,8 +3347,7 @@ static mc_status_t parser_external_declaration(struct parser *ps)
                         status = PARSER_ERROR(ps, "invalid declaration");
                         goto fail;
                 }
-
-                pt_node_child_add(ext_decl, parser_stack_pop(ps));
+                pt_node_child_add(ext_decl, parser_stack_pop(ps)); 
 
         } else if (declarator) {
                 parser_lookahead_set_type(ps, psym_function_definition);
@@ -3417,11 +3396,11 @@ struct pt_node *parser_translation_unit(struct parser *ps)
                                 "invalid external-declaration");
                 }
         }
+        assert(parser_stack_topsym(ps) == psym_translation_unit);
         if (pt_node_child_empty(unit) || !MC_SUCC(status)) {
                 pt_node_destroy(unit);
                 unit = NULL;
         }
-        assert(parser_stack_topsym(ps) == psym_translation_unit);
         parser_stack_pop(ps);
         return unit;
 }
@@ -3432,14 +3411,14 @@ void parser_init(struct parser *ps, struct parser_ops ops, void *user_data)
         ps->data = user_data;
         parser_stack_init(ps);
         struct hash_table_ops hops = {
-                .get_key = typedef_table_hash,
-                .free = typedef_table_free,
+                .get_key = symtable_hash,
+                .free = symtable_free,
         };
-        hash_init(&ps->htbl_typedef, hops);
+        hash_init(&ps->id_tbl, hops);
 }
 
 void parser_free(struct parser *ps)
 {
         parser_stack_free(ps);
-        hash_free(&ps->htbl_typedef);
+        hash_free(&ps->id_tbl);
 }

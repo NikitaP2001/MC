@@ -280,4 +280,11 @@
 #define PARAMETER_TYPE_LIST                             \
         PARAMETER_LIST
 
+/* declaration parents, for which declaration actually relates
+ * to their parents(of parents) scope */
+#define DECLARATION_SECOND_PARENT                       \
+        [psym_external_declaration] = 1,                \
+        [psym_block_item] = 1,                          \
+        [psym_declaration_list] = 1,                    \
+
 #endif /* _SYMSET_H_ */

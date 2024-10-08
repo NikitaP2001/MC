@@ -4,8 +4,8 @@
 
 #include <list.h>
 #include <parser/symbol.h>
-#include <parser/tree.h>
-#include <parser/typedef_table.h>
+#include <parser/ast.h>
+#include <parser/symtable.h>
 #include <mc.h>
 #include <stack.h>
 
@@ -25,7 +25,7 @@ struct parser {
         struct pt_node *lookahead;
         struct parser_ops ops;
         void *data; /* some user provided data, is passed to ops */
-        struct hash_table htbl_typedef;
+        struct hash_table id_tbl;
 };
 
 struct pt_node *parser_translation_unit(struct parser *ps);

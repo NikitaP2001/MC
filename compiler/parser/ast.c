@@ -1,4 +1,4 @@
-#include <parser/tree.h>
+#include <parser/ast.h>
 
 static void pt_node_child_init(struct pt_child_nodes *child)
 {
@@ -15,6 +15,7 @@ void pt_node_child_add(struct pt_node *node, struct pt_node *child)
                 node->childs.nodes = (struct pt_node**)realloc(node->childs.nodes,
                         node->childs.capacity * sizeof(struct pt_node*));
         }
+        child->parent = node;
         node->childs.nodes[node->childs.size++] = child;
 }
 
@@ -29,6 +30,7 @@ struct pt_node* pt_node_create(enum parser_symbol sym)
                 calloc(1, sizeof(struct pt_node));
         pt_node_child_init(&node->childs);
         node->sym = sym;
+        node->parent = NULL;
         return node;
 }
 

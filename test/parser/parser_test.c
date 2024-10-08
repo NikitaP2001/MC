@@ -93,47 +93,59 @@ static void parser_test_free(struct parser_test_context *t_ctx)
         fs_free(&t_ctx->fs);
 }
 
-TEST_CASE(parser, test1_general_valid)
+static _Bool parser_tcase_run(const char *name)
 {
+        _Bool result = true;
         struct parser_test_context t_ctx;
-        parser_test_init(&t_ctx, "test1.tc");
+        parser_test_init(&t_ctx, name);
 
         struct pt_node *node = parser_translation_unit(&t_ctx.ps);
-        ASSERT_NE(node, NULL);
+        if (node == NULL)
+                result = false;
 
         parser_test_free(&t_ctx);
+        return result;
 }
 
-TEST_CASE(parser, test2_typedef_valid)
+TEST_CASE(parser, general_main_1)
 {
-        struct parser_test_context t_ctx;
-        parser_test_init(&t_ctx, "test2.tc");
-
-        struct pt_node *node = parser_translation_unit(&t_ctx.ps);
-        ASSERT_NE(node, NULL);
-
-        parser_test_free(&t_ctx);
+        ASSERT_TRUE(parser_tcase_run("test1.tc"));
 }
 
-TEST_CASE(parser, test3_typedef_valid)
+TEST_CASE(parser, typedef_valid)
 {
-        struct parser_test_context t_ctx;
-        parser_test_init(&t_ctx, "test3.tc");
-
-        struct pt_node *node = parser_translation_unit(&t_ctx.ps);
-        ASSERT_EQ(node, NULL);
-
-        parser_test_free(&t_ctx);
+        ASSERT_TRUE(parser_tcase_run("test2.tc"));
 }
 
+TEST_CASE(parser, typedef_invalid)
+{
+        ASSERT_FALSE(parser_tcase_run("test3.tc"));
+}
 
+TEST_CASE(parser, local_var_valid)
+{
+        ASSERT_TRUE(parser_tcase_run("test4.tc"));
+}
+
+TEST_CASE(parser, local_var_undecl)
+{
+        ASSERT_FALSE(parser_tcase_run("test5.tc"));
+}
+
+TEST_CASE(parser, func_def_valid)
+{
+        ASSERT_TRUE(parser_tcase_run("test6.tc"));
+}
 
 int main()
 {
      mc_init(0, NULL);
-     TEST_RUN(parser, test1_general_valid);
-     TEST_RUN(parser, test2_typedef_valid);
-     TEST_RUN(parser, test3_typedef_valid);
+     TEST_RUN(parser, general_main_1);
+     TEST_RUN(parser, typedef_valid);
+     TEST_RUN(parser, typedef_invalid);
+     TEST_RUN(parser, local_var_valid);
+     TEST_RUN(parser, local_var_undecl);
+     TEST_RUN(parser, func_def_valid);
 
      mc_free();
 }

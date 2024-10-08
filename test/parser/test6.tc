@@ -1,0 +1,24 @@
+/* function definition valid */
+
+_Bool bar(const char *format, ...);
+
+static inline void foo(int var)
+{
+	return;
+}
+
+int main()
+{	
+	foo(0);
+	void baz();
+	bar("123");
+	
+	{
+		baz();
+		{
+			baz();
+		}
+		baz();
+	}
+	baz();	
+}

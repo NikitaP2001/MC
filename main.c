@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
         struct parser ps;
 
         fs_init(&fs);
-        fs_add_local(&fs, "./mc"); 
+        fs_add_local(&fs, "./compiler"); 
         fs_add_global(&fs, "/usr/include"); 
         fs_add_global(&fs, "./include"); 
         fs_add_global(&fs, "/usr/lib/gcc/x86_64-linux-gnu/9/include/"); 

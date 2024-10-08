@@ -1,4 +1,11 @@
 
+/* this is general basic test, lately it should be
+ * braked down into smaller meaningful cases */
+
+/* Note: not checking params at this stage */
+int printf(); 
+int fgets(); 
+
 int main() {
     char str[100] = "Hello, World!";
     int numbers[10];

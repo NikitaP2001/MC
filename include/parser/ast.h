@@ -14,12 +14,13 @@ struct pt_child_nodes {
 };
 
 struct pt_node {
+        struct pt_node *parent;
         enum parser_symbol sym;
         struct pt_child_nodes childs;  
         struct token *value;
 };
 
-#define PT_NODE_FOREACH_CHILD(node)                                             \
+#define AST_FOREACH_CHILD(node)                                                 \
         for (uint16_t i = 0,  *entry = (uint16_t *)node->childs.nodes[i];       \
                 i < node->childs.size;                                          \
                 i++, entry = (uint16_t *)node->childs.nodes[i])
@@ -53,13 +54,15 @@ static inline struct pt_node *pt_node_child_remove(struct pt_node *node)
 
 static inline struct pt_node *pt_node_child_last(struct pt_node *node)
 {
-        assert(node->childs.size != 0);
+        if (node->childs.size == 0)
+                return NULL;
         return node->childs.nodes[node->childs.size - 1];
 }
 
 static inline struct pt_node *pt_node_child_first(struct pt_node *node)
 {
-        assert(node->childs.size != 0);
+        if (node->childs.size == 0)
+                return NULL;
         return node->childs.nodes[0];
 }
 

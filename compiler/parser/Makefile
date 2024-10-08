@@ -1,6 +1,6 @@
 MODULE := parser.a
 DEPS := 
 
-SRC = parser.c tree.c typedef_table.c
+SRC = parser.c ast.c symtable.c
 
 include $(BLDRULES)
