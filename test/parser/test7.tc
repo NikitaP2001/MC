@@ -1,0 +1,62 @@
+/* Valid abstract declarator */
+
+int main()
+{
+
+	sizeof(int *);
+    
+    // Pointer to pointer to char
+    sizeof(char **);
+    
+    // Array of 10 ints
+    sizeof(int [10]);
+    
+    // Pointer to array of 5 doubles
+    sizeof(double (*)[5]);
+    
+    // Array of 3 pointers to float
+    sizeof(float *[3]);
+    
+    // Function returning int and taking no parameters
+    sizeof(int ());
+    
+    // Pointer to function returning void and taking an int
+    sizeof(void (*)(int));
+    
+    // Array of 2 pointers to functions returning char and taking a double
+    sizeof(char (*[2])(double));
+    
+    // Pointer to array of 4 functions returning float and taking no parameters
+    sizeof(float (*[4])());
+    
+    // Complex: Pointer to function returning pointer to array of 3 pointers to char
+    sizeof(char *(*(*)(void))[3]);
+}
+
+void additional_test()
+{
+	// Pointer to array of pointers to functions returning pointer to int
+    sizeof(int *(*(*[5])())());
+    
+    // Array of 2 pointers to arrays of 3 pointers to functions taking float and returning double
+    sizeof(double (*(*[2])[3])(float));
+    
+    // Pointer to function taking pointer to function and returning pointer to function
+    sizeof(void *(*(*)(void *(*)(int)))(char));
+    
+    // Array of 0 size (valid in C99 and later as a flexible array member)
+    struct {
+        int length;
+        char data[];
+    } flexible_array;
+    sizeof(flexible_array);
+    
+    // Function with old-style K&R C parameter list (not recommended, but valid)
+    sizeof(int ()()); // equivalent to int (void)
+    
+    // Bit-field abstract declarator (only valid in structure declarations)
+    struct {
+        unsigned int :1;
+    } bit_field;
+    sizeof(bit_field);
+}

@@ -248,7 +248,7 @@ void token_global_free();
 
 void token_print(struct token *tok);
 
-static inline int token_valcmp(struct token *first, struct token *second)
+static inline int token_compare(struct token *first, struct token *second)
 {
         file_size_t len_first = first->value.var_raw.length;
         file_size_t len_second = second->value.var_raw.length;

@@ -1,24 +1,28 @@
-/* function definition valid */
+/* test declarators and direct declarators */
 
-_Bool bar(const char *format, ...);
+int a;						// Trivial declarator
+int *ptr;					// Pointer declarator
+int (*func_ptr)(void);		// Function pointer
+int arr[10];				// Array of integers
+int (*ptr_arr)[10];   		// Pointer to an array of 10 integers
 
-static inline void foo(int var)
-{
-	return;
-}
+int **ptr_to_ptr;                    // Pointer to pointer to int
+int *arr_ptr[5];                     // Array of 5 pointers to int
+int *(*arr_of_ptrs[10]);             // Array of 10 pointers to pointers to int
+int (*func_ptr_arr[5])(void);        // Array of 5 function pointers returning int and taking void
+int (*(*func_ptr_arr_ptr)[5])(void); // Pointer to an array of 5 function pointers
 
-int main()
-{	
-	foo(0);
-	void baz();
-	bar("123");
-	
-	{
-		baz();
-		{
-			baz();
-		}
-		baz();
-	}
-	baz();	
-}
+int (*complex_ptr)(int, float *); 	  // Pointer to function taking int and float* and returning int
+int *(*ptr_func)(void);               // Pointer to function that returns a pointer to int
+int *(*(*ptr_func_ptr)(void))(int *); // Pointer to a function returning pointer to function
+
+int *(*complex_arr[10])(float **, double);  // Array of 10 pointers to functions taking float** and double, returning pointer to int
+int *(*(*complicated_ptr)(void))[5];        // Pointer to function returning pointer to an array of 5 int pointers
+
+
+struct S {
+    int x;
+    char y[10];
+};
+
+struct S (*p)[10];

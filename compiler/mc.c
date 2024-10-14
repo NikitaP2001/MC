@@ -119,7 +119,7 @@ void mc_init(int argc, char *argv[])
         if (!mc_isinit()) {
                 token_global_init();
                 mc_global.mc_is_init = true;
-                mc_global.last_level = MC_FATAL;
+                mc_global.last_level = MC_LVL_MAX;
                 mc_global.level = MC_FATAL;
                 if (argc != 0 && argv != NULL)
                         mc_init_args(argc, argv);

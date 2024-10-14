@@ -62,28 +62,28 @@
         POINTER                                 \
         DIRECT_DECLARATOR                       \
 
-#define DECLARATION_SPECIFIERS                  \
-        STORAGE_CLASS_SPECIFIER                 \
-        TYPE_SPECIFIER                          \
-        TYPE_QUALIFIER                          \
+#define DECLARATION_SPECIFIERS                          \
+        STORAGE_CLASS_SPECIFIER                         \
+        TYPE_SPECIFIER                                  \
+        TYPE_QUALIFIER                                  \
         FUNCTION_SPECIFIER
 
-#define DECLARATION                             \
+#define DECLARATION                                     \
         DECLARATION_SPECIFIERS
 
-#define TYPE_NAME                               \
-        TYPE_SPECIFIER                          \
+#define TYPE_NAME                                       \
+        TYPE_SPECIFIER                                  \
         TYPE_QUALIFIER
 
-#define DECLARATION_LIST                        \
+#define DECLARATION_LIST                                \
         DECLARATION_SPECIFIERS
 
-#define STRUCT_DECLARATION                      \
-        TYPE_SPECIFIER                          \
+#define STRUCT_DECLARATION                              \
+        TYPE_SPECIFIER                                  \
         TYPE_QUALIFIER
 
 /* first for  struct decl list */
-#define STRUCT_DECLARATION_LIST                 \
+#define STRUCT_DECLARATION_LIST                         \
         STRUCT_DECLARATION
 
 #define DECLARATION_SECOND                              \
@@ -91,11 +91,11 @@
         [PARSER_PUNCTUATOR(punc_assign)] = 1,           \
         [PARSER_PUNCTUATOR(punc_comma)] = 1,
 
-#define TRANSLATION_UNIT                        \
+#define TRANSLATION_UNIT                                \
         DECLARATION_SPECIFIERS
 
-#define STRUCT_DECLARATOR                       \
-        DECLARATOR                              \
+#define STRUCT_DECLARATOR                               \
+        DECLARATOR                                      \
         [PARSER_PUNCTUATOR(punc_colon)] = 1,
 
 #define PRIMARY_EXPRESSION                              \
@@ -105,7 +105,8 @@
         [PARSER_PUNCTUATOR(punc_comma)] = 1,
 
 #define POSTFIX_EXPRESSION                              \
-        PRIMARY_EXPRESSION
+        PRIMARY_EXPRESSION                              \
+        [PARSER_PUNCTUATOR(punc_left_rnd_br)] = 1,
 
 #define POSTFIX_EXPRESSION_SECOND                       \
         [PARSER_PUNCTUATOR(punc_left_sq_br)] = 1,       \

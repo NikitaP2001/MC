@@ -9,12 +9,11 @@
 
 /* @ex_type - expected pp token type 
  * @value - char * value of token */ 
-#define CHECK_NEXT_TOKEN(lex, ex_type, value)                      \
+#define CHECK_NEXT_TOKEN(token, ex_type, value)                    \
 {                                                                  \
-        struct pp_token *token = pp_lexer_get_token(&lex);         \
         EXPECT_EQ(token->type, ex_type);                           \
         EXPECT_EQ(pp_token_valcmp(token, value), 0);               \
-        pp_lexer_add_token(&lex, token);                           \
+        token = list_next(token);                                  \
 }
 
 TEST_CASE(lexer, header_name)
@@ -30,10 +29,12 @@ TEST_CASE(lexer, header_name)
         struct fs_file *src = fs_get_local(&fs, TFILE_NAME);
 
         ASSERT_TRUE((pp_lexer_init(&lex, src)));
-        CHECK_NEXT_TOKEN(lex, pp_punct, "#");
-        CHECK_NEXT_TOKEN(lex, pp_id, "include");
-        CHECK_NEXT_TOKEN(lex, pp_hdr_name, "<h_dr/name.cc>");
-        CHECK_NEXT_TOKEN(lex, pp_other, "\n");
+        pp_lexer_run(&lex);
+        const struct pp_token *tok = pp_lexer_get(&lex);
+        CHECK_NEXT_TOKEN(tok, pp_punct, "#");
+        CHECK_NEXT_TOKEN(tok, pp_id, "include");
+        CHECK_NEXT_TOKEN(tok, pp_hdr_name, "<h_dr/name.cc>");
+        CHECK_NEXT_TOKEN(tok, pp_other, "\n");
 
         pp_lexer_free(&lex);
         fs_free(&fs);
@@ -52,13 +53,15 @@ TEST_CASE(lexer, header_name_multiline)
 
         struct fs_file *src = fs_get_local(&fs, TFILE_NAME);
         ASSERT_TRUE(pp_lexer_init(&lex, src));
-        CHECK_NEXT_TOKEN(lex, pp_punct, "#");
-        CHECK_NEXT_TOKEN(lex, pp_id, "include");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "<");
-        CHECK_NEXT_TOKEN(lex, pp_id, "file");
-        CHECK_NEXT_TOKEN(lex, pp_other, "\n");
-        CHECK_NEXT_TOKEN(lex, pp_punct, ">");
-        CHECK_NEXT_TOKEN(lex, pp_other, "\n");
+        pp_lexer_run(&lex);
+        const struct pp_token *tok = pp_lexer_get(&lex);
+        CHECK_NEXT_TOKEN(tok, pp_punct, "#");
+        CHECK_NEXT_TOKEN(tok, pp_id, "include");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "<");
+        CHECK_NEXT_TOKEN(tok, pp_id, "file");
+        CHECK_NEXT_TOKEN(tok, pp_other, "\n");
+        CHECK_NEXT_TOKEN(tok, pp_punct, ">");
+        CHECK_NEXT_TOKEN(tok, pp_other, "\n");
 
         pp_lexer_free(&lex);
         fs_free(&fs);
@@ -78,10 +81,12 @@ TEST_CASE(lexer, header_name_escline)
         struct fs_file *src = fs_get_local(&fs, TFILE_NAME);
 
         ASSERT_TRUE((pp_lexer_init(&lex, src)));
-        CHECK_NEXT_TOKEN(lex, pp_punct, "#");
-        CHECK_NEXT_TOKEN(lex, pp_id, "include");
-        CHECK_NEXT_TOKEN(lex, pp_hdr_name, "<h_dr/name.cc>");
-        CHECK_NEXT_TOKEN(lex, pp_other, "\n");
+        pp_lexer_run(&lex);
+        const struct pp_token *tok = pp_lexer_get(&lex);
+        CHECK_NEXT_TOKEN(tok, pp_punct, "#");
+        CHECK_NEXT_TOKEN(tok, pp_id, "include");
+        CHECK_NEXT_TOKEN(tok, pp_hdr_name, "<h_dr/name.cc>");
+        CHECK_NEXT_TOKEN(tok, pp_other, "\n");
 
         pp_lexer_free(&lex);
         fs_free(&fs);
@@ -101,11 +106,13 @@ TEST_CASE(lexer, str_lit_oneline)
 
         struct fs_file *src = fs_get_local(&fs, TFILE_NAME);
         ASSERT_TRUE(pp_lexer_init(&lex, src));
-        CHECK_NEXT_TOKEN(lex, pp_str_lit, "\"lit 943\\123\"");
-        CHECK_NEXT_TOKEN(lex, pp_str_lit, "\"1 line\"");
-        CHECK_NEXT_TOKEN(lex, pp_other, "\n");
-        CHECK_NEXT_TOKEN(lex, pp_str_lit, "\"2 line\"");
-        CHECK_NEXT_TOKEN(lex, pp_str_lit, "\"\\U00023456\"");
+        pp_lexer_run(&lex);
+        const struct pp_token *tok = pp_lexer_get(&lex);
+        CHECK_NEXT_TOKEN(tok, pp_str_lit, "\"lit 943\\123\"");
+        CHECK_NEXT_TOKEN(tok, pp_str_lit, "\"1 line\"");
+        CHECK_NEXT_TOKEN(tok, pp_other, "\n");
+        CHECK_NEXT_TOKEN(tok, pp_str_lit, "\"2 line\"");
+        CHECK_NEXT_TOKEN(tok, pp_str_lit, "\"\\U00023456\"");
 
         pp_lexer_free(&lex);
         fs_free(&fs);
@@ -125,7 +132,9 @@ TEST_CASE(lexer, str_lit_multline)
         struct fs_file *src = fs_get_local(&fs, TFILE_NAME);
 
         ASSERT_TRUE(pp_lexer_init(&lex, src));
-        CHECK_NEXT_TOKEN(lex, pp_str_lit, "\"1 line2 line\"");
+        pp_lexer_run(&lex);
+        const struct pp_token *tok = pp_lexer_get(&lex);
+        CHECK_NEXT_TOKEN(tok, pp_str_lit, "\"1 line2 line\"");
 
         pp_lexer_free(&lex);
         fs_free(&fs);
@@ -145,11 +154,13 @@ TEST_CASE(lexer, comment_star_oneline)
         struct fs_file *src = fs_get_local(&fs, TFILE_NAME);
 
         ASSERT_TRUE(pp_lexer_init(&lex, src));
-        CHECK_NEXT_TOKEN(lex, pp_punct, "#");
-        CHECK_NEXT_TOKEN(lex, pp_id, "define");
-        CHECK_NEXT_TOKEN(lex, pp_id, "SOME_DEF");
-        CHECK_NEXT_TOKEN(lex, pp_number, "1233");
-        CHECK_NEXT_TOKEN(lex, pp_other, "\n");
+        pp_lexer_run(&lex);
+        const struct pp_token *tok = pp_lexer_get(&lex);
+        CHECK_NEXT_TOKEN(tok, pp_punct, "#");
+        CHECK_NEXT_TOKEN(tok, pp_id, "define");
+        CHECK_NEXT_TOKEN(tok, pp_id, "SOME_DEF");
+        CHECK_NEXT_TOKEN(tok, pp_number, "1233");
+        CHECK_NEXT_TOKEN(tok, pp_other, "\n");
 
         pp_lexer_free(&lex);
         fs_free(&fs);
@@ -173,72 +184,105 @@ TEST_CASE(lexer, punctuators)
         struct fs_file *src = fs_get_local(&fs, TFILE_NAME);
 
         ASSERT_TRUE(pp_lexer_init(&lex, src));
-        CHECK_NEXT_TOKEN(lex, pp_punct, "<=");
-        CHECK_NEXT_TOKEN(lex, pp_punct, ">=");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "==");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "!=");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "&&");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "||");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "->");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "++");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "--");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "<<");
-        CHECK_NEXT_TOKEN(lex, pp_punct, ">>");
+        pp_lexer_run(&lex);
+        const struct pp_token *tok = pp_lexer_get(&lex);
+        CHECK_NEXT_TOKEN(tok, pp_punct, "<=");
+        CHECK_NEXT_TOKEN(tok, pp_punct, ">=");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "==");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "!=");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "&&");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "||");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "->");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "++");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "--");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "<<");
+        CHECK_NEXT_TOKEN(tok, pp_punct, ">>");
 
-        CHECK_NEXT_TOKEN(lex, pp_punct, "*=");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "/=");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "%=");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "+=");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "-=");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "<<=");
-        CHECK_NEXT_TOKEN(lex, pp_punct, ">>=");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "&=");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "^=");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "|=");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "##");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "*=");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "/=");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "%=");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "+=");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "-=");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "<<=");
+        CHECK_NEXT_TOKEN(tok, pp_punct, ">>=");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "&=");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "^=");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "|=");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "##");
 
-        CHECK_NEXT_TOKEN(lex, pp_punct, "...");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "%:%:");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "...");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "%:%:");
 
-        CHECK_NEXT_TOKEN(lex, pp_punct, "<:");
-        CHECK_NEXT_TOKEN(lex, pp_punct, ":>");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "<%");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "%>");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "<:");
+        CHECK_NEXT_TOKEN(tok, pp_punct, ":>");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "<%");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "%>");
 
-        CHECK_NEXT_TOKEN(lex, pp_punct, "[");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "]");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "(");
-        CHECK_NEXT_TOKEN(lex, pp_punct, ")");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "{");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "}");
-        CHECK_NEXT_TOKEN(lex, pp_punct, ".");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "&");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "*");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "+");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "-");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "~");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "!");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "/");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "%");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "<");
-        CHECK_NEXT_TOKEN(lex, pp_punct, ">");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "^");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "|");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "?");
-        CHECK_NEXT_TOKEN(lex, pp_punct, ":");
-        CHECK_NEXT_TOKEN(lex, pp_punct, ";");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "=");
-        CHECK_NEXT_TOKEN(lex, pp_punct, ",");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "#");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "[");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "]");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "(");
+        CHECK_NEXT_TOKEN(tok, pp_punct, ")");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "{");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "}");
+        CHECK_NEXT_TOKEN(tok, pp_punct, ".");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "&");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "*");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "+");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "-");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "~");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "!");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "/");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "%");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "<");
+        CHECK_NEXT_TOKEN(tok, pp_punct, ">");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "^");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "|");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "?");
+        CHECK_NEXT_TOKEN(tok, pp_punct, ":");
+        CHECK_NEXT_TOKEN(tok, pp_punct, ";");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "=");
+        CHECK_NEXT_TOKEN(tok, pp_punct, ",");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "#");
 
-        CHECK_NEXT_TOKEN(lex, pp_punct, "<=");
-        CHECK_NEXT_TOKEN(lex, pp_punct, ">");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "<");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "!=");
-        CHECK_NEXT_TOKEN(lex, pp_punct, ">");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "<=");
-        CHECK_NEXT_TOKEN(lex, pp_punct, "==");
-        CHECK_NEXT_TOKEN(lex, pp_punct, ">");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "<=");
+        CHECK_NEXT_TOKEN(tok, pp_punct, ">");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "<");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "!=");
+        CHECK_NEXT_TOKEN(tok, pp_punct, ">");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "<=");
+        CHECK_NEXT_TOKEN(tok, pp_punct, "==");
+        CHECK_NEXT_TOKEN(tok, pp_punct, ">");
+
+        pp_lexer_free(&lex);
+        fs_free(&fs);
+        remove(TFILE_NAME);
+}
+
+TEST_CASE(lexer, comment_line_end)
+{
+        struct filesys fs = {0};
+        struct pp_lexer lex = {0};
+        fs_init(&fs);
+        fs_add_local(&fs, "./");
+
+        const char t_text[] = "int a; // \n"
+                              " int b; /* \n \n */";
+        ASSERT_TRUE(write_file(TFILE_NAME, t_text, LEN_OF(t_text)));
+
+        struct fs_file *src = fs_get_local(&fs, TFILE_NAME);
+
+        ASSERT_TRUE(pp_lexer_init(&lex, src));
+        pp_lexer_run(&lex);
+        const struct pp_token *tok = pp_lexer_get(&lex);
+        CHECK_NEXT_TOKEN(tok, pp_id, "int");
+        CHECK_NEXT_TOKEN(tok, pp_id, "a");
+        CHECK_NEXT_TOKEN(tok, pp_punct, ";");
+        CHECK_NEXT_TOKEN(tok, pp_other, "\n");
+        CHECK_NEXT_TOKEN(tok, pp_id, "int");
+        CHECK_NEXT_TOKEN(tok, pp_id, "b");
+        CHECK_NEXT_TOKEN(tok, pp_punct, ";");
+        CHECK_NEXT_TOKEN(tok, pp_other, "\n");
+        CHECK_NEXT_TOKEN(tok, pp_other, "\n");
 
         pp_lexer_free(&lex);
         fs_free(&fs);
@@ -255,5 +299,7 @@ void run_pp_lexer()
         TEST_RUN(lexer, str_lit_multline);
         TEST_RUN(lexer, comment_star_oneline);
         TEST_RUN(lexer, punctuators);
+        TEST_RUN(lexer, comment_line_end);
+
         mc_free();
 }

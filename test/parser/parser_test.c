@@ -48,8 +48,15 @@ struct token *fetch_token(void *pp_data)
 
 mc_status_t error_handler(void *pp_data, const char *message)
 {
-        UNUSED(message);
-        UNUSED(pp_data);
+        struct parser_context *pctx = (struct parser_context *)pp_data;
+        if (pctx->last_error != pctx->curr) {
+                mc_printf("error: %s", message);
+                if (pctx->last_pull != NULL)
+                        token_print(pctx->last_pull);
+                else
+                        token_print(pctx->curr);
+                pctx->last_error = pctx->curr;
+        }
         return MC_FAIL;
 }
 
@@ -127,25 +134,55 @@ TEST_CASE(parser, local_var_valid)
         ASSERT_TRUE(parser_tcase_run("test4.tc"));
 }
 
-TEST_CASE(parser, local_var_undecl)
+TEST_CASE(parser, func_def_valid)
 {
-        ASSERT_FALSE(parser_tcase_run("test5.tc"));
+        ASSERT_TRUE(parser_tcase_run("test5.tc"));
 }
 
-TEST_CASE(parser, func_def_valid)
+TEST_CASE(parser, declarator_valid)
 {
         ASSERT_TRUE(parser_tcase_run("test6.tc"));
 }
 
-int main()
+TEST_CASE(parser, abstract_declarator_valid)
 {
-     mc_init(0, NULL);
+        ASSERT_TRUE(parser_tcase_run("test7.tc"));
+}
+
+TEST_CASE(parser, declarator_invalid)
+{
+        ASSERT_FALSE(parser_tcase_run("test8.tc"));
+}
+
+TEST_CASE(parser, abstract_declarator_invalid)
+{
+        ASSERT_FALSE(parser_tcase_run("test9.tc"));
+}
+
+TEST_CASE(parser, struct_declaration_valid)
+{
+        ASSERT_TRUE(parser_tcase_run("test10.tc"));
+}
+
+TEST_CASE(parser, struct_empty_invalid)
+{
+        ASSERT_FALSE(parser_tcase_run("test11.tc"));
+}
+
+int main(int argc, char *argv[])
+{
+     mc_init(argc, argv);
      TEST_RUN(parser, general_main_1);
      TEST_RUN(parser, typedef_valid);
      TEST_RUN(parser, typedef_invalid);
      TEST_RUN(parser, local_var_valid);
-     TEST_RUN(parser, local_var_undecl);
      TEST_RUN(parser, func_def_valid);
+     TEST_RUN(parser, declarator_valid);
+     TEST_RUN(parser, abstract_declarator_valid);
+     TEST_RUN(parser, declarator_invalid);
+     TEST_RUN(parser, abstract_declarator_invalid);
+     TEST_RUN(parser, struct_declaration_valid);
+     TEST_RUN(parser, struct_empty_invalid);
 
      mc_free();
 }

@@ -32,9 +32,7 @@ TEST_CASE(pp_node, insert_macro)
         ASSERT_NE(src, NULL);
 
         pp_lexer_init(&lex, src);
-        struct pp_token *token = NULL;
-        while ((token = pp_lexer_get_token(&lex)))
-                pp_lexer_add_token(&lex, token);
+        pp_lexer_run(&lex);
         ASSERT_TRUE(pp_lexer_noerror(&lex));
 
         pp_parser_init(&parser, lex.first);

@@ -48,15 +48,15 @@ struct pp_lexer;
 struct pp_token *pp_token_create(const struct pp_lexer *before, 
 const struct pp_lexer *after, enum pp_type type);
 
-int pp_token_valcmp(struct pp_token *left, const char *value);
+int pp_token_valcmp(const struct pp_token *left, const char *value);
 
-void pp_token_getval(struct pp_token *token, char *buffer);
+void pp_token_getval(const struct pp_token *token, char *buffer);
 
 static inline 
 line_num_t
 pp_token_line(struct pp_token *token)
 {
-        return token->line;
+        return token->file_line;
 }
 
 void pp_token_destroy(struct pp_token *token);

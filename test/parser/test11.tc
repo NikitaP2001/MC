@@ -1,0 +1,5 @@
+/* Valid struct declarations */
+
+// Test case 6: Empty struct
+struct Empty {
+};

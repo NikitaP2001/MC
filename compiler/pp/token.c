@@ -59,7 +59,7 @@ const struct pp_lexer *after, enum pp_type type)
 }
 
 
-int pp_token_valcmp(struct pp_token *left, const char *value)
+int pp_token_valcmp(const struct pp_token *left, const char *value)
 {
         size_t r_len = strlen(value);
         if (r_len > left->length)
@@ -71,7 +71,7 @@ int pp_token_valcmp(struct pp_token *left, const char *value)
 }
 
 
-void pp_token_getval(struct pp_token *token, char *buffer)
+void pp_token_getval(const struct pp_token *token, char *buffer)
 {
         strncpy(buffer, token->value, token->length);
         buffer[token->length] = '\0';

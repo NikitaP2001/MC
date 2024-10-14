@@ -1,0 +1,4 @@
+/* invalid abstract declarators */
+
+
+int (*(*)(int, char[]))(*);

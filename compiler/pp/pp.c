@@ -102,7 +102,6 @@ pp_forward(struct pp_context *pp)
 static struct pp_node*
 pp_file_parse(struct pp_context *pp, const char *file_name, bool is_global)
 {
-        struct pp_token *token = NULL;
         struct pp_lexer lex;
         struct pp_parser parser;
         struct pp_node *node;
@@ -115,13 +114,12 @@ pp_file_parse(struct pp_context *pp, const char *file_name, bool is_global)
 
         if (!pp_lexer_init(&lex, src))
                 return NULL;
-        while ((token = pp_lexer_get_token(&lex)))
-                pp_lexer_add_token(&lex, token);
+        pp_lexer_run(&lex);
         assert(pp_lexer_noerror(&lex));
 
         struct pp_node *root_file = pp_node_create(pp_file);
 
-        struct pp_token *tok_list = pp_lexer_result(&lex);
+        struct pp_token *tok_list = pp_lexer_move(&lex);
         assert(tok_list != NULL);
         pp_parser_init(&parser, tok_list);
 

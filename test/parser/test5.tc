@@ -1,12 +1,24 @@
-/* test local variable declaration FAIL */
-int main()
+/* function definition valid */
+
+_Bool bar(const char *format, ...);
+
+static inline void foo(int var)
 {
-	int var = 0;	
-	var = var + 1;
+	return;
 }
 
-int foo()
-{
-	// int var = 1;	
-	var = var + 1;
+int main()
+{	
+	foo(0);
+	void baz();
+	bar("123");
+	
+	{
+		baz();
+		{
+			baz();
+		}
+		baz();
+	}
+	baz();	
 }

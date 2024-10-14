@@ -8,6 +8,8 @@
 #include <token.h>
 #include <tools.h>
 
+static void pp_lexer_add_token(struct pp_lexer *pp, struct pp_token *token);
+
 /* TODO:
  * - replace pp->pos != '\0' with pp_eof inline */
 
@@ -119,6 +121,14 @@ static _Bool pp_skipspace(struct pp_lexer *pp)
         return was_found;
 }
 
+static inline void pp_fetch_newline_token(struct pp_lexer *pp)
+{
+        struct pp_token *token;
+        struct pp_lexer before = *pp;
+        pp_advance(pp, 1);
+        token = pp_token_create(&before, pp, pp_other);
+        pp_lexer_add_token(pp, token);
+}
 
 static _Bool pp_skipcomment(struct pp_lexer *pp)
 {
@@ -127,13 +137,22 @@ static _Bool pp_skipcomment(struct pp_lexer *pp)
                 size_t curr_l = pp->line;
                 while (curr_l == pp->line) {
                         assert(!pp_eof(pp)); /* anyway file ends in newline */
+                        if (pp->pos[0] == '\n') {
+                                pp_fetch_newline_token(pp);
+                                break;
+                        }
                         pp_advance(pp, 1);
                 }
                 was_found = true;
         } else if (pp_isstr(pp, "/*")) {
                 pp_advance(pp, 2);
-                while (!pp_isstr(pp, "*/") && !pp_eof(pp))
+                while (!pp_isstr(pp, "*/") && !pp_eof(pp)) {
+                        if (pp->pos[0] == '\n') {
+                                pp_fetch_newline_token(pp);
+                                continue;
+                        }
                         pp_advance(pp, 1);
+                }
                 if (!pp_eof(pp)) {
                         pp_advance(pp, 2);
                         was_found = true;
@@ -392,16 +411,15 @@ static void pp_fetch_punctuator(struct pp_lexer *pp)
 }
 
 /* Take caution, we may leak ptr here */
-static void pp_lexer_reset(struct pp_lexer *pp)
+static inline void pp_lexer_reset(struct pp_lexer *pp)
 {
         pp->first = NULL;
         pp->last = NULL;
-        pp->line = 0;
-        pp->file_line = 0;
+        pp->line = 1;
+        pp->file_line = 1;
         pp->state = true;
         pp->_escape = false;
 }
-
 
 _Bool pp_lexer_init(struct pp_lexer *pp, struct fs_file *file)
 {
@@ -422,15 +440,21 @@ _Bool pp_lexer_init(struct pp_lexer *pp, struct fs_file *file)
         return status;
 }
 
-struct pp_token *pp_lexer_result(struct pp_lexer *pp)
+struct pp_token *pp_lexer_move(struct pp_lexer *pp)
 {
         struct pp_token *result = pp->first;
-        pp_lexer_reset(pp);
+        pp->first = pp->last = NULL;
+        return result;
+}
+
+const struct pp_token *pp_lexer_get(struct pp_lexer *pp)
+{
+        struct pp_token *result = pp->first;
         return result;
 }
 
 
-void pp_lexer_add_token(struct pp_lexer *pp, struct pp_token *token)
+static void pp_lexer_add_token(struct pp_lexer *pp, struct pp_token *token)
 {
         assert(token != NULL);
         if (pp->last != NULL) {
@@ -460,7 +484,7 @@ void pp_lexer_free(struct pp_lexer *pp)
 /* TODO: this module should be redone, properly using lookahead
  * and char tables, like in parser, instead of this stupid
  * state saves */
-struct pp_token *pp_lexer_get_token(struct pp_lexer *pp)
+static inline _Bool pp_lexer_step(struct pp_lexer *pp)
 {
         struct pp_token *token = NULL;
 
@@ -470,52 +494,65 @@ struct pp_token *pp_lexer_get_token(struct pp_lexer *pp)
         /* header name */
         pp_fetch_header_name(pp);
         token = pp_token_create(&pp_save, pp, pp_hdr_name);
-        if (token == NULL)
-                *pp = pp_save;
-        else
-                return token;
+        if (token != NULL) {
+                pp_lexer_add_token(pp, token);
+                return true;
+        }
+        *pp = pp_save;
         
         pp_fetch_chrconst(pp);
         token = pp_token_create(&pp_save, pp, pp_chr_const);
-        if (token == NULL)
-                *pp = pp_save;
-        else
-                return token;
+        if (token != NULL) {
+                pp_lexer_add_token(pp, token);
+                return true;
+        }
+        *pp = pp_save;
 
         pp_fetch_strlit(pp);
         token = pp_token_create(&pp_save, pp, pp_str_lit);
-        if (token == NULL)
-                *pp = pp_save;
-        else
-                return token;
+        if (token != NULL) {
+                pp_lexer_add_token(pp, token);
+                return true;
+        }
+        *pp = pp_save;
 
         // identifier
         pp_fetch_identifier(pp);
         token = pp_token_create(&pp_save, pp, pp_id);
-        if (token == NULL)
-                *pp = pp_save;
-        else
-                return token;
+        if (token != NULL) {
+                pp_lexer_add_token(pp, token);
+                return true;
+        }
+        *pp = pp_save;
 
         /* pp-number */
         pp_fetch_number(pp);
         token = pp_token_create(&pp_save, pp, pp_number);
-        if (token == NULL)
-                *pp = pp_save;
-        else
-                return token;
+        if (token != NULL) {
+                pp_lexer_add_token(pp, token);
+                return true;
+        }
+        *pp = pp_save;
 
         pp_fetch_punctuator(pp);
         token = pp_token_create(&pp_save, pp, pp_punct);
-        if (token == NULL)
-                *pp = pp_save;
-        else
-                return token;
+        if (token != NULL) {
+                pp_lexer_add_token(pp, token);
+                return true;
+        }
+        *pp = pp_save;
 
         if (pp->pos[0] != '\0') {
                 pp_advance(pp, 1);
-                return pp_token_create(&pp_save, pp, pp_other);
+                token = pp_token_create(&pp_save, pp, pp_other);
+                pp_lexer_add_token(pp, token);
+                return true; 
         }
         
-        return NULL;
+        return false;
+}
+
+void pp_lexer_run(struct pp_lexer *pp)
+{
+        while (pp_lexer_step(pp));
 }

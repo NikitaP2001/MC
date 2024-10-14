@@ -1,0 +1,119 @@
+/* Valid struct declarations */
+
+// Test case 1: Basic struct with various data types
+struct BasicTypes {
+    char a;
+    int b;
+    float c;
+    double d;
+    _Bool e;
+};
+
+// Test case 2: Struct with arrays
+struct ArrayMembers {
+    int numbers[5];
+    char string[20];
+    float matrix[3][3];
+};
+
+// Test case 3: Nested structs
+struct Inner {
+    int x;
+    char y;
+};
+
+struct Outer {
+    struct Inner inner1;
+    struct Inner inner2;
+    int z;
+};
+
+// Test case 4: Struct with pointers
+struct Pointers {
+    int* p1;
+    char* p2;
+    void* p3;
+    struct Pointers* next;
+};
+
+// Test case 5: Struct with bit fields
+struct BitFields {
+    unsigned int a : 1;
+    unsigned int b : 3;
+    int c : 4;
+    int : 0;  // Zero-width bit field for padding
+    unsigned int d : 5;
+};
+
+// Test case 7: Struct with flexible array member
+struct FlexibleArray {
+    int size;
+    char data[];
+};
+
+// Test case 8: Struct with const and volatile members
+struct Qualifiers {
+    const int a;
+    volatile int b;
+    const volatile int c;
+};
+
+// Test case 10: Anonymous struct
+struct {
+    int x;
+    int y;
+} AnonymousStruct;
+
+// Test case 11: Typedef struct
+typedef struct {
+    int value;
+    char name[50];
+} TypedefStruct;
+
+// Test case 12: Struct with function pointer
+struct FunctionPointer {
+    int (*operation)(int, int);
+    void (*print)(const char*);
+};
+
+// Test case 13: Struct with union
+struct WithUnion {
+    int type;
+    union {
+        int i;
+        float f;
+        char c;
+    } data;
+};
+
+// Test case 14: Struct with enumeration
+enum Color { RED, GREEN, BLUE };
+struct WithEnum {
+    enum Color primary;
+    enum Color secondary;
+};
+
+// Test case 15: Struct with complex types
+struct Complex {
+    float _Complex c1;
+    double _Complex c2;
+};
+
+// Test case 17: Struct with restrict pointers
+struct Restrict {
+    int* restrict ptr1;
+    int* restrict ptr2;
+};
+
+// Test case 18: Struct with variably modified array
+struct VariableArray {
+    int size;
+    int data[*];
+};
+
+
+// Test case 20: Struct with inline initializer (C99 feature)
+struct Initialized {
+    int x;
+    char y[10];
+} instance = {42, "Hello"};

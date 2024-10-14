@@ -162,7 +162,7 @@ struct declaration *symtable_get_declaration(struct hash_table *tbl,
                         struct declaration *decl = &t_e->variant.decl;
                         struct token *id_decl = symtable_init_decl_id(
                                 decl->init_decl);
-                        if (token_valcmp(id, id_decl) == 0 
+                        if (token_compare(id, id_decl) == 0 
                                 && symtable_decl_visible(*decl, scope))
                                 return decl;
                 }

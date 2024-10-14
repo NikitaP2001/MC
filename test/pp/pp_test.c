@@ -23,9 +23,7 @@ pp_parser_test_init(struct pp_parser *parser, struct pp_lexer *lex,
         assert(src != NULL);
 
         pp_lexer_init(lex, src);
-        struct pp_token *token = NULL;
-        while ((token = pp_lexer_get_token(lex)))
-                pp_lexer_add_token(lex, token);
+        pp_lexer_run(lex);
         assert(pp_lexer_noerror(lex));
 
         pp_parser_init(parser, lex->first);

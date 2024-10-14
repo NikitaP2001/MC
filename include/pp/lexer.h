@@ -22,13 +22,14 @@ struct pp_token;
 _Bool pp_lexer_init(struct pp_lexer *pp, struct fs_file *file);
 
 /* Returns an ownership for the result */
-struct pp_token *pp_lexer_result(struct pp_lexer *pp);
+struct pp_token *pp_lexer_move(struct pp_lexer *pp);
 
-void pp_lexer_add_token(struct pp_lexer *pp, struct pp_token *token);
+/* returns the result, with no ownership */
+const struct pp_token *pp_lexer_get(struct pp_lexer *pp);
 
 _Bool pp_lexer_noerror(const struct pp_lexer *pp);
 
-struct pp_token *pp_lexer_get_token(struct pp_lexer *pp);
+void pp_lexer_run(struct pp_lexer *pp);
 
 void pp_lexer_free(struct pp_lexer *pp);
 
