@@ -68,7 +68,7 @@ struct parser_test_context {
         struct parser_context pctx; 
 };
 
-static void parser_test_init(struct parser_test_context *t_ctx, 
+static mc_status_t parser_test_init(struct parser_test_context *t_ctx, 
                              const char *fname)
 {
         fs_init(&t_ctx->fs);
@@ -76,10 +76,12 @@ static void parser_test_init(struct parser_test_context *t_ctx,
         pp_init(&t_ctx->pp, &t_ctx->fs);
 
         enum mc_status status = pp_run(&t_ctx->pp, fname);
-        assert(MC_SUCC(status));
+        if (!MC_SUCC(status))
+                return status;
 
         convert_init(&t_ctx->ctx, &t_ctx->pp);
-        assert(MC_SUCC(convert_run(&t_ctx->ctx)));
+        if (!MC_SUCC(convert_run(&t_ctx->ctx)))
+                return status;
 
         parser_context_init(&t_ctx->pctx, &t_ctx->ctx);
         struct parser_ops ops = {
@@ -90,6 +92,7 @@ static void parser_test_init(struct parser_test_context *t_ctx,
         };
 
         parser_init(&t_ctx->ps, ops, &t_ctx->pctx);
+        return MC_OK;
 }
 
 static void parser_test_free(struct parser_test_context *t_ctx)
@@ -104,7 +107,8 @@ static _Bool parser_tcase_run(const char *name)
 {
         _Bool result = true;
         struct parser_test_context t_ctx;
-        parser_test_init(&t_ctx, name);
+        if (!MC_SUCC(parser_test_init(&t_ctx, name)))
+                return false;
 
         struct pt_node *node = parser_translation_unit(&t_ctx.ps);
         if (node == NULL)

@@ -31,7 +31,7 @@ static void fs_file_object_read(struct fs_file *file, FILE *sfile)
         int read = fread(file->content, sizeof(char), fsize, sfile);
 
         if (read != fsize && !feof(sfile)) {
-                MC_LOG(MC_DEBUG, "read file %s failed", file->path);
+                mc_msg(MC_ERR, "read file %s failed", file->path);
                 fs_file_seterr(file, MC_FILE_OP_FAIL);
                 goto clean;
         }
@@ -43,7 +43,7 @@ static void fs_file_object_read(struct fs_file *file, FILE *sfile)
         for (int fp = 0; fp < read; fp++) {
                 char chr = file->content[fp];
                 if (!source_allowed_chr(chr)) {
-                        MC_LOG(MC_DEBUG, "invalid char 0x%02x", chr);
+                        mc_msg(MC_ERR, "invalid char 0x%02x", chr);
                         fs_file_seterr(file, MC_UNKNOWN_CHAR);
                         goto clean;
                 }
@@ -64,7 +64,7 @@ const char *fs_file_read(struct fs_file *file)
                         fs_file_object_read(file, sfile);
                         fclose(sfile);
                 } else {
-                        MC_LOG(MC_DEBUG, "open file %s failed", file->path);
+                        mc_msg(MC_ERR, "open file %s failed", file->path);
                 }
         }
         return file->content;
