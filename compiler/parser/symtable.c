@@ -45,24 +45,15 @@ hash_key_t symtable_hash(struct hlist_entry *node)
 
 void symtable_free(struct hlist_entry *node)
 {
-        struct symbol_table_entry *entry = container_of(node, 
-                struct symbol_table_entry, hlist);
-        free(entry);
+        free(symtable_hlist_entry(node));
 }
 
 /* from init declarator extract associated identifier */
-static struct token*
+static inline struct token*
 symtable_init_decl_id(struct pt_node *init_decl) 
 {
-        struct pt_node *dir_decl = init_decl;
-        struct pt_node *decl;
-
-        do {
-                decl = pt_node_child_first(dir_decl);
-                dir_decl = pt_node_child_last(decl);
-        } while (decl->sym != psym_identifier);
-
-        return decl->value;
+        struct pt_node *decl = pt_node_child_first(init_decl);
+        return ast_declarator_id(decl);
 }
 
 static inline struct token*

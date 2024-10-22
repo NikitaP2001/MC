@@ -7,6 +7,18 @@
 
 #define PT_CHILD_NODES_CAPACITY 5
 
+/* Be aware that ast differs from how grammar defines 
+ * parse tree stucture, so consider examining ast building procedures
+ * in parse.c, before working with the tree.
+ * The main points are: 
+ *  - all excessive characters are omitted, when possible
+ *    example: (type-name) in postfix expr will go without ()
+ *  - recurrent symbol placement avoided, when possible
+ *    example: trainslation-unit: translation-unit external-declaration
+ *    is a rule defined by grammar, when in ast all external-declaration 
+ *    will be childs of a single translation unit, to avoid recursion 
+ */
+
 struct pt_child_nodes {
         struct pt_node **nodes; /* may be pt_node_leaf also */
         uint16_t size;
@@ -65,5 +77,15 @@ static inline struct pt_node *pt_node_child_first(struct pt_node *node)
                 return NULL;
         return node->childs.nodes[0];
 }
+
+static inline 
+struct pt_node *pt_node_child_number(struct pt_node *node, uint16_t num)
+{
+        if (node->childs.size > num || num == 0)
+                return NULL;
+        return node->childs.nodes[num - 1];
+}
+
+struct token *ast_declarator_id(struct pt_node *decl);
 
 #endif /* _PARSE_TREE_H_ */

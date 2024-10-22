@@ -55,3 +55,15 @@ enum parser_symbol pt_node_child_type(struct pt_node *node, uint32_t number)
                 return psym_invalid;
         return node->childs.nodes[number]->sym;
 }
+
+struct token *ast_declarator_id(struct pt_node *decl)
+{
+        struct pt_node *dir_decl;
+
+        while (decl->sym != psym_identifier) {
+                dir_decl = pt_node_child_last(decl);
+                decl = pt_node_child_first(dir_decl);
+        }
+
+        return decl->value;
+}
