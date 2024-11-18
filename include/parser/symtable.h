@@ -14,6 +14,8 @@ struct declaration {
 
 struct label {
         struct pt_node *lbld_stmt;
+        /* associated basic block, which may be assigned later */
+        void *block;
 };
 
 _Bool declaration_is_typedef(struct declaration decl);
@@ -42,6 +44,10 @@ void symtable_free(struct hlist_entry *node);
 struct declaration *symtable_get_declaration(struct hash_table *tbl, 
                                              struct token *id, 
                                              struct pt_node *scope);
+
+struct label *symtable_get_label(struct hash_table *tbl, 
+                                 struct token *id, 
+                                 struct pt_node *scope);
 
 mc_status_t symtable_add_declaration(struct hash_table *ht,
                                      struct pt_node *declaration);

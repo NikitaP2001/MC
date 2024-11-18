@@ -63,13 +63,6 @@ parser_stack_topsym(struct parser *ps)
         return parser_stack_top(ps)->sym; 
 }
 
-static inline size_t
-parser_stack_content(struct parser *ps, struct pt_node ***node)
-{
-        *node = (struct pt_node **)stack_raw(&ps->stack);
-        return ps->stack.size;
-}
-
 static inline
 struct pt_node *parser_stack_pop(struct parser *ps)
 {
@@ -97,7 +90,7 @@ static inline
 void parser_stack_free(struct parser *ps)
 {
         struct stack *st = &ps->stack;
-        while (st->size != 0)
+        while (!stack_empty(st))
                 pt_node_destroy(parser_stack_pop(ps));
         stack_free(st);
 }
@@ -154,15 +147,8 @@ parser_fetch_symbol(struct parser *ps)
                 return psym_invalid;
 }
 
-static inline _Bool
-parser_error(struct parser *ps, char *message)
-{
-        return ps->ops.error(ps->data, message);
-}
-
 #define PARSER_ERROR(ps, message)                               \
         ps->ops.error(ps->data, message)
-
 
 static inline _Bool parser_is_typedef(struct parser *ps, 
                                       struct token *id)
@@ -739,7 +725,7 @@ static enum parser_symbol parser_fetch_declarator_center(struct parser *ps)
                 == PARSER_PUNCTUATOR(punc_left_rnd_br)
                 || sym == PARSER_PUNCTUATOR(punc_mul));
 
-        while (tok_stack.size != 0) {
+        while (!stack_empty(&tok_stack)) {
                 stack_top(&tok_stack, &tok);
                 parser_put_token(ps, tok);
                 stack_pop(&tok_stack);

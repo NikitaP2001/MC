@@ -12,7 +12,8 @@ static inline _Bool declaration_spec_is_typedef(struct pt_node *decl_spec)
                 struct pt_node *node = (struct pt_node *)entry;
                 if (node->sym == psym_storage_class_specifier) {
                         node = pt_node_child_first(node);
-                        if (token_get_keyword(node->value) == keyw_typedef)
+                        if (token_get_keyword(node->node_value.value) 
+                                == keyw_typedef)
                                 return true;
                 }
 
@@ -59,7 +60,7 @@ symtable_init_decl_id(struct pt_node *init_decl)
 static inline struct token*
 symtable_label_id(struct pt_node *label) 
 {
-        return pt_node_child_first(label)->value;
+        return pt_node_child_first(label)->node_value.value;
 }
 
 enum entry_var_type symtable_get_var_type(union entry_var var)
@@ -80,6 +81,11 @@ enum entry_var_type symtable_get_var_type(union entry_var var)
 static inline _Bool symtable_entry_is_decl(struct symbol_table_entry *e)
 {
         return (symtable_get_var_type(e->variant) == entry_declaration);
+}
+
+static inline _Bool symtable_entry_is_lable(struct symbol_table_entry *e)
+{
+        return (symtable_get_var_type(e->variant) == entry_label);
 }
 
 static struct token*
@@ -136,6 +142,27 @@ static _Bool symtable_decl_visible(struct declaration decl,
         return false;
 }
 
+static _Bool symtable_label_visible(struct label lbl,
+                                    struct pt_node *scope)
+{
+        /* find actual scope declaration relates to */
+        struct pt_node *lbl_scope = lbl.lbld_stmt->parent;
+        while (lbl_scope->sym != psym_function_definition && lbl_scope != NULL)
+                lbl_scope = lbl_scope->parent;
+        if (lbl_scope == NULL) {
+                MC_LOG(MC_ERR, "label have no function def in parent");
+                return false;
+        }
+
+        /* go up the tree, looking if we will reach label scope */
+        while (scope != NULL) {
+                if (scope == lbl_scope)
+                        return true;
+                scope = scope->parent;
+        }
+        return false;
+}
+
 
 struct declaration *symtable_get_declaration(struct hash_table *tbl, 
                                              struct token *id, 
@@ -156,6 +183,30 @@ struct declaration *symtable_get_declaration(struct hash_table *tbl,
                         if (token_compare(id, id_decl) == 0 
                                 && symtable_decl_visible(*decl, scope))
                                 return decl;
+                }
+        }
+        return NULL;
+}
+
+struct label *symtable_get_label(struct hash_table *tbl, 
+                                 struct token *id, 
+                                 struct pt_node *scope)
+{
+        assert(id->type == tok_identifier);
+        hash_key_t key = symtable_token_hash(id);
+        HASH_FOREACH_ENTRY(tbl, key) {
+                struct symbol_table_entry *t_e = symtable_hlist_entry(entry);
+                /* variable/typedef shadowing - variables of our scope
+                 * declared earlier - are higher in the hlist, so we
+                 * will find out first most recent added one. We will
+                 * pick it, and assume that other ones are shadowed */
+                if (t_e->hash == key && symtable_entry_is_lable(t_e)) {
+                        struct label *lbl = &t_e->variant.label;
+                        struct token *id_lbl 
+                                = symtable_label_id(lbl->lbld_stmt);
+                        if (token_compare(id, id_lbl) == 0 
+                                && symtable_label_visible(*lbl, scope))
+                                return lbl;
                 }
         }
         return NULL;

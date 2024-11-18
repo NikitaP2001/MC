@@ -37,7 +37,7 @@ struct pt_node* pt_node_create(enum parser_symbol sym)
 struct pt_node* pt_node_create_leaf(struct token *tok)
 {
         struct pt_node *node = pt_node_create(parser_token_tosymbol(tok));
-        node->value = tok;
+        node->node_value.value = tok;
         return node;
 }
 
@@ -65,5 +65,5 @@ struct token *ast_declarator_id(struct pt_node *decl)
                 decl = pt_node_child_first(dir_decl);
         }
 
-        return decl->value;
+        return decl->node_value.value;
 }

@@ -29,7 +29,13 @@ struct pt_node {
         struct pt_node *parent;
         enum parser_symbol sym;
         struct pt_child_nodes childs;  
-        struct token *value;
+        union {
+                struct token *value;
+                /* mey be related for non-leaf symbol (non token)
+                 * for example storing case label list in switch */
+                void *abstract_value;
+        } node_value;
+        
 };
 
 #define AST_FOREACH_CHILD(node)                                                 \

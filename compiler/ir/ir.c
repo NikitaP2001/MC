@@ -3,8 +3,6 @@
 #include <ir.h>
 #include <parser/ast.h>
 
-#define IR_BASIC_BLOCK_LABLE_RADIX 10
-
 static void ir_function_destroy(struct function *func);
 
 struct module *ir_module_create()
@@ -20,37 +18,6 @@ void ir_module_destroy(struct module *module)
         free(module);
 }
 
-struct basic_block *ir_bb_create(const char *prefix, uint32_t index)
-{
-        struct basic_block *bb = calloc(1, sizeof(struct basic_block));
-        uint32_t pref_size = 0;
-        if (prefix != NULL) {
-                pref_size = strlen(prefix);
-                strcat(bb->lable, prefix);
-        }
-        ultoa(index, bb->lable + pref_size, IR_BASIC_BLOCK_LABLE_RADIX);
-        return bb;
-}
-
-static inline 
-struct basic_block *
-ir_bb_hlist_entry(struct hlist_entry *node)
-{
-        return container_of(node, struct basic_block, hlist);
-}
-
-static void ir_bb_free(struct hlist_entry *node)
-{
-        /* free instructions */
-        assert(false);
-        free(ir_bb_hlist_entry(node)); 
-}
-
-static hash_key_t ir_bb_hash(struct hlist_entry *node)
-{
-        return ir_bb_hlist_entry(node)->hash;
-}
-
 struct function *ir_function_create(struct module *module, 
                                     struct pt_node *func_def)
 {
@@ -62,24 +29,23 @@ struct function *ir_function_create(struct module *module,
 
         func->name = func_id;
         struct hash_table_ops t_ops = {
-                .free = ir_bb_free,
-                .get_key = ir_bb_hash,
+                .free = ir_value_free,
+                .get_key = ir_value_hash,
         };
-        hash_init(&func->tbl, t_ops);
+        hash_init(&func->var_tbl, t_ops);
         return func;
 }
 
-void ir_function_block_add(struct function *func, struct basic_block *bb)
+void ir_function_value_add(struct function *func, struct value *val)
 {
-        if (func->entry == NULL)
-                func->entry = bb;
-
-        bb->hash = fnv_1_hash(bb->lable, strlen(bb->lable));
-        hash_add(&func->tbl, &bb->hlist);
+        const char *lable = val->name;
+        val->hash = fnv_1_hash(lable, strlen(lable));
+        hash_add(&func->var_tbl, &val->hlist);
 }
 
 static void ir_function_destroy(struct function *func)
 {
-        hash_free(&func->tbl);
+        /* free all entries in table: blocks and values */
+        hash_free(&func->var_tbl);
         free(func);
 }

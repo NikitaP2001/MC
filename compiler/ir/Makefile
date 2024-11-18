@@ -1,6 +1,6 @@
 MODULE := ir.a
 DEPS := 
 
-SRC = ir.c irgen.c
+SRC = ir.c gen.c ins.c value.c
 
 include $(BLDRULES)
