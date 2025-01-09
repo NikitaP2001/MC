@@ -142,9 +142,15 @@ ir_lvalue_get(struct value *val)
 
 static inline _Bool ir_lvalue_is_arithmetic(struct lvalue *val)
 {
-        UNUSED(val);
         assert(false);
         return (val->type == lvalue_scalar);
+}
+
+static inline _Bool ir_lvalue_is_integer(struct lvalue *val)
+{
+        return (ir_lvalue_is_arithmetic(val) 
+                && ir_scalar_is_integer(val->var.scalar));
+
 }
 
 static inline 
@@ -200,7 +206,31 @@ _Bool ir_lvalue_ptr_compat(struct lvalue *val1,
 
 struct lvalue *ir_lvalue_create(const char *prefix, uint32_t index);
 
+static inline struct scalar_var ir_lvalue_scalar_get(struct lvalue *val)
+{
+        assert(val->type == lvalue_scalar);
+        return val->var.scalar;
+}
+
 mc_status_t ir_lvalue_const_move(struct lvalue *source, struct lvalue *result);
+
+void ir_lvalue_sext(struct basic_block *bb, struct lvalue *src, 
+                    struct lvalue *dest, enum scalar_type type);
+
+void ir_lvalue_zext(struct basic_block *bb, struct lvalue *src, 
+                    struct lvalue *dest, enum scalar_type type);
+                        
+mc_status_t ir_lvalue_or(struct basic_block *bb, struct lvalue *val1, 
+                  struct lvalue *val2, struct lvalue *result);
+
+mc_status_t ir_lvalue_const_set(struct lvalue *dest, struct scalar_var value);
+
+static inline 
+mc_status_t irgen_scalar_const_cast(struct lvalue *val, 
+                                    enum scalar_type type)
+{
+        return ir_scalar_const_cast(&val->var.scalar, type);
+}
 
 /* to @bb add instructions to move src value to dest */
 mc_status_t  ir_lvalue_move(struct basic_block *bb, struct lvalue *src, 

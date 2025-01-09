@@ -3,12 +3,6 @@
 #include <ir.h>
 #include <parser/ast.h>
 
-static mc_status_t irgen_error_type_scalar(struct irgen_context *gen, 
-                                           struct pt_node *node)
-{
-        return IRGEN_ERROR(gen, node, "expected scalar type");
-}
-
 static mc_status_t irgen_compound_statement(struct irgen_context *gen, 
                                             struct pt_node *comp_stmt);
 static mc_status_t irgen_statement(struct irgen_context *gen, 
@@ -22,12 +16,76 @@ static mc_status_t irgen_expression(struct irgen_context *gen,
         return MC_FAIL;
 }
 
-static mc_status_t irgen_logical_and_expression(struct irgen_context *gen, 
-                                                struct pt_node *expr)
+static mc_status_t irgen_exclusive_or_expression(struct irgen_context *gen, 
+                                                 struct pt_node *expr)
 {
         UNUSED(gen);
         UNUSED(expr);
         return MC_FAIL;
+}
+
+static mc_status_t irgen_inclusive_or_expression(struct irgen_context *gen, 
+                                                 struct pt_node *expr)
+{
+        mc_status_t status;
+        struct lvalue *result = irgen_lvalue_get(gen);
+
+        struct pt_node *node_exclusive_or_expr = pt_node_child_last(expr);
+        struct lvalue *exclusive_or_expr_val = irgen_lvalue_create(gen, 
+                node_exclusive_or_expr);
+        status = irgen_exclusive_or_expression(gen, node_exclusive_or_expr);
+        if (!MC_SUCC(status))
+                return status;
+        assert(exclusive_or_expr_val->type == lvalue_scalar);
+
+        if (pt_node_child_count(expr) == 2) {
+                struct pt_node *node_incl_or_expr = pt_node_child_first(expr);
+                struct lvalue *incl_or_expr_val = irgen_lvalue_create(gen, 
+                        node_incl_or_expr);
+                status = irgen_inclusive_or_expression(gen, node_incl_or_expr);
+                if (!MC_SUCC(status))
+                        return status;
+                assert(incl_or_expr_val->type == lvalue_scalar);
+
+                struct lvalue *expr_val = irgen_lvalue_create(gen, expr);
+                status = irgen_lvalue_or(gen, exclusive_or_expr_val, 
+                        incl_or_expr_val);
+                exclusive_or_expr_val = expr_val;
+        }
+        irgen_value_set(gen, &result->val);
+        status = irgen_lvalue_move_single(gen, exclusive_or_expr_val);
+        return status;
+}
+
+static mc_status_t irgen_logical_and_expression(struct irgen_context *gen, 
+                                                struct pt_node *expr)
+{
+        mc_status_t status;
+        struct lvalue *result = irgen_lvalue_get(gen);
+
+        struct pt_node *node_inc_expr = pt_node_child_last(expr);
+        struct lvalue *inc_expr_val = irgen_lvalue_create(gen, node_inc_expr);
+        status = irgen_inclusive_or_expression(gen, node_inc_expr);
+        if (!MC_SUCC(status))
+                return status;
+        assert(inc_expr_val ->type == lvalue_scalar);
+
+        if (pt_node_child_count(expr) == 2) {
+                struct pt_node *node_log_and_expr = pt_node_child_first(expr);
+                struct lvalue *log_expr_val = irgen_lvalue_create(gen, 
+                        node_log_and_expr);
+                status = irgen_logical_and_expression(gen, node_log_and_expr);
+                if (!MC_SUCC(status))
+                        return status;
+                assert(log_expr_val->type == lvalue_scalar);
+
+                struct lvalue *expr_val = irgen_lvalue_create(gen, expr);
+                status = irgen_lvalue_log_and(gen, inc_expr_val, log_expr_val);
+                inc_expr_val = expr_val; 
+        }
+        irgen_value_set(gen, &result->val);
+        status = irgen_lvalue_move_single(gen, inc_expr_val);
+        return status;
 }
 
 static mc_status_t irgen_logical_or_expression(struct irgen_context *gen, 
@@ -41,8 +99,7 @@ static mc_status_t irgen_logical_or_expression(struct irgen_context *gen,
         status = irgen_logical_and_expression(gen, node_and_expr);
         if (!MC_SUCC(status))
                 return status;
-        if (and_expr_val->type != lvalue_scalar)
-                return irgen_error_type_scalar(gen, expr);
+        assert(and_expr_val->type == lvalue_scalar);
 
         if (pt_node_child_count(expr) == 2) {
                 struct pt_node *node_log_or_expr = pt_node_child_first(expr);
@@ -51,8 +108,7 @@ static mc_status_t irgen_logical_or_expression(struct irgen_context *gen,
                 status = irgen_logical_or_expression(gen, node_log_or_expr);
                 if (!MC_SUCC(status))
                         return status;
-                if (log_expr_val->type != lvalue_scalar)
-                        return irgen_error_type_scalar(gen, expr);
+                assert(log_expr_val->type == lvalue_scalar);
 
                 struct lvalue *expr_val = irgen_lvalue_create(gen, expr);
                 status = irgen_lvalue_log_or(gen, and_expr_val, log_expr_val);
@@ -100,8 +156,7 @@ static mc_status_t irgen_conditional_expression(struct irgen_context *gen,
         if (!MC_SUCC(status))
                 return status;
 
-        if (log_expr_val->type != lvalue_scalar)
-                return irgen_error_type_scalar(gen, stmt);
+        assert(log_expr_val->type != lvalue_scalar);
 
         if (pt_node_child_count(stmt) != 1) {
                 struct pt_node *node_expr = pt_node_child_number(stmt, 2);
@@ -430,7 +485,7 @@ static mc_status_t irgen_external_declaration(struct irgen_context *gen,
                         status = MC_OK;
                         break;
                 default:
-                        MC_LOG(MC_CRIT, "unexpected node type");
+                        MC_DBG(MC_CRIT, "unexpected node type");
                         break;
         }
         return status;

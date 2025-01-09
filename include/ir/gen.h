@@ -89,6 +89,13 @@ mc_status_t irgen_lvalue_log_or(struct irgen_context *gen,
                                 struct lvalue *val1, 
                                 struct lvalue *val2);
 
+mc_status_t irgen_lvalue_log_and(struct irgen_context *gen, 
+                                struct lvalue *val1, 
+                                struct lvalue *val2);
+
+mc_status_t irgen_lvalue_or(struct irgen_context *gen, 
+                            struct lvalue *val1, 
+                            struct lvalue *val2);
 static inline 
 enum ir_value_type 
 irgen_value_type(struct irgen_context *gen)
@@ -96,6 +103,7 @@ irgen_value_type(struct irgen_context *gen)
         return gen->curr_value->type;
 }
 
+/* value of the last ir-gen operation is stored */
 static inline void
 irgen_value_set(struct irgen_context *gen, struct value *val)
 {

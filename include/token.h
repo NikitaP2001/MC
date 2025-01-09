@@ -66,6 +66,11 @@ static inline _Bool token_const_is_char(enum constant_type type)
         return type >= const_char && type <= const_wchar_t;
 }
 
+static inline _Bool token_const_is_signed(enum constant_type type)
+{
+        return (type & 1);
+}
+
 extern const char token_simple_esc_chars[];
 
 struct constant_value {
@@ -240,6 +245,12 @@ struct token {
 void token_destroy(struct token *tok);
 
 struct token* token_convert_next(struct convert_context *ctx);
+
+static inline struct constant_value token_constant(struct token *tok)
+{
+        assert(tok->type == tok_constant);
+        return tok->value.var_const;
+}
 
 /* one time initialization of the token module */
 void token_global_init();

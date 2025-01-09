@@ -103,7 +103,7 @@ static void fs_file_destroy(struct fs_file *file)
         if (file->content != NULL) 
                 free(file->content);
         if (file->use_count != 0)
-                MC_LOG(MC_WARN, "file %s was not released", file->path);
+                MC_DBG(MC_WARN, "file %s was not released", file->path);
         assert(file->use_count == 0);
         free(file->path);
         free(file);
@@ -241,7 +241,7 @@ const char *f_name)
 void fs_release_file(struct fs_file *file)
 {
         if (file->use_count == 0) {
-                MC_LOG(MC_CRIT, "release counter underflow");
+                MC_DBG(MC_CRIT, "release counter underflow");
                 assert(false);
         }
         file->use_count -= 1;

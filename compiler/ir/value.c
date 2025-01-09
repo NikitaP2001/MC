@@ -30,7 +30,7 @@ void ir_value_free(struct hlist_entry *node)
                         ir_bb_destroy(ir_value_bb_get(val));
                         break;
                 default:
-                        MC_LOG(MC_ERR, "unexpected value type");
+                        MC_DBG(MC_ERR, "unexpected value type");
         }
 }
 
@@ -119,12 +119,12 @@ ir_lvalue_create(const char *prefix, uint32_t index)
 }
 
 static inline 
-_Bool ir_lvalue_mov_compat(struct lvalue *source, struct lvalue *result)
+_Bool ir_lvalue_scalar_compat(struct lvalue *source, struct lvalue *result)
 {
-        struct scalar_var *src = &source->var.scalar;
-        struct scalar_var *res = &result->var.scalar;
+        struct scalar_var src = source->var.scalar;
+        struct scalar_var res = result->var.scalar;
         /* currently we assume no type cast */
-        return (src->type == res->type);
+        return ir_scalar_type_compatible(src, res);
 }
 
 mc_status_t ir_lvalue_const_move(struct lvalue *source, struct lvalue *result)
@@ -132,7 +132,7 @@ mc_status_t ir_lvalue_const_move(struct lvalue *source, struct lvalue *result)
         assert(ir_lvalue_const_eval(source) && ir_lvalue_const_eval(result));
         mc_status_t status = MC_FAIL;
         /* currently we assume no type cast */
-        if (ir_lvalue_mov_compat(source, result)) {
+        if (ir_lvalue_scalar_compat(source, result)) {
                 result->var.scalar = source->var.scalar;
                 status = MC_OK;
         }
@@ -143,10 +143,81 @@ mc_status_t ir_lvalue_move(struct basic_block *bb, struct lvalue *src,
         struct lvalue *dest)
 {
         mc_status_t status = MC_FAIL;
-        if (ir_lvalue_mov_compat(src, dest)) {
+        if (ir_lvalue_scalar_compat(src, dest)) {
                 struct instruction *ins = ir_bb_add_ins(bb, ir_ins_mov);
                 ir_ins_insert_use(ins, &dest->val);
                 ir_ins_insert_use(ins, &src->val);
+                status = MC_OK;
+        }
+        return status;
+}
+
+void ir_lvalue_sext(struct basic_block *bb, struct lvalue *src, 
+                    struct lvalue *dest, enum scalar_type type)
+{
+        struct instruction *ins = NULL;
+        assert(ir_lvalue_scalar_get(src).type < type);
+        switch (type) {
+                case s_i16:
+                        ins = ir_bb_add_ins(bb, ir_ins_sext16);
+                        break;
+                case s_i32:
+                        ins = ir_bb_add_ins(bb, ir_ins_sext32);
+                        break;
+                case s_i64:
+                        ins = ir_bb_add_ins(bb, ir_ins_sext64);
+                        break;
+                default:
+                        MC_DBG(MC_CRIT, "unexpected type");
+                        return;
+        }
+        ir_ins_insert_use(ins, &dest->val);
+        ir_ins_insert_use(ins, &src->val);
+}
+
+void ir_lvalue_zext(struct basic_block *bb, struct lvalue *src, 
+                    struct lvalue *dest, enum scalar_type type)
+{
+        struct instruction *ins = NULL;
+        assert(ir_lvalue_scalar_get(src).type < type);
+        switch (type) {
+                case s_i16:
+                        ins = ir_bb_add_ins(bb, ir_ins_zext16);
+                        break;
+                case s_i32:
+                        ins = ir_bb_add_ins(bb, ir_ins_zext32);
+                        break;
+                case s_i64:
+                        ins = ir_bb_add_ins(bb, ir_ins_zext64);
+                        break;
+                default:
+                        MC_DBG(MC_CRIT, "unexpected type");
+                        return;
+        }
+        ir_ins_insert_use(ins, &dest->val);
+        ir_ins_insert_use(ins, &src->val);
+}
+
+mc_status_t ir_lvalue_const_set(struct lvalue *dest, struct scalar_var value)
+{
+        mc_status_t status = MC_FAIL;
+        if (ir_scalar_type_compatible(dest->var.scalar, value)) {
+                dest->var.scalar = value;
+                status = MC_OK;
+        }
+        return status;
+}
+
+mc_status_t ir_lvalue_or(struct basic_block *bb, struct lvalue *val1, 
+                  struct lvalue *val2, struct lvalue *result)
+{
+        mc_status_t status = MC_FAIL;
+        if (ir_lvalue_scalar_compat(val1, result) 
+                && ir_lvalue_scalar_compat(val2, result)) {
+                struct instruction *ins = ir_bb_add_ins(bb, ir_ins_or);
+                ir_ins_insert_use(ins, &result->val);
+                ir_ins_insert_use(ins, &val1->val);
+                ir_ins_insert_use(ins, &val2->val);
                 status = MC_OK;
         }
         return status;

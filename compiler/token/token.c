@@ -162,7 +162,7 @@ static int64_t token_hex_esc_value(const char *value, size_t *pos)
                                         + token_hex_to_int(c);
 
                         if (n_chr > TOKEN_HEX_ESC_LEN)
-                                MC_LOG(MC_WARN, "max length exceeded");
+                                MC_DBG(MC_WARN, "max length exceeded");
                 }
         }
         if (TOKEN_SUCC(result))
@@ -201,7 +201,7 @@ int64_t token_utf8_pt_code_units(int64_t point)
                 result |= (0x80 | ((point >> 6) & 0x3F)) << 8;
                 result |= 0x80 | (point & 0x3F);
                 if (point > 0x10FFFF)
-                        MC_LOG(MC_WARN, "point value exceeds representable");
+                        MC_DBG(MC_WARN, "point value exceeds representable");
         }
         return result;
 }
@@ -224,7 +224,7 @@ int64_t token_utf16_pt_code_units(int64_t point)
                 result = (0xD800 | (point >> 10)) << 16;
                 result |= 0xDC00 | (point & 0x3FF);
                 if (point > 0x10FFFF)
-                        MC_LOG(MC_WARN, "point value exceeds representable");
+                        MC_DBG(MC_WARN, "point value exceeds representable");
         }
         return result;
 }
@@ -272,7 +272,7 @@ static size_t token_esc_val_to_wchars(_IN int64_t esc_val,
                 esc_val >>= sizeof(mc_wchar_t) * CHAR_BIT;
         }
         if (esc_val != 0)
-                MC_LOG(MC_WARN, "value %lld not fully written", esc_val);
+                MC_DBG(MC_WARN, "value %lld not fully written", esc_val);
         return n_sym;
 }
 
@@ -296,7 +296,7 @@ static size_t token_esc_val_to_chars(_IN int64_t esc_val,
         }
         reverse_bytes(result, n_sym);
         if (esc_val != 0)
-                MC_LOG(MC_WARN, "value %lld not fully written", esc_val);
+                MC_DBG(MC_WARN, "value %lld not fully written", esc_val);
         return n_sym;
 }
 
@@ -924,10 +924,10 @@ struct token* token_convert_next(struct convert_context *ctx)
                         if (pp_token_valcmp(convert_pos(ctx), "\"") == 0)
                                 convert_error(ctx, "missing closing quote");
                         else if (pp_token_valcmp(convert_pos(ctx), "\n") != 0)
-                                MC_LOG(MC_CRIT, "Should be new-ln only");
+                                MC_DBG(MC_CRIT, "Should be new-ln only");
                         break;
                 default:
-                        MC_LOG(MC_CRIT, "unexpected token");
+                        MC_DBG(MC_CRIT, "unexpected token");
                         break;
         }
         return new_tok;
@@ -982,13 +982,13 @@ static void token_print_constant(struct constant_value c_val)
                 else
                         printf("%c", (char)c_val.data.var_int);
         } else
-                MC_LOG(MC_CRIT, "unexpected value type");
+                MC_DBG(MC_CRIT, "unexpected value type");
 }
 
 void token_print_content(struct token *tok)
 {
         union token_value t_val = tok->value; 
-        MC_LOG(MC_DEBUG, "token %p", (void *)tok);
+        MC_DBG(MC_DEBUG, "token %p", (void *)tok);
         printf("%s [", token_type_strs[tok->type]);
 
         switch (tok->type) {
@@ -1017,7 +1017,7 @@ void token_print_content(struct token *tok)
                 }
                 default:
                 {
-                        MC_LOG(MC_CRIT, "unexpected token type");
+                        MC_DBG(MC_CRIT, "unexpected token type");
                         break;
                 }
                         

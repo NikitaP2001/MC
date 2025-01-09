@@ -85,21 +85,61 @@ struct basic_block *irgen_bb_create(struct irgen_context *gen,
         return bb;
 }
 
+static inline 
+enum scalar_type 
+irgen_const_type_to_scalar(enum constant_type type)
+{
+        switch (type) {
+                case const_int:
+                        return s_i32;
+                case const_uint:
+                        return s_i32;
+                case const_long_int:
+                        return s_i64;
+                case const_ulong_int:
+                        return s_i64;
+                case const_long_long_int:
+                        return s_i64;
+                case const_ulong_long_int:
+                        return s_i64;
+                case const_float:
+                        return s_f32;
+                case const_double:
+                        return s_f64;
+                case const_long_double:
+                        return s_f80;
+                default:
+                        MC_DBG(MC_CRIT, "unexpected constant type");
+                        return scalar_invalid;
+        }
+}
+
 static void irgen_lvalue_specify_type(struct lvalue *s_val, 
         struct pt_node *lval_node)
 {
         struct scalar_var scalar;
         enum parser_symbol sym = lval_node->sym;
+
         if (sym == psym_constant_expression
                 || sym == psym_logical_or_expression
                 || sym == psym_logical_and_expression) {
                 s_val->type = lvalue_scalar;
-                scalar.type = scalar_int;
+                scalar.type = s_i32;
+                scalar.is_signed = true;
+                s_val->var.scalar = scalar;
+        } else if (sym == psym_constant) {
+                struct token *const_tok = lval_node->node_value.value;
+                enum constant_type type = token_constant(const_tok).type;
+                s_val->type = lvalue_scalar;
+                scalar.type = irgen_const_type_to_scalar(type);
+                scalar.is_signed = token_const_is_signed(type);
                 s_val->var.scalar = scalar;
         }
         s_val->node = lval_node;
 }
 
+/* set new value type, based on associated @pt_node if it could
+ * be unambiguously defined, leave unspecified othervise */
 struct lvalue *irgen_lvalue_create(struct irgen_context *gen, 
         struct pt_node *lval_node)
 {
@@ -266,6 +306,207 @@ mc_status_t irgen_lvalue_move_cond(struct irgen_context *gen,
         return status;
 }
 
+/* result is applied to @val */
+mc_status_t irgen_scalar_cast(struct irgen_context *gen,
+                              struct lvalue *val, 
+                              enum scalar_type type)
+{
+        mc_status_t status = MC_OK;
+        struct basic_block *bb_val = ir_lvalue_get_eval(val);
+        struct scalar_var scalar = ir_lvalue_scalar_get(val);
+        /* TODO: implement for narrowing types */
+        assert(scalar.type < type);
+        /* TODO: implement for float types */
+        assert(ir_scalar_is_integer(scalar));
+        if (bb_val == NULL) {
+                status = irgen_scalar_const_cast(val, type);
+                if (!MC_SUCC(status))
+                        goto fail;
+        } else if (scalar.type != type) {
+                struct basic_block *bb_cast = ir_bb_form_final(gen, bb_val);
+                if (scalar.is_signed)
+                        ir_lvalue_sext(bb_cast, val, val, type);
+                else
+                        ir_lvalue_zext(bb_cast, val, val, type);
+        }
+        return status;
+fail:
+        return IRGEN_ERROR(gen, val->node, 
+                "types are incompatible for cast operation");
+}
+
+static void irgen_scalar_integer_promotion(struct irgen_context *gen,
+                                           struct lvalue *val1, 
+                                           struct lvalue *val2)
+{
+        struct scalar_var val1_scalar = ir_lvalue_scalar_get(val1);
+        struct scalar_var val2_scalar = ir_lvalue_scalar_get(val2);
+        enum scalar_type type1 = val1_scalar.type;
+        enum scalar_type type2 = val2_scalar.type;
+        if (type1 == type2)
+                return;
+        _Bool val1_signed = val1_scalar.is_signed;
+        _Bool val2_signed = val2_scalar.is_signed;
+        if (val1_signed == val2_signed) {
+                if (type1 < type2)
+                        irgen_scalar_cast(gen, val1, type2);
+                else
+                        irgen_scalar_cast(gen, val2, type1);
+        } else if (!val1_signed && type1 >= type2) {
+                val2->var.scalar.is_signed = false;
+                irgen_scalar_cast(gen, val2, type1);
+        } else if (!val2_signed && type2 >= type1) {
+                val1->var.scalar.is_signed = false;
+                irgen_scalar_cast(gen, val1, type2);
+        } else if (type1 != type2) {
+                if (type1 < type2) {
+                        val1->var.scalar.is_signed = true;
+                        irgen_scalar_cast(gen, val1, type2);
+                } else {
+                        val2->var.scalar.is_signed = true;
+                        irgen_scalar_cast(gen, val2, type1);
+                }
+        } else {
+                MC_DBG(MC_CRIT, "unexpected case");
+        }
+
+}
+
+mc_status_t irgen_lvalue_or(struct irgen_context *gen, 
+                            struct lvalue *val1, 
+                            struct lvalue *val2)
+{
+        struct lvalue *result = irgen_lvalue_get(gen);
+        mc_status_t status;
+
+        /* Each of the operands shall have integer type */
+        if (!ir_lvalue_is_integer(val1))
+                return IRGEN_ERROR(gen, val1->node, "is not integer type");
+        if (!ir_lvalue_is_integer(val2))
+                return IRGEN_ERROR(gen, val2->node, "is not integer type");
+
+        /* The usual arhthmetic conversions are performed on the operands */
+        irgen_scalar_integer_promotion(gen, val1, val2);
+
+        if (!ir_scalar_type_compatible(ir_lvalue_scalar_get(result), 
+                ir_lvalue_scalar_get(val1))) {
+                return IRGEN_ERROR(gen, result->node, 
+                                "incompatible result type");
+        }
+
+        if (ir_lvalue_const_eval(val1) && ir_lvalue_const_eval(val2)) {
+                status = ir_scalar_or(ir_lvalue_scalar_get(val1), 
+                        ir_lvalue_scalar_get(val2), 
+                        &result->var.scalar);
+                if (!MC_SUCC(status))
+                        goto fail;
+        } else {
+                struct basic_block *bb_jmp = irgen_bb_create(gen, NULL);
+                struct basic_block *bb_jmp_start = bb_jmp;
+                struct basic_block *val_bb;
+
+                if (!ir_lvalue_const_eval(val1)) {
+                        val_bb = ir_lvalue_get_eval(val1);
+                        val_bb = ir_bb_form_final(gen, val_bb);
+                        ir_bb_ctf_uncond(bb_jmp, val_bb);
+                        bb_jmp = val_bb;
+                }
+                if (!ir_lvalue_const_eval(val2)) {
+                        val_bb = ir_lvalue_get_eval(val2);
+                        val_bb = ir_bb_form_final(gen, val_bb);
+                        ir_bb_ctf_uncond(bb_jmp, val_bb);
+                        bb_jmp = val_bb;
+                }
+
+                status = ir_lvalue_or(bb_jmp, val1, val2, result);
+                if (!MC_SUCC(status))
+                        goto fail;
+                irgen_value_set(gen, ir_bb_value(bb_jmp_start));
+                irgen_lvalue_set_eval(gen, result);
+        }
+
+        return MC_OK;
+fail:
+        return IRGEN_ERROR(gen, result->node, 
+                "invalid bitwise or operation");
+}
+
+mc_status_t irgen_lvalue_log_and(struct irgen_context *gen, 
+                                struct lvalue *val1, 
+                                struct lvalue *val2)
+{
+        mc_status_t status = MC_OK;
+
+        struct lvalue *result = irgen_lvalue_get(gen);
+        struct basic_block *bb_val1 = ir_lvalue_get_eval(val1);
+        struct basic_block *bb_val2 = ir_lvalue_get_eval(val2);
+        _Bool val1_false = (bb_val1 == NULL && !ir_scalar_eval_true(val1));
+        _Bool val2_false = (bb_val2 == NULL && !ir_scalar_eval_true(val2));
+
+        if (val1_false || (bb_val1 == NULL && val2_false)) {
+                status = ir_lvalue_const_set(result, ir_scalar_create_int(0));
+                if (!MC_SUCC(status))
+                        goto fail;
+        } else if (bb_val1 == NULL && !val1_false 
+                && bb_val2 == NULL && !val2_false) {
+                status = ir_lvalue_const_set(result, ir_scalar_create_int(1));
+                if (!MC_SUCC(status))
+                        goto fail;
+        } else {
+                struct basic_block *bb_jmp = irgen_bb_create(gen, NULL);
+                struct basic_block *bb_jmp_start = bb_jmp;
+                struct basic_block *bb_val_false = irgen_bb_create(gen, NULL);
+                struct basic_block *bb_true = NULL;
+
+                struct lvalue *val_0 = irgen_scalar_create(gen, 
+                        ir_scalar_create_int(0));
+                status = ir_lvalue_move(bb_val_false, val_0, result);
+                if (!MC_SUCC(status))
+                        goto fail;
+
+                if (!val2_false) {
+                        bb_true = irgen_bb_create(gen, NULL);
+                        struct lvalue *val_1 = irgen_scalar_create(gen, 
+                                ir_scalar_create_int(1));
+                        status = ir_lvalue_move(bb_true, val_1, result);
+                        if (!MC_SUCC(status))
+                                goto fail;
+                }
+
+                if (bb_val1 != NULL) {
+                        /* generate code to calculate val1 */
+                        ir_bb_ctf_uncond(bb_jmp, bb_val1);
+                        struct basic_block *bb_val1_after 
+                                = ir_bb_form_final(gen, bb_val1);
+                        if (bb_true == NULL) {
+                                ir_bb_ctf_uncond(bb_val1_after, bb_val_false);
+                        } else {
+                                ir_bb_ctf(bb_val1_after, bb_true, 
+                                        bb_val_false, val1);
+                        }
+                                
+                        if (bb_val2 != NULL) {
+                                bb_jmp = bb_true;
+                                bb_true = irgen_bb_create(gen, NULL);
+                        }
+                }
+
+                if (bb_val2 != NULL) {
+                        ir_bb_ctf_uncond(bb_jmp, bb_val2);
+                        struct basic_block *bb_val2_after 
+                                = ir_bb_form_final(gen, bb_val2);
+                        ir_bb_ctf(bb_val2_after, bb_true, bb_val_false, val2);
+                }
+
+                irgen_value_set(gen, ir_bb_value(bb_jmp_start));
+                irgen_lvalue_set_eval(gen, result);
+        }
+
+        return status;
+fail:
+        return IRGEN_ERROR(gen, val1->node, "incompatible types");
+}
+
 mc_status_t irgen_lvalue_log_or(struct irgen_context *gen, 
                                 struct lvalue *val1, 
                                 struct lvalue *val2)
@@ -278,24 +519,46 @@ mc_status_t irgen_lvalue_log_or(struct irgen_context *gen,
         _Bool val1_true = (bb_val1 == NULL && ir_scalar_eval_true(val1));
         _Bool val2_true = (bb_val2 == NULL && ir_scalar_eval_true(val2));
 
-        struct lvalue *val_1 = irgen_scalar_create(gen, 
-                        scalar_create_int(1));
-        if (val1_true || val2_true) {
-                status = ir_lvalue_const_move(val_1, result);
+        if (val1_true || (bb_val1 == NULL && val2_true)) {
+                status = ir_lvalue_const_set(result, ir_scalar_create_int(1));
+                if (!MC_SUCC(status))
+                        goto fail;
+        } else if (bb_val1 == NULL && !val1_true 
+                && bb_val2 == NULL && !val2_true) {
+                status = ir_lvalue_const_set(result, ir_scalar_create_int(0));
                 if (!MC_SUCC(status))
                         goto fail;
         } else {
                 struct basic_block *bb_jmp = irgen_bb_create(gen, NULL);
                 struct basic_block *bb_jmp_start = bb_jmp;
                 struct basic_block *bb_val_true = irgen_bb_create(gen, NULL);
-                struct basic_block *bb_false = irgen_bb_create(gen, NULL);
+                struct basic_block *bb_false = NULL;
+
+                struct lvalue *val_1 = irgen_scalar_create(gen, 
+                        ir_scalar_create_int(1));
+                status = ir_lvalue_move(bb_val_true, val_1, result);
+                if (!MC_SUCC(status))
+                        goto fail;
+
+                if (!val2_true) {
+                        bb_false = irgen_bb_create(gen, NULL);
+                        struct lvalue *val_0 = irgen_scalar_create(gen, 
+                                ir_scalar_create_int(0));
+                        status = ir_lvalue_move(bb_false, val_0, result);
+                        if (!MC_SUCC(status))
+                                goto fail;
+                }
 
                 if (bb_val1 != NULL) {
                         /* generate code to calculate val1 */
                         ir_bb_ctf_uncond(bb_jmp, bb_val1);
                         struct basic_block *bb_val1_after 
                                 = ir_bb_form_final(gen, bb_val1);
-                        ir_bb_ctf(bb_val1_after, bb_val_true, bb_false, val1);
+                        if (bb_false == NULL)
+                                ir_bb_ctf_uncond(bb_val1_after, bb_val_true);
+                        else
+                                ir_bb_ctf(bb_val1_after, bb_val_true, 
+                                        bb_false, val1);
                         if (bb_val2 != NULL) {
                                 bb_jmp = bb_false;
                                 bb_false = irgen_bb_create(gen, NULL);
@@ -308,17 +571,6 @@ mc_status_t irgen_lvalue_log_or(struct irgen_context *gen,
                                 = ir_bb_form_final(gen, bb_val1);
                         ir_bb_ctf(bb_val2_after, bb_val_true, bb_false, val2);
                 }
-
-                status = ir_lvalue_move(bb_val_true, val_1, result);
-                if (!MC_SUCC(status))
-                        goto fail;
-
-                struct lvalue *val_0 = irgen_scalar_create(gen, 
-                        scalar_create_int(0));
-
-                status = ir_lvalue_move(bb_false, val_0, result);
-                if (!MC_SUCC(status))
-                        goto fail;
 
                 irgen_value_set(gen, ir_bb_value(bb_jmp_start));
                 irgen_lvalue_set_eval(gen, result);

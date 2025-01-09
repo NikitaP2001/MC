@@ -434,7 +434,7 @@ _Bool pp_lexer_init(struct pp_lexer *pp, struct fs_file *file)
                         status = false;
                 }
         } else {
-                MC_LOG(MC_ERR, "mc global init failed");
+                MC_DBG(MC_ERR, "mc global init failed");
                 status = false;
         }
         return status;

@@ -272,11 +272,11 @@ pp_proc_root(struct pp_context *pp)
                         case pp_text_line:
                                 break;
                         case pp_non_dir:
-                                MC_LOG(MC_ERR, "unsupported directive");
+                                MC_DBG(MC_ERR, "unsupported directive");
                                 pp_print_node(node);
                                 break;
                         default:
-                                MC_LOG(MC_CRIT, "unexpected node type");
+                                MC_DBG(MC_CRIT, "unexpected node type");
                                 break;
                 }
 

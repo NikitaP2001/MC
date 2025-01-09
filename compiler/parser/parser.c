@@ -109,7 +109,7 @@ enum parser_symbol parser_token_tosymbol(struct token *tok)
                 case tok_punctuator:
                         return psym_first_punc + tok->value.var_punc;
                 default:
-                        MC_LOG(MC_CRIT, "unexpected token type");
+                        MC_DBG(MC_CRIT, "unexpected token type");
                         break;
         }
         return psym_invalid;
@@ -2907,7 +2907,7 @@ static mc_status_t parser_jump_statement(struct parser *ps)
                 }
                 default:
                 {
-                        MC_LOG(MC_CRIT, "unexpected jump keyword");
+                        MC_DBG(MC_CRIT, "unexpected jump keyword");
                         break;
                 }
         }

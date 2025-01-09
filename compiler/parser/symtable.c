@@ -72,7 +72,7 @@ enum entry_var_type symtable_get_var_type(union entry_var var)
                 case psym_labeled_statement:
                         return entry_label;
                 default:
-                        MC_LOG(MC_CRIT, "Unexpected var node");
+                        MC_DBG(MC_CRIT, "Unexpected var node");
                         break;
         }
         return entry_invalid;
@@ -150,7 +150,7 @@ static _Bool symtable_label_visible(struct label lbl,
         while (lbl_scope->sym != psym_function_definition && lbl_scope != NULL)
                 lbl_scope = lbl_scope->parent;
         if (lbl_scope == NULL) {
-                MC_LOG(MC_ERR, "label have no function def in parent");
+                MC_DBG(MC_ERR, "label have no function def in parent");
                 return false;
         }
 

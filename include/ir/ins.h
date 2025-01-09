@@ -14,6 +14,44 @@ enum ir_ins_type {
 
         /* cmp <value result>, <value 1>, <value 2> */
         ir_ins_cmp,
+
+        /* Signed value extent to type 
+         * sextN <value result>, <value src>
+         */
+        ir_ins_sext16,
+        ir_ins_sext32,
+        ir_ins_sext64,
+
+        /* Signed value extent to type 
+         * sextN <value result>, <value src>
+         */
+        ir_ins_zext16,
+        ir_ins_zext32,
+        ir_ins_zext64,
+
+        /* Truncate value to type
+         * truncN <value result>, <value src>
+         */
+        ir_ins_trunc8,
+        ir_ins_trunc16,
+        ir_ins_trunc32,
+
+        /* Float value extent to type
+         * fpextN <value result>, <value src>
+         */
+        ir_ins_fpext64,
+        ir_ins_fpext80,
+
+        /* Float value truncate to type
+         * fptruncN <value result>, <value src>
+         */
+        ir_ins_fptrunc32,
+        ir_ins_fptrunc64,
+
+        /* Binary or operation 
+         * or <value result>, <operand 1>, <operand 2> 
+         */
+        ir_ins_or,
 };
 
 struct value;
