@@ -4,8 +4,6 @@
 #include <ir/value.h>
 #include <ir/ins.h>
 
-#define IR_BASIC_BLOCK_LABLE_RADIX 10
-
 static void ir_bb_destroy(struct basic_block *bb);
 
 void ir_value_add_use(struct value *val, struct ir_ins_use *use)
@@ -36,13 +34,12 @@ void ir_value_free(struct hlist_entry *node)
 
 void ir_value_init(struct value *val, const char *prefix, uint32_t index)
 {
-        uint32_t pref_size = 0;
         char *name = val->name;
-        if (prefix != NULL) {
-                pref_size = strlen(prefix);
-                strcat(name, prefix);
-        }
-        ultoa(index, name + pref_size, IR_BASIC_BLOCK_LABLE_RADIX);
+        int len = snprintf(name, IR_VALUE_NAME_MAX, "%s%d", prefix, index);
+        if (len < 0) {
+                MC_DBG(MC_ERR, "form name failed");
+                return;
+        };
         val->uses = calloc(IR_VALUE_USE_COUNT, sizeof(struct ir_ins_use *));
         val->use_capacity = IR_VALUE_USE_COUNT;
         val->use_count = 0;
@@ -215,6 +212,21 @@ mc_status_t ir_lvalue_or(struct basic_block *bb, struct lvalue *val1,
         if (ir_lvalue_scalar_compat(val1, result) 
                 && ir_lvalue_scalar_compat(val2, result)) {
                 struct instruction *ins = ir_bb_add_ins(bb, ir_ins_or);
+                ir_ins_insert_use(ins, &result->val);
+                ir_ins_insert_use(ins, &val1->val);
+                ir_ins_insert_use(ins, &val2->val);
+                status = MC_OK;
+        }
+        return status;
+}
+
+mc_status_t ir_lvalue_xor(struct basic_block *bb, struct lvalue *val1, 
+                          struct lvalue *val2, struct lvalue *result)
+{
+        mc_status_t status = MC_FAIL;
+        if (ir_lvalue_scalar_compat(val1, result) 
+                && ir_lvalue_scalar_compat(val2, result)) {
+                struct instruction *ins = ir_bb_add_ins(bb, ir_ins_xor);
                 ir_ins_insert_use(ins, &result->val);
                 ir_ins_insert_use(ins, &val1->val);
                 ir_ins_insert_use(ins, &val2->val);

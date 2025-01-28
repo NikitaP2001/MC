@@ -7,6 +7,7 @@
 #include <pp.h>
 #include <parser.h>
 #include <token.h>
+#include <ir.h>
 
 struct parser_context {
         struct token *curr;
@@ -71,6 +72,7 @@ int main(int argc, char *argv[])
         struct pp_context pp;
         struct convert_context ctx;
         struct parser ps;
+        struct irgen_context gen;
 
         fs_init(&fs);
         fs_add_local(&fs, "./compiler"); 
@@ -103,6 +105,9 @@ int main(int argc, char *argv[])
         };
         parser_init(&ps, ops, &pctx);
         parser_translation_unit(&ps);
+
+        irgen_init(&gen, &ps);
+        irgen_translation_unit(&gen, parser_translation_unit(&ps));
 
         parser_free(&ps);
 

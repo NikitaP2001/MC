@@ -16,12 +16,43 @@ static mc_status_t irgen_expression(struct irgen_context *gen,
         return MC_FAIL;
 }
 
-static mc_status_t irgen_exclusive_or_expression(struct irgen_context *gen, 
-                                                 struct pt_node *expr)
+static mc_status_t irgen_and_expression(struct irgen_context *gen, 
+                                        struct pt_node *expr)
 {
         UNUSED(gen);
         UNUSED(expr);
         return MC_FAIL;
+}
+
+static mc_status_t irgen_exclusive_or_expression(struct irgen_context *gen, 
+                                                 struct pt_node *expr)
+{
+        mc_status_t status;
+        struct lvalue *result = irgen_lvalue_get(gen);
+
+        struct pt_node *node_and_expr = pt_node_child_last(expr);
+        struct lvalue *and_expr_val = irgen_lvalue_create(gen, node_and_expr);
+        status =  irgen_and_expression(gen, node_and_expr);
+        if (!MC_SUCC(status))
+                return status;
+        assert(and_expr_val->type == lvalue_scalar);
+
+        if (pt_node_child_count(expr) == 2) {
+                struct pt_node *node_xor_expr = pt_node_child_first(expr);
+                struct lvalue *xor_expr_val = irgen_lvalue_create(gen, 
+                        node_xor_expr);
+                status = irgen_exclusive_or_expression(gen, node_xor_expr);
+                if (!MC_SUCC(status))
+                        return status;
+                assert(xor_expr_val->type == lvalue_scalar);
+
+                struct lvalue *expr_val = irgen_lvalue_create(gen, expr);
+                status = irgen_lvalue_xor(gen, and_expr_val, xor_expr_val);
+                and_expr_val = expr_val;
+        }
+        irgen_value_set(gen, &result->val);
+        status = irgen_lvalue_move_single(gen, and_expr_val);
+        return status;
 }
 
 static mc_status_t irgen_inclusive_or_expression(struct irgen_context *gen, 

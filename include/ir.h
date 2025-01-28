@@ -3,6 +3,7 @@
 #include <list.h>
 #include <ir/value.h>
 #include <ir/ins.h>
+#include <ir/gen.h>
 #include <parser/ast.h>
 
 struct module {

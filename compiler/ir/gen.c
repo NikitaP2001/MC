@@ -117,23 +117,24 @@ irgen_const_type_to_scalar(enum constant_type type)
 static void irgen_lvalue_specify_type(struct lvalue *s_val, 
         struct pt_node *lval_node)
 {
-        struct scalar_var scalar;
         enum parser_symbol sym = lval_node->sym;
 
         if (sym == psym_constant_expression
                 || sym == psym_logical_or_expression
                 || sym == psym_logical_and_expression) {
-                s_val->type = lvalue_scalar;
-                scalar.type = s_i32;
-                scalar.is_signed = true;
-                s_val->var.scalar = scalar;
+                struct scalar_var scalar = {
+                        .type = s_i32,
+                        .is_signed = true,
+                };
+                ir_lvalue_scalar_set(s_val, scalar);
         } else if (sym == psym_constant) {
                 struct token *const_tok = lval_node->node_value.value;
                 enum constant_type type = token_constant(const_tok).type;
-                s_val->type = lvalue_scalar;
-                scalar.type = irgen_const_type_to_scalar(type);
-                scalar.is_signed = token_const_is_signed(type);
-                s_val->var.scalar = scalar;
+                struct scalar_var scalar = {
+                        .type = irgen_const_type_to_scalar(type),
+                        .is_signed = token_const_is_signed(type)
+                };
+                ir_lvalue_scalar_set(s_val, scalar);
         }
         s_val->node = lval_node;
 }
@@ -147,10 +148,20 @@ struct lvalue *irgen_lvalue_create(struct irgen_context *gen,
         struct lvalue *s_val = ir_lvalue_create(prefix, 
                 irgen_label_index(gen));
         gen->curr_value = &s_val->val;
-        irgen_lvalue_specify_type(s_val, lval_node);
+        if (lval_node != NULL)
+                irgen_lvalue_specify_type(s_val, lval_node);
         ir_function_value_add(gen->curr_func, gen->curr_value);
         return s_val;
 }
+
+struct lvalue *irgen_scalar_create(struct irgen_context *gen, 
+        struct scalar_var var)
+{
+        struct lvalue *result = irgen_lvalue_create(gen, NULL);
+        ir_lvalue_scalar_set(result, var);
+        return result;
+}
+
 
 /* Return a single block in DAG, all path of @bb will lead to,
  * will insert uncontional jumps, if needed. 
@@ -370,6 +381,65 @@ static void irgen_scalar_integer_promotion(struct irgen_context *gen,
                 MC_DBG(MC_CRIT, "unexpected case");
         }
 
+}
+
+mc_status_t irgen_lvalue_xor(struct irgen_context *gen, 
+                             struct lvalue *val1, 
+                             struct lvalue *val2)
+{
+        struct lvalue *result = irgen_lvalue_get(gen);
+        mc_status_t status;
+
+        /* Each of the operands shall have integer type */
+        if (!ir_lvalue_is_integer(val1))
+                return IRGEN_ERROR(gen, val1->node, "is not integer type");
+        if (!ir_lvalue_is_integer(val2))
+                return IRGEN_ERROR(gen, val2->node, "is not integer type");
+
+        /* The usual arithmetic conversions are performed on the operands */
+        irgen_scalar_integer_promotion(gen, val1, val2);
+
+        if (!ir_scalar_type_compatible(ir_lvalue_scalar_get(result),
+                ir_lvalue_scalar_get(val1))) {
+                return IRGEN_ERROR(gen, result->node,
+                                "incompatible result type");
+        }
+
+        if (ir_lvalue_const_eval(val1) && ir_lvalue_const_eval(val2)) {
+                status = ir_scalar_xor(ir_lvalue_scalar_get(val1),
+                        ir_lvalue_scalar_get(val2),
+                        &result->var.scalar);
+                if (!MC_SUCC(status))
+                        goto fail;
+        } else {
+                struct basic_block *bb_jmp = irgen_bb_create(gen, NULL);
+                struct basic_block *bb_jmp_start = bb_jmp;
+                struct basic_block *val_bb;
+
+                if (!ir_lvalue_const_eval(val1)) {
+                        val_bb = ir_lvalue_get_eval(val1);
+                        val_bb = ir_bb_form_final(gen, val_bb);
+                        ir_bb_ctf_uncond(bb_jmp, val_bb);
+                        bb_jmp = val_bb;
+                }
+                if (!ir_lvalue_const_eval(val2)) {
+                        val_bb = ir_lvalue_get_eval(val2);
+                        val_bb = ir_bb_form_final(gen, val_bb);
+                        ir_bb_ctf_uncond(bb_jmp, val_bb);
+                        bb_jmp = val_bb;
+                }
+
+                status = ir_lvalue_xor(bb_jmp, val1, val2, result);
+                if (!MC_SUCC(status))
+                        goto fail;
+                irgen_value_set(gen, ir_bb_value(bb_jmp_start));
+                irgen_lvalue_set_eval(gen, result);
+        }
+
+        return MC_OK;
+fail:
+        return IRGEN_ERROR(gen, result->node,
+                "invalid bitwise xor operation");
 }
 
 mc_status_t irgen_lvalue_or(struct irgen_context *gen, 

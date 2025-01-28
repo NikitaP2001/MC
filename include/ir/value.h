@@ -212,6 +212,13 @@ static inline struct scalar_var ir_lvalue_scalar_get(struct lvalue *val)
         return val->var.scalar;
 }
 
+static inline void ir_lvalue_scalar_set(struct lvalue *val, struct scalar_var scalar)
+{
+        assert(val->type == lvalue_unspecified || val->type == lvalue_scalar);
+        val->type = lvalue_scalar;
+        val->var.scalar = scalar;
+}
+
 mc_status_t ir_lvalue_const_move(struct lvalue *source, struct lvalue *result);
 
 void ir_lvalue_sext(struct basic_block *bb, struct lvalue *src, 
@@ -222,6 +229,9 @@ void ir_lvalue_zext(struct basic_block *bb, struct lvalue *src,
                         
 mc_status_t ir_lvalue_or(struct basic_block *bb, struct lvalue *val1, 
                   struct lvalue *val2, struct lvalue *result);
+
+mc_status_t ir_lvalue_xor(struct basic_block *bb, struct lvalue *val1, 
+                          struct lvalue *val2, struct lvalue *result);
 
 mc_status_t ir_lvalue_const_set(struct lvalue *dest, struct scalar_var value);
 
@@ -236,7 +246,7 @@ mc_status_t irgen_scalar_const_cast(struct lvalue *val,
 mc_status_t  ir_lvalue_move(struct basic_block *bb, struct lvalue *src, 
         struct lvalue *dest);
 
-_Bool ir_scalar_eval_true(struct lvalue *val)
+static inline _Bool ir_scalar_eval_true(struct lvalue *val)
 {
         assert(val->type == lvalue_scalar);
         assert(false); /* TBD */

@@ -62,9 +62,14 @@ static inline _Bool ir_scalar_type_compatible(struct scalar_var var1,
 
 mc_status_t ir_scalar_const_cast(struct scalar_var *var,
                                  enum scalar_type type);
+
 mc_status_t ir_scalar_or(_IN struct scalar_var var1, 
                          _IN struct scalar_var var2,
                          _OUT struct scalar_var *result);
+
+mc_status_t ir_scalar_xor(_IN struct scalar_var var1, 
+                          _IN struct scalar_var var2,
+                          _OUT struct scalar_var *result);
 
 static inline struct scalar_var ir_scalar_create_int(int value)
 {
