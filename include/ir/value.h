@@ -233,6 +233,9 @@ mc_status_t ir_lvalue_or(struct basic_block *bb, struct lvalue *val1,
 mc_status_t ir_lvalue_xor(struct basic_block *bb, struct lvalue *val1, 
                           struct lvalue *val2, struct lvalue *result);
 
+mc_status_t ir_lvalue_and(struct basic_block *bb, struct lvalue *val1, 
+                          struct lvalue *val2, struct lvalue *result);
+
 mc_status_t ir_lvalue_const_set(struct lvalue *dest, struct scalar_var value);
 
 static inline 

@@ -71,6 +71,10 @@ mc_status_t ir_scalar_xor(_IN struct scalar_var var1,
                           _IN struct scalar_var var2,
                           _OUT struct scalar_var *result);
 
+mc_status_t ir_scalar_and(_IN struct scalar_var var1, 
+                          _IN struct scalar_var var2,
+                          _OUT struct scalar_var *result);
+
 static inline struct scalar_var ir_scalar_create_int(int value)
 {
         struct scalar_var result = {

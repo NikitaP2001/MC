@@ -234,3 +234,18 @@ mc_status_t ir_lvalue_xor(struct basic_block *bb, struct lvalue *val1,
         }
         return status;
 }
+
+mc_status_t ir_lvalue_and(struct basic_block *bb, struct lvalue *val1, 
+                          struct lvalue *val2, struct lvalue *result)
+{
+        mc_status_t status = MC_FAIL;
+        if (ir_lvalue_scalar_compat(val1, result) 
+                && ir_lvalue_scalar_compat(val2, result)) {
+                struct instruction *ins = ir_bb_add_ins(bb, ir_ins_and);
+                ir_ins_insert_use(ins, &result->val);
+                ir_ins_insert_use(ins, &val1->val);
+                ir_ins_insert_use(ins, &val2->val);
+                status = MC_OK;
+        }
+        return status;
+}

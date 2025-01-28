@@ -89,3 +89,15 @@ mc_status_t ir_scalar_xor(_IN struct scalar_var var1,
         ir_scalar_const_sign_ext(result); 
         return MC_OK; 
 }
+
+mc_status_t ir_scalar_and(_IN struct scalar_var var1, 
+                          _IN struct scalar_var var2,
+                          _OUT struct scalar_var *result)
+{
+        if (!ir_scalar_type_compatible(var1, var2) 
+                || !ir_scalar_type_compatible(var1, *result))
+                return MC_FAIL;
+        result->data.var_uint = var1.data.var_uint & var2.data.var_uint;
+        ir_scalar_const_sign_ext(result); 
+        return MC_OK;
+}

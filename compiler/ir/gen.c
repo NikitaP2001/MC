@@ -383,6 +383,65 @@ static void irgen_scalar_integer_promotion(struct irgen_context *gen,
 
 }
 
+mc_status_t irgen_lvalue_and(struct irgen_context *gen, 
+                             struct lvalue *val1, 
+                             struct lvalue *val2)
+{
+        struct lvalue *result = irgen_lvalue_get(gen);
+        mc_status_t status;
+
+        /* Each of the operands shall have integer type */
+        if (!ir_lvalue_is_integer(val1))
+                return IRGEN_ERROR(gen, val1->node, "is not integer type");
+        if (!ir_lvalue_is_integer(val2))
+                return IRGEN_ERROR(gen, val2->node, "is not integer type");
+
+        /* The usual arithmetic conversions are performed on the operands */
+        irgen_scalar_integer_promotion(gen, val1, val2);
+
+        if (!ir_scalar_type_compatible(ir_lvalue_scalar_get(result),
+                ir_lvalue_scalar_get(val1))) {
+                return IRGEN_ERROR(gen, result->node,
+                                "incompatible result type");
+        }
+
+        if (ir_lvalue_const_eval(val1) && ir_lvalue_const_eval(val2)) {
+                status = ir_scalar_and(ir_lvalue_scalar_get(val1),
+                        ir_lvalue_scalar_get(val2),
+                        &result->var.scalar);
+                if (!MC_SUCC(status))
+                        goto fail;
+        } else {
+                struct basic_block *bb_jmp = irgen_bb_create(gen, NULL);
+                struct basic_block *bb_jmp_start = bb_jmp;
+                struct basic_block *val_bb;
+
+                if (!ir_lvalue_const_eval(val1)) {
+                        val_bb = ir_lvalue_get_eval(val1);
+                        val_bb = ir_bb_form_final(gen, val_bb);
+                        ir_bb_ctf_uncond(bb_jmp, val_bb);
+                        bb_jmp = val_bb;
+                }
+                if (!ir_lvalue_const_eval(val2)) {
+                        val_bb = ir_lvalue_get_eval(val2);
+                        val_bb = ir_bb_form_final(gen, val_bb);
+                        ir_bb_ctf_uncond(bb_jmp, val_bb);
+                        bb_jmp = val_bb;
+                }
+
+                status = ir_lvalue_and(bb_jmp, val1, val2, result);
+                if (!MC_SUCC(status))
+                        goto fail;
+                irgen_value_set(gen, ir_bb_value(bb_jmp_start));
+                irgen_lvalue_set_eval(gen, result);
+        }
+
+        return MC_OK;
+fail:
+        return IRGEN_ERROR(gen, result->node,
+                "invalid bitwise and operation");
+}
+
 mc_status_t irgen_lvalue_xor(struct irgen_context *gen, 
                              struct lvalue *val1, 
                              struct lvalue *val2)
