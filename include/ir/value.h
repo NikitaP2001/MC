@@ -140,17 +140,22 @@ ir_lvalue_get(struct value *val)
         return container_of(val, struct lvalue, val);
 }
 
+static inline _Bool ir_lvalue_is_scalar(struct lvalue *val)
+{
+        return (val->type == lvalue_scalar);
+}
+
+/* Integer and floating types are collectively called arithmetic types. */
 static inline _Bool ir_lvalue_is_arithmetic(struct lvalue *val)
 {
-        assert(false);
-        return (val->type == lvalue_scalar);
+        assert(ir_lvalue_is_scalar(val));
+        return ir_scalar_is_arithmetic(val->var.scalar);
 }
 
 static inline _Bool ir_lvalue_is_integer(struct lvalue *val)
 {
         return (ir_lvalue_is_arithmetic(val) 
                 && ir_scalar_is_integer(val->var.scalar));
-
 }
 
 static inline 
@@ -234,6 +239,9 @@ mc_status_t ir_lvalue_xor(struct basic_block *bb, struct lvalue *val1,
                           struct lvalue *val2, struct lvalue *result);
 
 mc_status_t ir_lvalue_and(struct basic_block *bb, struct lvalue *val1, 
+                          struct lvalue *val2, struct lvalue *result);
+
+mc_status_t ir_lvalue_cmp(struct basic_block *bb, struct lvalue *val1, 
                           struct lvalue *val2, struct lvalue *result);
 
 mc_status_t ir_lvalue_const_set(struct lvalue *dest, struct scalar_var value);

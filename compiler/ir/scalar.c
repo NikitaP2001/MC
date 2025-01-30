@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdbool.h>
 #include <limits.h>
 #include <ir/scalar.h>
 
@@ -100,4 +101,21 @@ mc_status_t ir_scalar_and(_IN struct scalar_var var1,
         result->data.var_uint = var1.data.var_uint & var2.data.var_uint;
         ir_scalar_const_sign_ext(result); 
         return MC_OK;
+}
+
+_Bool ir_scalar_const_cmp(struct scalar_var var1, 
+                          struct scalar_var var2)
+{
+        _Bool equal = false;
+        assert(ir_scalar_type_compatible(var1, var2));
+        if (ir_scalar_is_integer(var1)) {
+                if (var1.is_signed)
+                        equal = (var1.data.var_int == var2.data.var_int);
+                else
+                        equal = (var1.data.var_uint == var2.data.var_uint);
+        } else if (ir_scalar_is_float(var1)) {
+                equal = (var1.data.var_long_double 
+                        == var2.data.var_long_double);
+        }
+        return equal;
 }

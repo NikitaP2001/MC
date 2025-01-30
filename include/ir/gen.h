@@ -105,6 +105,10 @@ mc_status_t irgen_lvalue_and(struct irgen_context *gen,
                              struct lvalue *val1, 
                              struct lvalue *val2);
 
+mc_status_t irgen_lvalue_eq(struct irgen_context *gen, 
+                            struct lvalue *val1, 
+                            struct lvalue *val2);
+
 static inline 
 enum ir_value_type 
 irgen_value_type(struct irgen_context *gen)

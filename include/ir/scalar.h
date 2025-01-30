@@ -17,6 +17,8 @@ enum scalar_type {
         s_f32 = scalar_float_first,
         s_f64,
         s_f80,
+
+        s_complex,
         scalar_float_last = s_f80,
 };
 
@@ -49,9 +51,21 @@ static inline _Bool ir_scalar_type_integer(enum scalar_type type)
         return (type >= scalar_integer_first && type <= scalar_integer_last);
 }
 
-static inline _Bool ir_scalar_is_integer(struct scalar_var var1)
+static inline _Bool ir_scalar_is_integer(struct scalar_var var)
 {
-        return ir_scalar_type_integer(var1.type);
+        return ir_scalar_type_integer(var.type);
+}
+
+static inline _Bool ir_scalar_is_float(struct scalar_var var)
+{
+        return (var.type >= scalar_float_first && var.type <= scalar_float_last);
+}
+
+static inline _Bool ir_scalar_is_arithmetic(struct scalar_var var)
+{
+        return ir_scalar_type_integer(var.type) 
+                || (var.type >= scalar_float_first 
+                && var.type <= scalar_float_last); 
 }
 
 static inline _Bool ir_scalar_type_compatible(struct scalar_var var1, 
@@ -59,6 +73,8 @@ static inline _Bool ir_scalar_type_compatible(struct scalar_var var1,
 {
         return (var1.type == var2.type);
 } 
+
+_Bool ir_scalar_const_cmp(struct scalar_var var1, struct scalar_var var2);
 
 mc_status_t ir_scalar_const_cast(struct scalar_var *var,
                                  enum scalar_type type);
