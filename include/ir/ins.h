@@ -12,8 +12,13 @@ enum ir_ins_type {
         /* mov <value dest>, <value src> */
         ir_ins_mov,
 
-        /* cmp <value result>, <value 1>, <value 2> */
-        ir_ins_cmp,
+        /* cmp_xx <value result>, <value 1>, <value 2> */
+        ir_ins_cmp_eq,
+        ir_ins_cmp_ne,
+        ir_ins_cmp_lt,
+        ir_ins_cmp_le,
+        ir_ins_cmp_gt,
+        ir_ins_cmp_ge,
 
         /* Signed value extent to type 
          * sextN <value result>, <value src>

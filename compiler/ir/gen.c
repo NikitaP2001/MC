@@ -734,7 +734,7 @@ mc_status_t irgen_lvalue_eq(struct irgen_context *gen,
                         bb_jmp = val_bb;
                 }
 
-                status = ir_lvalue_cmp(bb_jmp, val1, val2, result);
+                status = ir_lvalue_cmp_eq(bb_jmp, val1, val2, result);
                 if (!MC_SUCC(status))
                         goto fail;
                 irgen_value_set(gen, ir_bb_value(bb_jmp_start));
