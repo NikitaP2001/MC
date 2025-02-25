@@ -691,9 +691,10 @@ fail:
         return IRGEN_ERROR(gen, val1->node, "incompatible types");
 }
 
-mc_status_t irgen_lvalue_eq(struct irgen_context *gen, 
-                            struct lvalue *val1, 
-                            struct lvalue *val2)
+static mc_status_t irgen_lvalue_cmp(struct irgen_context *gen, 
+                                    struct lvalue *val1, 
+                                    struct lvalue *val2,
+                                    enum ir_ins_type cmp_type)
 {
         mc_status_t status = MC_OK;
         struct lvalue *result = irgen_lvalue_get(gen);
@@ -734,7 +735,7 @@ mc_status_t irgen_lvalue_eq(struct irgen_context *gen,
                         bb_jmp = val_bb;
                 }
 
-                status = ir_lvalue_cmp_eq(bb_jmp, val1, val2, result);
+                status = ir_lvalue_cmp(bb_jmp, cmp_type, val1, val2, result);
                 if (!MC_SUCC(status))
                         goto fail;
                 irgen_value_set(gen, ir_bb_value(bb_jmp_start));
@@ -743,4 +744,18 @@ mc_status_t irgen_lvalue_eq(struct irgen_context *gen,
         return status;
 fail:
         return IRGEN_ERROR(gen, val1->node, "incompatible types");
+}
+
+mc_status_t irgen_lvalue_neq(struct irgen_context *gen, 
+                            struct lvalue *val1, 
+                            struct lvalue *val2)
+{
+        return irgen_lvalue_cmp(gen, val1, val2, ir_ins_cmp_ne);
+}
+
+mc_status_t irgen_lvalue_eq(struct irgen_context *gen, 
+                            struct lvalue *val1, 
+                            struct lvalue *val2)
+{
+        return irgen_lvalue_cmp(gen, val1, val2, ir_ins_cmp_eq);
 }

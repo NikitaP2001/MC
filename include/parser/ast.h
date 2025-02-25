@@ -66,30 +66,36 @@ enum parser_symbol pt_node_child_type(struct pt_node *node, uint32_t number);
 
 static inline struct pt_node *pt_node_child_remove(struct pt_node *node)
 {
-        assert(node->childs.size != 0);
+        assert(pt_node_child_count(node) != 0);
         return node->childs.nodes[--node->childs.size];
 }
 
 static inline struct pt_node *pt_node_child_last(struct pt_node *node)
 {
-        if (node->childs.size == 0)
+        if (pt_node_child_count(node) == 0)
                 return NULL;
         return node->childs.nodes[node->childs.size - 1];
 }
 
 static inline struct pt_node *pt_node_child_first(struct pt_node *node)
 {
-        if (node->childs.size == 0)
+        if (pt_node_child_count(node) == 0)
                 return NULL;
         return node->childs.nodes[0];
 }
 
+/* number start from 1 */
 static inline 
 struct pt_node *pt_node_child_number(struct pt_node *node, uint16_t num)
 {
-        if (node->childs.size > num || num == 0)
+        if (pt_node_child_count(node) < num || num == 0)
                 return NULL;
         return node->childs.nodes[num - 1];
+}
+
+static inline _Bool pt_node_sym_cmp(struct pt_node *node, enum parser_symbol sym)
+{
+        return (node->sym == sym);
 }
 
 struct token *ast_declarator_id(struct pt_node *decl);

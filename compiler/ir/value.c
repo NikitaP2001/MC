@@ -250,8 +250,7 @@ mc_status_t ir_lvalue_and(struct basic_block *bb, struct lvalue *val1,
         return status;
 }
 
-static mc_status_t 
-ir_lvalue_cmp(struct basic_block *bb, enum ir_ins_type type, 
+mc_status_t ir_lvalue_cmp(struct basic_block *bb, enum ir_ins_type type, 
         struct lvalue *val1, struct lvalue *val2, struct lvalue *result)
 {
         mc_status_t status = MC_FAIL;
@@ -263,10 +262,4 @@ ir_lvalue_cmp(struct basic_block *bb, enum ir_ins_type type,
                 status = MC_OK;
         }
         return status;
-}
-
-mc_status_t ir_lvalue_cmp_eq(struct basic_block *bb, struct lvalue *val1, 
-                             struct lvalue *val2, struct lvalue *result)
-{
-        return ir_lvalue_cmp(bb, ir_ins_cmp_eq, val1, val2, result);
 }
