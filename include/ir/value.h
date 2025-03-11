@@ -91,7 +91,6 @@ enum lvalue_type {
         lvalue_unspecified,
         lvalue_scalar,
         lvalue_void,
-        lvalue_ptr,
 };
 
 struct lvalue {
@@ -146,6 +145,19 @@ static inline _Bool ir_lvalue_is_scalar(struct lvalue *val)
         return (val->type == lvalue_scalar);
 }
 
+static inline struct scalar_var ir_lvalue_scalar_get(struct lvalue *val)
+{
+        assert(ir_lvalue_is_scalar(val));
+        return val->var.scalar;
+}
+
+static inline void ir_lvalue_scalar_set(struct lvalue *val, struct scalar_var scalar)
+{
+        assert(val->type == lvalue_unspecified || val->type == lvalue_scalar);
+        val->type = lvalue_scalar;
+        val->var.scalar = scalar;
+}
+
 /* Integer and floating types are collectively called arithmetic types. */
 static inline _Bool ir_lvalue_is_arithmetic(struct lvalue *val)
 {
@@ -172,10 +184,20 @@ _Bool ir_lvalue_compat_struct_or_union(struct lvalue *val1,
 static inline 
 _Bool ir_lvalue_is_pointer(struct lvalue *val)
 {
-        return (val->type == lvalue_ptr);
+        return ir_lvalue_is_scalar(val) 
+                && ir_scalar_is_pointer(ir_lvalue_scalar_get(val));
 }
 
-/* pointer to object or incoplete type */
+/* pointer to incoplete type */
+static inline 
+_Bool ir_lvalue_is_ptr_incompl(struct lvalue *val)
+{
+        UNUSED(val);
+        assert(false);
+        return false;
+}
+
+/* pointer to object type */
 static inline 
 _Bool ir_lvalue_is_ptr_obj(struct lvalue *val)
 {
@@ -211,19 +233,6 @@ _Bool ir_lvalue_ptr_compat(struct lvalue *val1,
 }
 
 struct lvalue *ir_lvalue_create(const char *prefix, uint32_t index);
-
-static inline struct scalar_var ir_lvalue_scalar_get(struct lvalue *val)
-{
-        assert(val->type == lvalue_scalar);
-        return val->var.scalar;
-}
-
-static inline void ir_lvalue_scalar_set(struct lvalue *val, struct scalar_var scalar)
-{
-        assert(val->type == lvalue_unspecified || val->type == lvalue_scalar);
-        val->type = lvalue_scalar;
-        val->var.scalar = scalar;
-}
 
 mc_status_t ir_lvalue_const_move(struct lvalue *source, struct lvalue *result);
 

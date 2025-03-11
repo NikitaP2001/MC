@@ -3,7 +3,7 @@
 #include <parser.h>
 
 /* The purpose of this module is to help us identify
- * the type of production ahead, by looking on first of more symbols
+ * the type of production ahead, by looking on first (or more symbols)
  */
 
 #define STRUCT_OR_UNION                         \
@@ -42,10 +42,10 @@
         [PARSER_KEYWORD(keyw_volatile)] = 1,
 
 #define STORAGE_CLASS_SPECIFIER                 \
-        [PARSER_KEYWORD(keyw_typedef)] = 1,       \
-        [PARSER_KEYWORD(keyw_extern)] = 1,       \
-        [PARSER_KEYWORD(keyw_static)] = 1,       \
-        [PARSER_KEYWORD(keyw_auto)] = 1,       \
+        [PARSER_KEYWORD(keyw_typedef)] = 1,     \
+        [PARSER_KEYWORD(keyw_extern)] = 1,      \
+        [PARSER_KEYWORD(keyw_static)] = 1,      \
+        [PARSER_KEYWORD(keyw_auto)] = 1,        \
         [PARSER_KEYWORD(keyw_register)] = 1,
 
 #define FUNCTION_SPECIFIER                      \

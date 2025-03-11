@@ -113,6 +113,75 @@ mc_status_t irgen_lvalue_neq(struct irgen_context *gen,
                             struct lvalue *val1, 
                             struct lvalue *val2);
 
+mc_status_t irgen_lvalue_lt(struct irgen_context *gen, 
+                            struct lvalue *val1, 
+                            struct lvalue *val2);
+
+mc_status_t irgen_lvalue_gt(struct irgen_context *gen, 
+                            struct lvalue *val1, 
+                            struct lvalue *val2);
+
+mc_status_t irgen_lvalue_le(struct irgen_context *gen, 
+                            struct lvalue *val1, 
+                            struct lvalue *val2);
+
+mc_status_t irgen_lvalue_ge(struct irgen_context *gen, 
+                            struct lvalue *val1, 
+                            struct lvalue *val2);
+
+mc_status_t irgen_lvalue_lshift(struct irgen_context *gen, 
+                                struct lvalue *val1, 
+                                struct lvalue *val2);
+
+mc_status_t irgen_lvalue_rshift(struct irgen_context *gen, 
+                                struct lvalue *val1, 
+                                struct lvalue *val2);
+
+mc_status_t irgen_lvalue_add(struct irgen_context *gen, 
+                             struct lvalue *val1, 
+                             struct lvalue *val2);
+
+mc_status_t irgen_lvalue_sub(struct irgen_context *gen, 
+                             struct lvalue *val1, 
+                             struct lvalue *val2);
+
+mc_status_t irgen_lvalue_mul(struct irgen_context *gen, 
+                             struct lvalue *val1, 
+                             struct lvalue *val2);
+
+mc_status_t irgen_lvalue_div(struct irgen_context *gen, 
+                             struct lvalue *val1, 
+                             struct lvalue *val2);
+
+mc_status_t irgen_lvalue_mod(struct irgen_context *gen, 
+                             struct lvalue *val1, 
+                             struct lvalue *val2);
+
+mc_status_t irgen_lvalue_type_cast(struct irgen_context *gen, 
+                                   struct lvalue *val, 
+                                   struct pt_node *type);
+
+mc_status_t irgen_lvalue_sizeof(struct irgen_context *gen, 
+                                struct lvalue *val);
+
+mc_status_t irgen_lvalue_sizeof_tname(struct irgen_context *gen, 
+                                      struct pt_node *tnane);
+
+mc_status_t irgen_lvalue_addr_of(struct irgen_context *gen, 
+                                 struct lvalue *val);
+
+mc_status_t irgen_lvalue_deref(struct irgen_context *gen, 
+                               struct lvalue *val);
+
+mc_status_t irgen_lvalue_neg(struct irgen_context *gen, 
+                             struct lvalue *val);
+
+mc_status_t irgen_lvalue_not(struct irgen_context *gen, 
+                             struct lvalue *val);
+
+mc_status_t irgen_lvalue_log_not(struct irgen_context *gen, 
+                                 struct lvalue *val);
+
 static inline 
 enum ir_value_type 
 irgen_value_type(struct irgen_context *gen)

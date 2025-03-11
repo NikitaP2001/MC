@@ -18,8 +18,9 @@ enum scalar_type {
         s_f64,
         s_f80,
 
-        s_complex,
         scalar_float_last = s_f80,
+        s_complex,
+        s_pointer,
 };
 
 #define IR_SCALAR_S_I1_MASK  1ULL
@@ -63,9 +64,12 @@ static inline _Bool ir_scalar_is_float(struct scalar_var var)
 
 static inline _Bool ir_scalar_is_arithmetic(struct scalar_var var)
 {
-        return ir_scalar_type_integer(var.type) 
-                || (var.type >= scalar_float_first 
-                && var.type <= scalar_float_last); 
+        return ir_scalar_is_integer(var) || ir_scalar_is_float(var); 
+}
+
+static inline _Bool ir_scalar_is_pointer(struct scalar_var var)
+{
+        return (var.type == s_pointer);
 }
 
 static inline _Bool ir_scalar_type_compatible(struct scalar_var var1, 

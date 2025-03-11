@@ -16,6 +16,7 @@ enum mc_status {
         MC_SYNTAX_ERR   = 8,
         MC_FILE_NOT_FOUND = 9,
         MC_PARSE_ERROR = 10,
+        MC_IRGEN_ERROR = 11,
 };
 
 typedef enum mc_status mc_status_t;

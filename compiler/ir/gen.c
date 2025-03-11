@@ -114,14 +114,20 @@ irgen_const_type_to_scalar(enum constant_type type)
         }
 }
 
+#define IRGEN_INTEGER_EXPRESSION                \
+        [psym_constant_expression] = 1,         \
+        [psym_logical_or_expression] = 1,       \
+        [psym_logical_and_expression] = 1,      \
+        [psym_equality_expression] = 1,         \
+        [psym_relational_expression] = 1,       \
+
 static void irgen_lvalue_specify_type(struct lvalue *s_val, 
         struct pt_node *lval_node)
 {
         enum parser_symbol sym = lval_node->sym;
+        static const uint8_t int_expr[] = { IRGEN_INTEGER_EXPRESSION };
 
-        if (sym == psym_constant_expression
-                || sym == psym_logical_or_expression
-                || sym == psym_logical_and_expression) {
+        if (int_expr[sym]) {
                 struct scalar_var scalar = {
                         .type = s_i32,
                         .is_signed = true,
@@ -135,6 +141,8 @@ static void irgen_lvalue_specify_type(struct lvalue *s_val,
                         .is_signed = token_const_is_signed(type)
                 };
                 ir_lvalue_scalar_set(s_val, scalar);
+        } else if (sym == psym_type_name) {
+                assert(false);
         }
         s_val->node = lval_node;
 }
@@ -758,4 +766,32 @@ mc_status_t irgen_lvalue_eq(struct irgen_context *gen,
                             struct lvalue *val2)
 {
         return irgen_lvalue_cmp(gen, val1, val2, ir_ins_cmp_eq);
+}
+
+mc_status_t irgen_lvalue_lt(struct irgen_context *gen, 
+                            struct lvalue *val1, 
+                            struct lvalue *val2)
+{
+        return irgen_lvalue_cmp(gen, val1, val2, ir_ins_cmp_lt); 
+}
+
+mc_status_t irgen_lvalue_gt(struct irgen_context *gen, 
+                            struct lvalue *val1, 
+                            struct lvalue *val2)
+{
+        return irgen_lvalue_cmp(gen, val1, val2, ir_ins_cmp_gt);
+}
+
+mc_status_t irgen_lvalue_le(struct irgen_context *gen, 
+                            struct lvalue *val1, 
+                            struct lvalue *val2)
+{
+        return irgen_lvalue_cmp(gen, val1, val2, ir_ins_cmp_le);
+}
+
+mc_status_t irgen_lvalue_ge(struct irgen_context *gen, 
+                            struct lvalue *val1, 
+                            struct lvalue *val2)
+{
+        return irgen_lvalue_cmp(gen, val1, val2, ir_ins_cmp_ge);
 }
