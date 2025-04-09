@@ -3237,7 +3237,11 @@ static mc_status_t parser_declaration(struct parser *ps)
                         goto fail;
                 }
                 pt_node_child_add(decl, parser_stack_pop(ps));
-
+                /* add new type from declarations specs if any */
+                status = symtable_add_declaration(&ps->type_tbl, 
+                        pt_node_child_last(decl));
+                if (!MC_SUCC(status))
+                        goto fail;
                 if (decl_first[parser_fetch_symbol(ps)]) {
                         status = parser_declarator(ps);
                         if (!MC_SUCC(status)) {
@@ -3399,6 +3403,7 @@ void parser_init(struct parser *ps, struct parser_ops ops, void *user_data)
                 .free = symtable_free,
         };
         hash_init(&ps->id_tbl, hops);
+        hash_init(&ps->type_tbl, hops);
 }
 
 void parser_free(struct parser *ps)

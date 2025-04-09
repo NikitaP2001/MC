@@ -26,7 +26,9 @@ struct irgen_context {
 #define IRGEN_ERROR(gen, node, message)                               \
         gen->error(node, message)
 
-struct declaration *irgen_get_declaration(struct irgen_context *gen);
+struct declaration *irgen_get_declaration(struct irgen_context *gen, 
+                                          struct token *id,
+                                          struct pt_node *scope);
 
 struct switch_label_entry {
         /* we heve block - we know where to jump, we have

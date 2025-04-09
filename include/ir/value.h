@@ -90,6 +90,7 @@ enum lvalue_type {
         /* this is default abstract state */
         lvalue_unspecified,
         lvalue_scalar,
+        lvalue_object,
         lvalue_void,
 };
 

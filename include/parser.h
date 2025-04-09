@@ -26,6 +26,7 @@ struct parser {
         struct parser_ops ops;
         void *data; /* some user provided data, is passed to ops */
         struct hash_table id_tbl;
+        struct hash_table type_tbl;
 };
 
 struct pt_node *parser_translation_unit(struct parser *ps);

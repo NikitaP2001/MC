@@ -50,7 +50,7 @@ struct label *symtable_get_label(struct hash_table *tbl,
                                  struct pt_node *scope);
 
 mc_status_t symtable_add_declaration(struct hash_table *ht,
-                                     struct pt_node *declaration);
+                                     struct pt_node *decl_node);
 
 mc_status_t symtable_add_label(struct hash_table *ht, 
                                struct pt_node *label);

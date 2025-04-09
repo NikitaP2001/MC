@@ -212,8 +212,8 @@ struct label *symtable_get_label(struct hash_table *tbl,
         return NULL;
 }
 
-mc_status_t symtable_add_declaration(struct hash_table *ht,
-                                     struct pt_node *declaration)
+static mc_status_t symtable_add_declaration_id(struct hash_table *ht,
+                                               struct pt_node *declaration)
 {
         struct pt_node *init_lst = pt_node_child_last(declaration);
         struct pt_node *decl_spec = pt_node_child_first(declaration);
@@ -242,6 +242,33 @@ mc_status_t symtable_add_declaration(struct hash_table *ht,
                 symtable_add(ht, var);
         }
         return MC_OK;
+}
+
+static mc_status_t symtable_add_declaration_type(struct hash_table *ht,
+                                                 struct pt_node *decl_spec)
+{
+        UNUSED(ht);
+        mc_status_t status = MC_OK;
+        uint16_t child_count = pt_node_child_count(decl_spec);
+        assert(decl_spec->sym == psym_declaration_specifiers);
+
+        for (uint16_t i_node = 1; i_node <= child_count; i_node++) {
+                struct pt_node *curr = pt_node_child_number(decl_spec, i_node);
+                if (curr->sym == psym_storage_class_specifier) {
+
+                }
+        }
+        assert(false);
+        return status;
+}
+
+mc_status_t symtable_add_declaration(struct hash_table *ht,
+                                     struct pt_node *decl_node)
+{
+        if (decl_node->sym == psym_declaration)
+                return symtable_add_declaration_id(ht, decl_node);
+        else
+                return symtable_add_declaration_type(ht, decl_node);
 }
 
 mc_status_t symtable_add_label(struct hash_table *ht,

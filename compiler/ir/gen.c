@@ -1,10 +1,11 @@
 #include <ir/gen.h>
 
+/*
 struct declaration *irgen_get_declaration(struct irgen_context *gen)
 {
-        UNUSED(gen);
-        return NULL;
+        return symtable_get_declaration(&gen->parser->id_tbl, id, scope);
 }
+*/
 
 struct label *irgen_get_label(struct irgen_context *gen, struct pt_node *scope)
 {
@@ -794,4 +795,140 @@ mc_status_t irgen_lvalue_ge(struct irgen_context *gen,
                             struct lvalue *val2)
 {
         return irgen_lvalue_cmp(gen, val1, val2, ir_ins_cmp_ge);
+}
+
+mc_status_t irgen_lvalue_lshift(struct irgen_context *gen,
+                                struct lvalue *val1,
+                                struct lvalue *val2)
+{
+        UNUSED(gen);
+        UNUSED(val1);
+        UNUSED(val2);
+        return MC_OK;
+}
+
+mc_status_t irgen_lvalue_rshift(struct irgen_context *gen,
+                                struct lvalue *val1,
+                                struct lvalue *val2)
+{
+        UNUSED(gen);
+        UNUSED(val1);
+        UNUSED(val2);
+        return MC_OK;
+}
+
+mc_status_t irgen_lvalue_add(struct irgen_context *gen,
+                             struct lvalue *val1,
+                             struct lvalue *val2)
+{
+        UNUSED(gen);
+        UNUSED(val1);
+        UNUSED(val2);
+        return MC_OK;
+}
+
+mc_status_t irgen_lvalue_sub(struct irgen_context *gen,
+                             struct lvalue *val1,
+                             struct lvalue *val2)
+{
+        UNUSED(gen);
+        UNUSED(val1);
+        UNUSED(val2);
+        return MC_OK;
+}
+
+mc_status_t irgen_lvalue_mul(struct irgen_context *gen,
+                             struct lvalue *val1,
+                             struct lvalue *val2)
+{
+        UNUSED(gen);
+        UNUSED(val1);
+        UNUSED(val2);
+        return MC_OK;
+}
+
+mc_status_t irgen_lvalue_div(struct irgen_context *gen,
+                             struct lvalue *val1,
+                             struct lvalue *val2)
+{
+        UNUSED(gen);
+        UNUSED(val1);
+        UNUSED(val2);
+        return MC_OK;
+}
+
+mc_status_t irgen_lvalue_mod(struct irgen_context *gen,
+                             struct lvalue *val1,
+                             struct lvalue *val2)
+{
+        UNUSED(gen);
+        UNUSED(val1);
+        UNUSED(val2);
+        return MC_OK;
+}
+
+mc_status_t irgen_lvalue_type_cast(struct irgen_context *gen,
+                                   struct lvalue *val,
+                                   struct pt_node *type)
+{
+        UNUSED(gen);
+        UNUSED(val);
+        UNUSED(type);
+        return MC_OK;
+}
+
+mc_status_t irgen_lvalue_sizeof(struct irgen_context *gen,
+                                struct lvalue *val)
+{
+        UNUSED(gen);
+        UNUSED(val);
+        return MC_OK;
+}
+
+mc_status_t irgen_lvalue_sizeof_tname(struct irgen_context *gen,
+                                      struct pt_node *tname)
+{
+        UNUSED(gen);
+        UNUSED(tname);
+        return MC_OK;
+}
+
+mc_status_t irgen_lvalue_addr_of(struct irgen_context *gen,
+                                 struct lvalue *val)
+{
+        UNUSED(gen);
+        UNUSED(val);
+        return MC_OK;
+}
+
+mc_status_t irgen_lvalue_deref(struct irgen_context *gen,
+                               struct lvalue *val)
+{
+        UNUSED(gen);
+        UNUSED(val);
+        return MC_OK;
+}
+
+mc_status_t irgen_lvalue_neg(struct irgen_context *gen,
+                             struct lvalue *val)
+{
+        UNUSED(gen);
+        UNUSED(val);
+        return MC_OK;
+}
+
+mc_status_t irgen_lvalue_not(struct irgen_context *gen,
+                             struct lvalue *val)
+{
+        UNUSED(gen);
+        UNUSED(val);
+        return MC_OK;
+}
+
+mc_status_t irgen_lvalue_log_not(struct irgen_context *gen,
+                                 struct lvalue *val)
+{
+        UNUSED(gen);
+        UNUSED(val);
+        return MC_OK;
 }
