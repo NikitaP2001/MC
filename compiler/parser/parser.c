@@ -153,7 +153,7 @@ parser_fetch_symbol(struct parser *ps)
 static inline _Bool parser_is_typedef(struct parser *ps, 
                                       struct token *id)
 {
-        struct declaration *decl = symtable_get_declaration(&ps->id_tbl, 
+        struct declaration *decl = symtable_get_declaration(&ps->sym_tbl, 
                 id, parser_stack_top(ps));
 
         if (decl != NULL)
@@ -2988,7 +2988,7 @@ static mc_status_t parser_statement(struct parser *ps)
                         goto fail;
                 }
                 pt_node_child_add(stmt , parser_stack_pop(ps));
-                symtable_add_label(&ps->id_tbl, pt_node_child_last(stmt));
+                symtable_add_label(&ps->sym_tbl, pt_node_child_last(stmt));
         }
         assert(parser_stack_topsym(ps) == psym_statement);
 
@@ -3237,11 +3237,6 @@ static mc_status_t parser_declaration(struct parser *ps)
                         goto fail;
                 }
                 pt_node_child_add(decl, parser_stack_pop(ps));
-                /* add new type from declarations specs if any */
-                status = symtable_add_declaration(&ps->type_tbl, 
-                        pt_node_child_last(decl));
-                if (!MC_SUCC(status))
-                        goto fail;
                 if (decl_first[parser_fetch_symbol(ps)]) {
                         status = parser_declarator(ps);
                         if (!MC_SUCC(status)) {
@@ -3266,9 +3261,6 @@ static mc_status_t parser_declaration(struct parser *ps)
                         goto fail;
                 }
                 pt_node_child_add(decl, parser_stack_pop(ps));
-                status = symtable_add_declaration(&ps->id_tbl, decl);
-                if (!MC_SUCC(status))
-                        goto fail;
                 old_lk = parser_lookahead_swap(ps, old_lk);
                 assert(old_lk == NULL);
         }
@@ -3279,6 +3271,9 @@ static mc_status_t parser_declaration(struct parser *ps)
         }
         parser_pull_token(ps);
         assert(parser_stack_topsym(ps) == psym_declaration);
+        status = symtable_add_declaration(&ps->sym_tbl, decl);
+        if (!MC_SUCC(status))
+                goto fail;
 
         return MC_OK;
 fail:
@@ -3398,16 +3393,11 @@ void parser_init(struct parser *ps, struct parser_ops ops, void *user_data)
         ps->ops = ops;
         ps->data = user_data;
         parser_stack_init(ps);
-        struct hash_table_ops hops = {
-                .get_key = symtable_hash,
-                .free = symtable_free,
-        };
-        hash_init(&ps->id_tbl, hops);
-        hash_init(&ps->type_tbl, hops);
+        symtable_init(&ps->sym_tbl); 
 }
 
 void parser_free(struct parser *ps)
 {
         parser_stack_free(ps);
-        hash_free(&ps->id_tbl);
+        symtable_free(&ps->sym_tbl);
 }

@@ -2,8 +2,9 @@
 #define _PARSE_TREE_H_
 #include <stdint.h>
 #include <stdlib.h>
+#include <assert.h>
 
-#include <parser.h>
+#include <parser/symbol.h>
 
 #define PT_CHILD_NODES_CAPACITY 5
 

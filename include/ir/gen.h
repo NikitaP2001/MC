@@ -1,7 +1,7 @@
 #ifndef _AST_IRGEN_H_
 #define _AST_IRGEN_H_
 #include <stack.h>
-#include <parser/ast.h>
+#include <parser.h>
 #include <ir.h>
 
 #define IRGEN_STACK_CAPACITY 10

@@ -2,6 +2,7 @@
 #include <ir/gen.h>
 #include <ir.h>
 #include <parser/ast.h>
+#include <parser/symtable.h>
 
 static mc_status_t irgen_compound_statement(struct irgen_context *gen, 
                                             struct pt_node *comp_stmt);

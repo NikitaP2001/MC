@@ -37,22 +37,28 @@ struct symbol_table_entry {
         union entry_var variant;
 };
 
-hash_key_t symtable_hash(struct hlist_entry *node);
+struct symtable {
+        struct hash_table id_tbl;
+        struct hash_table type_tbl;
+};
 
-void symtable_free(struct hlist_entry *node);
+void symtable_init(struct symtable *table);
 
-struct declaration *symtable_get_declaration(struct hash_table *tbl, 
-                                             struct token *id, 
+void symtable_free(struct symtable *table);
+
+struct declaration *symtable_get_declaration(struct symtable *sym_tbl,
+                                             struct token *id,
                                              struct pt_node *scope);
 
-struct label *symtable_get_label(struct hash_table *tbl, 
+struct label *symtable_get_label(struct symtable *sym_tbl,
                                  struct token *id, 
                                  struct pt_node *scope);
 
-mc_status_t symtable_add_declaration(struct hash_table *ht,
-                                     struct pt_node *decl_node);
+mc_status_t symtable_add_declaration(struct symtable *sym_tbl,
+                                     struct pt_node *decl);
 
-mc_status_t symtable_add_label(struct hash_table *ht, 
+mc_status_t symtable_add_label(struct symtable *sym_tbl,
                                struct pt_node *label);
+
 
 #endif /* _SYMTABLE_H_ */

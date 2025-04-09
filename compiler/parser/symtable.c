@@ -39,14 +39,30 @@ symtable_hlist_entry(struct hlist_entry *node)
         return container_of(node, struct symbol_table_entry, hlist);
 }
 
-hash_key_t symtable_hash(struct hlist_entry *node)
+static hash_key_t symtable_hash(struct hlist_entry *node)
 {
         return symtable_hlist_entry(node)->hash;
 }
 
-void symtable_free(struct hlist_entry *node)
+static void table_free(struct hlist_entry *node)
 {
         free(symtable_hlist_entry(node));
+}
+
+void symtable_init(struct symtable *table)
+{
+        struct hash_table_ops hops = {
+                .get_key = symtable_hash,
+                .free = table_free,
+        };
+        hash_init(&table->id_tbl, hops);
+        hash_init(&table->type_tbl, hops);
+}
+
+void symtable_free(struct symtable *table)
+{
+        hash_free(&table->id_tbl);
+        hash_free(&table->type_tbl);
 }
 
 /* from init declarator extract associated identifier */
@@ -164,10 +180,11 @@ static _Bool symtable_label_visible(struct label lbl,
 }
 
 
-struct declaration *symtable_get_declaration(struct hash_table *tbl, 
+struct declaration *symtable_get_declaration(struct symtable *sym_tbl,
                                              struct token *id, 
                                              struct pt_node *scope)
 {
+        struct hash_table *tbl = &sym_tbl->id_tbl;
         assert(id->type == tok_identifier);
         hash_key_t key = symtable_token_hash(id);
         HASH_FOREACH_ENTRY(tbl, key) {
@@ -188,10 +205,11 @@ struct declaration *symtable_get_declaration(struct hash_table *tbl,
         return NULL;
 }
 
-struct label *symtable_get_label(struct hash_table *tbl, 
+struct label *symtable_get_label(struct symtable *sym_tbl,
                                  struct token *id, 
                                  struct pt_node *scope)
 {
+        struct hash_table *tbl = &sym_tbl->id_tbl;
         assert(id->type == tok_identifier);
         hash_key_t key = symtable_token_hash(id);
         HASH_FOREACH_ENTRY(tbl, key) {
@@ -212,22 +230,48 @@ struct label *symtable_get_label(struct hash_table *tbl,
         return NULL;
 }
 
-static mc_status_t symtable_add_declaration_id(struct hash_table *ht,
-                                               struct pt_node *declaration)
+static mc_status_t symtable_add_declaration_type(struct hash_table *ht,
+                                                 struct pt_node *decl_spec)
 {
-        struct pt_node *init_lst = pt_node_child_last(declaration);
-        struct pt_node *decl_spec = pt_node_child_first(declaration);
+        UNUSED(ht);
+        UNUSED(decl_spec);
+        mc_status_t status = MC_OK;
+        /*
+        uint16_t child_count = pt_node_child_count(decl_spec);
 
-        assert(declaration->sym == psym_declaration);
-        /* we will be unable to identify scope */
-        assert(declaration->parent != NULL);
-        /* init declarator list is optional*/
+        for (uint16_t i_node = 1; i_node <= child_count; i_node++) {
+                struct pt_node *curr = pt_node_child_number(decl_spec, i_node);
+                if (curr->sym == psym_storage_class_specifier) {
+
+                }
+        }
+        assert(false);
+        */
+        return status;
+}
+
+mc_status_t symtable_add_declaration(struct symtable *sym_tbl,
+                                     struct pt_node *decl)
+{
+        mc_status_t status = MC_OK;
+        assert(decl->sym == psym_declaration);
+        struct pt_node *init_lst = pt_node_child_last(decl);
+        struct pt_node *decl_spec = pt_node_child_first(decl);
+
+        status = symtable_add_declaration_type(&sym_tbl->type_tbl, decl);
+        if (status != MC_OK)
+                return status;
+
         if (init_lst->sym == psym_declaration_specifiers)
                 return MC_OK;
 
+        /* we will be unable to identify scope */
+        assert(decl->parent != NULL);
+
         AST_FOREACH_CHILD(init_lst) {
                 struct pt_node *init_decl = (struct pt_node *)entry;
-
+                /* TODO: decl spec node should be replace with 
+                 * type info parsed in add_decl_type */
                 union entry_var var = {
                         .decl = {
                                 .decl_specs = decl_spec,
@@ -238,42 +282,17 @@ static mc_status_t symtable_add_declaration_id(struct hash_table *ht,
                  * 1. check 6.7p2 no more than one declaration of the 
                  * identifier with the same scope and in the same name 
                  * space and other..
-                 * 2. Add also enums and structs declarations from specifiers  */
-                symtable_add(ht, var);
+                 * 2. Add also enums and structs declarations from specifiers */
+                symtable_add(&sym_tbl->id_tbl, var);
         }
+
         return MC_OK;
 }
 
-static mc_status_t symtable_add_declaration_type(struct hash_table *ht,
-                                                 struct pt_node *decl_spec)
-{
-        UNUSED(ht);
-        mc_status_t status = MC_OK;
-        uint16_t child_count = pt_node_child_count(decl_spec);
-        assert(decl_spec->sym == psym_declaration_specifiers);
-
-        for (uint16_t i_node = 1; i_node <= child_count; i_node++) {
-                struct pt_node *curr = pt_node_child_number(decl_spec, i_node);
-                if (curr->sym == psym_storage_class_specifier) {
-
-                }
-        }
-        assert(false);
-        return status;
-}
-
-mc_status_t symtable_add_declaration(struct hash_table *ht,
-                                     struct pt_node *decl_node)
-{
-        if (decl_node->sym == psym_declaration)
-                return symtable_add_declaration_id(ht, decl_node);
-        else
-                return symtable_add_declaration_type(ht, decl_node);
-}
-
-mc_status_t symtable_add_label(struct hash_table *ht,
+mc_status_t symtable_add_label(struct symtable *sym_tbl,
                                struct pt_node *label)
-{
+{       
+        struct hash_table *ht = &sym_tbl->id_tbl;
         assert(label->sym == psym_labeled_statement);
         struct token *id_label = symtable_label_id(label);
         if (id_label->type != tok_identifier)

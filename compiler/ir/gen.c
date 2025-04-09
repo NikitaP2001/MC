@@ -1,3 +1,4 @@
+#include <parser/symtable.h>
 #include <ir/gen.h>
 
 /*
@@ -20,7 +21,7 @@ struct label *irgen_get_label(struct irgen_context *gen, struct pt_node *scope)
         else
                 assert(false);
         id = label->node_value.value;
-        return symtable_get_label(&gen->parser->id_tbl, id, scope);
+        return symtable_get_label(&gen->parser->sym_tbl, id, scope);
 }
 
 void irgen_init(struct irgen_context *gen, struct parser *ps)

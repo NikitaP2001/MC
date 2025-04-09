@@ -1,4 +1,4 @@
-#include <parser/ast.h>
+#include <parser.h>
 
 static void pt_node_child_init(struct pt_child_nodes *child)
 {
