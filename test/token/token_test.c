@@ -676,4 +676,5 @@ int main()
      TEST_RUN(token, concat_strlit);
      TEST_RUN(token, concat_wstrlit);
      mc_free();
+     return TEST_RESULT;
 }

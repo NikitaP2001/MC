@@ -189,4 +189,5 @@ int main(int argc, char *argv[])
      TEST_RUN(parser, struct_empty_invalid);
 
      mc_free();
+     return TEST_RESULT;
 }

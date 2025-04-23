@@ -289,7 +289,7 @@ TEST_CASE(lexer, comment_line_end)
         remove(TFILE_NAME);
 }
 
-void run_pp_lexer()
+int run_pp_lexer()
 {
         mc_init(0, NULL);
         TEST_RUN(lexer, header_name);
@@ -302,4 +302,5 @@ void run_pp_lexer()
         TEST_RUN(lexer, comment_line_end);
 
         mc_free();
+        return TEST_RESULT;
 }

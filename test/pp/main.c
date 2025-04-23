@@ -1,10 +1,12 @@
-void run_pp_lexer();
-void run_pp_parser();
-void run_pp_node();
+int run_pp_lexer();
+int run_pp_parser();
+int run_pp_node();
 
 int main()
 {
-        run_pp_lexer();
-        run_pp_parser();
-        run_pp_node();
+        int result = 0;
+        result |= run_pp_lexer();
+        result |= run_pp_parser();
+        result |= run_pp_node();
+        return result;
 }

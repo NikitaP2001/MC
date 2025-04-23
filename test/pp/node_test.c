@@ -115,9 +115,10 @@ TEST_CASE(pp_node, insert_macro)
 }
 
 
-void run_pp_node()
+int run_pp_node()
 {
         mc_init(0, NULL);
         TEST_RUN(pp_node, insert_macro);
         mc_free();
+        return TEST_RESULT;
 }

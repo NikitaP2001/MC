@@ -214,16 +214,18 @@ static inline const char *token_punc_to_str(enum punc_type type)
         return token_punctuators[type];
 }
 
+struct token_value_raw {
+        char *value;
+        file_size_t length;
+        _Bool is_alloc;
+};
+
 union token_value {
 
         enum keyword_type var_keyw;
         enum punc_type var_punc;
 
-        struct {
-                char *value;
-                file_size_t length;
-                _Bool is_alloc;
-        } var_raw;
+        struct token_value_raw var_raw;
 
         struct constant_value var_const;
         
@@ -258,6 +260,18 @@ void token_global_init();
 void token_global_free();
 
 void token_print(struct token *tok);
+
+static inline const char *token_get_strlit(struct token *tok)
+{
+        assert(tok->type == tok_strlit);
+        return tok->value.var_raw.value;
+}
+
+static inline file_size_t token_get_strlit_length(struct token *tok)
+{
+        assert(tok->type == tok_strlit);
+        return tok->value.var_raw.length;
+}       
 
 static inline int token_compare(struct token *first, struct token *second)
 {

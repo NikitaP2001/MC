@@ -169,11 +169,12 @@ TEST_CASE(pp_parser, macro_if_elif)
         pp_parser_test_free(&lex, &fs);
 }
 
-void run_pp_parser()
+int run_pp_parser()
 {
         mc_init(0, NULL);
         TEST_RUN(pp_parser, multiline_macro);
         TEST_RUN(pp_parser, macro_if_elif);
         TEST_RUN(pp_parser, func_def);
         mc_free();
+        return TEST_RESULT;
 }

@@ -193,4 +193,5 @@ int main()
         TEST_RUN(fs, two_global_dirs);
         TEST_RUN(fs, get_file_global);
         TEST_RUN(fs, get_file_notexist);
+        return TEST_RESULT;
 }

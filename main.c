@@ -104,10 +104,18 @@ int main(int argc, char *argv[])
                 .error = error_handler,
         };
         parser_init(&ps, ops, &pctx);
-        parser_translation_unit(&ps);
+        struct pt_node *unit = parser_translation_unit(&ps);
 
         irgen_init(&gen, &ps);
-        irgen_translation_unit(&gen, parser_translation_unit(&ps));
+        assert(pt_node_sym_cmp(unit, psym_translation_unit));
+        AST_FOREACH_CHILD(unit) {
+                struct pt_node *ext_decl = (struct pt_node *)entry;
+                status = gen.ops->external_declaration(&gen, ext_decl);
+                if (!MC_SUCC(status)) {
+                        MC_DBG(MC_ERR, "ir generation failed");
+                        break;
+                }
+        }
 
         parser_free(&ps);
 

@@ -6,8 +6,10 @@
 
 static mc_status_t irgen_compound_statement(struct irgen_context *gen, 
                                             struct pt_node *comp_stmt);
+
 static mc_status_t irgen_statement(struct irgen_context *gen, 
                                    struct pt_node *stmt);
+
 static mc_status_t irgen_cast_expression(struct irgen_context *gen, 
                                          struct pt_node *stmt);
 
@@ -19,12 +21,106 @@ static mc_status_t irgen_expression(struct irgen_context *gen,
         return MC_FAIL;
 }
 
-static mc_status_t irgen_postfix_expression(struct irgen_context *gen, 
+static mc_status_t irgen_primary_expression(struct irgen_context *gen,
                                             struct pt_node *stmt)
+{
+        mc_status_t status = MC_FAIL;
+        struct ir_object *result = NULL;
+        struct pt_node *curr_node = pt_node_child_first(stmt);
+        if (pt_node_sym_cmp(curr_node, psym_identifier)) {
+
+                /*
+                struct *value  = irgen
+                */
+        }
+        irgen_value_set(gen, &result->val);
+        return status;
+}
+
+static mc_status_t irgen_initializer_list(struct irgen_context *gen,
+                                          struct pt_node *stmt)
 {
         UNUSED(gen);
         UNUSED(stmt);
         return MC_FAIL;
+}
+
+static mc_status_t irgen_argument_expression_list(struct irgen_context *gen,
+                                                  struct ir_object *func,
+                                                  struct pt_node *arg_list)
+{
+        /* perform the function call */
+        UNUSED(gen);
+        UNUSED(func);
+        UNUSED(arg_list);
+        return MC_FAIL;
+}
+
+static mc_status_t irgen_postfix_expression(struct irgen_context *gen, 
+                                            struct pt_node *stmt)
+{
+        mc_status_t status;
+        uint16_t child_count = pt_node_child_count(stmt);
+        uint16_t i_node = 1;
+        struct ir_object *result = irgen_obj_get(gen);
+        struct pt_node *curr_node = pt_node_child_first(stmt);
+        struct pt_node *id;
+        struct ir_object *curr_val;
+        struct ir_object *old_val;
+
+        if (pt_node_sym_cmp(curr_node, psym_primary_expression)) {
+                status = irgen_primary_expression(gen, curr_node);
+                curr_val = irgen_obj_create(gen, curr_node);
+        } else { 
+                curr_val = irgen_obj_create(gen, curr_node);
+                assert(pt_node_sym_cmp(curr_node, psym_type_name));
+                curr_node = pt_node_child_number(stmt, ++i_node);
+                status = irgen_initializer_list(gen, curr_node);
+        }
+        if (!MC_SUCC(status))
+                return status;
+
+        for (++i_node; i_node <= child_count; i_node++) {
+                curr_node = pt_node_child_number(stmt, i_node);
+                if (pt_node_sym_cmp(curr_node, psym_expression)) {
+                        struct ir_object *index = irgen_obj_create(gen, curr_node);
+                        status = irgen_expression(gen, curr_node);
+                        if (!MC_SUCC(status))
+                                return status;
+                        irgen_value_set(gen, &curr_val->val); 
+                        status = irgen_obj_array_index(gen, curr_val, index);
+                } else if (pt_node_sym_cmp(curr_node, psym_argument_expression_list)) {
+                        status = irgen_argument_expression_list(gen, 
+                                curr_val, curr_node);
+                } else if (pt_node_sym_cmp(curr_node, 
+                        PARSER_PUNCTUATOR(punc_right_arrow))) {
+                        assert(i_node + 1 <= child_count);
+                        id = pt_node_child_number(stmt, i_node + 1);
+                        status = irgen_obj_struct_ptr_op(gen, curr_val, id);
+                } else if (pt_node_sym_cmp(curr_node, 
+                        PARSER_PUNCTUATOR(punc_dot))) {
+                        assert(i_node + 1 <= child_count);
+                        id = pt_node_child_number(stmt, i_node + 1);
+                        status = irgen_obj_struct_member_op(gen, curr_val, id);
+                } else if (pt_node_sym_cmp(curr_node, 
+                        PARSER_PUNCTUATOR(punc_increment))) {
+                        old_val = curr_val;
+                        curr_val = irgen_obj_create(gen, stmt);
+                        status = irgen_obj_inc(gen, old_val);
+                } else if (pt_node_sym_cmp(curr_node, 
+                        PARSER_PUNCTUATOR(punc_decrement))) {
+                        old_val = curr_val;
+                        curr_val = irgen_obj_create(gen, stmt);
+                        status = irgen_obj_dec(gen, old_val);
+                } else {
+                        MC_DBG(MC_CRIT, "unexpected postfix operator");
+                }
+                if (!MC_SUCC(status))
+                        return status;
+        }
+        irgen_value_set(gen, &result->val);
+        status = irgen_obj_move_single(gen, curr_val);
+        return status;
 }
 
 static mc_status_t irgen_unary_operator(struct irgen_context *gen, 
@@ -32,31 +128,31 @@ static mc_status_t irgen_unary_operator(struct irgen_context *gen,
                                         struct pt_node *cast_expr)
 {
         mc_status_t status;
-        struct lvalue *result = irgen_lvalue_get(gen);
+        struct ir_object *result = irgen_obj_get(gen);
         assert(pt_node_sym_cmp(unary_op, psym_unary_operator));
-        struct lvalue *cast_expr_val = irgen_lvalue_create(gen, cast_expr);
+        struct ir_object *cast_expr_val = irgen_obj_create(gen, cast_expr);
         status = irgen_cast_expression(gen, cast_expr);
         if (!MC_SUCC(status))
                 return status;
         irgen_value_set(gen, &result->val);
         switch ((int)pt_node_child_first(unary_op)->sym) {
                 case PARSER_PUNCTUATOR(punc_bit_and):
-                        status = irgen_lvalue_addr_of(gen, cast_expr_val);
+                        status = irgen_obj_addr_of(gen, cast_expr_val);
                         break;
                 case PARSER_PUNCTUATOR(punc_mul):
-                        status = irgen_lvalue_deref(gen, cast_expr_val);
+                        status = irgen_obj_deref(gen, cast_expr_val);
                         break;
                 case PARSER_PUNCTUATOR(punc_add):
                         status = MC_OK;
                         break;
                 case PARSER_PUNCTUATOR(punc_sub):
-                        status = irgen_lvalue_neg(gen, cast_expr_val);
+                        status = irgen_obj_neg(gen, cast_expr_val);
                         break;
                 case PARSER_PUNCTUATOR(punc_tilde):
-                        status = irgen_lvalue_not(gen, cast_expr_val);
+                        status = irgen_obj_not(gen, cast_expr_val);
                         break;
                 case PARSER_PUNCTUATOR(punc_exclamation):
-                        status = irgen_lvalue_log_not(gen, cast_expr_val);
+                        status = irgen_obj_log_not(gen, cast_expr_val);
                         break;
                 default:
                         status = MC_IRGEN_ERROR;
@@ -70,11 +166,10 @@ static mc_status_t irgen_unary_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(stmt);
-        struct lvalue *result = irgen_lvalue_get(gen);
-        struct lvalue *val_one = NULL;
+        struct ir_object *result = irgen_obj_get(gen);
         struct pt_node *last_expr = pt_node_child_last(stmt);
 
-        struct lvalue *expr_val = irgen_lvalue_create(gen, last_expr);
+        struct ir_object *expr_val = irgen_obj_create(gen, last_expr);
         if (pt_node_sym_cmp(last_expr, psym_postfix_expression)) {
                 status = irgen_postfix_expression(gen, last_expr);
         } else if (pt_node_sym_cmp(last_expr, psym_cast_expression)) {
@@ -86,7 +181,7 @@ static mc_status_t irgen_unary_expression(struct irgen_context *gen,
                 assert(pt_node_sym_cmp(pt_node_child_number(stmt, 
                         child_count), PARSER_KEYWORD(keyw_sizeof)));
                 assert(pt_node_sym_cmp(last_expr, psym_type_name));
-                status = irgen_lvalue_sizeof_tname(gen, last_expr);
+                status = irgen_obj_sizeof_tname(gen, last_expr);
         }
 
         if (!MC_SUCC(status))
@@ -95,28 +190,20 @@ static mc_status_t irgen_unary_expression(struct irgen_context *gen,
         for (uint16_t i_node = child_count - 1; i_node > 0; i_node--) {
                 last_expr = pt_node_child_number(stmt, i_node); 
                 if (pt_node_sym_cmp(last_expr, psym_type_name)) {
-                        irgen_value_set(gen, &expr_val->val);
-                        status = irgen_lvalue_sizeof(gen, expr_val);
+                        status = irgen_obj_sizeof(gen, expr_val);
                 } else {
                         struct pt_node *prefix_op = pt_node_child_number(stmt, 
                                 i_node);
-                        if (val_one == NULL) {
-                                val_one = irgen_lvalue_create(gen, NULL);
-                                status = ir_lvalue_const_set(val_one, 
-                                        ir_scalar_create_int(1));
-                                assert(MC_SUCC(status));
-                        }
-                        irgen_value_set(gen, &expr_val->val);
                         if (pt_node_sym_cmp(prefix_op, 
                                 PARSER_PUNCTUATOR(punc_increment))) {
-                                status = irgen_lvalue_add(gen, expr_val, val_one);
+                                status = irgen_obj_inc(gen, expr_val);
                         } else {
-                                status = irgen_lvalue_sub(gen, expr_val, val_one);
+                                status = irgen_obj_dec(gen, expr_val);
                         }
                 }
         }
         irgen_value_set(gen, &result->val);
-        status = irgen_lvalue_move_single(gen, expr_val);
+        status = irgen_obj_move_single(gen, expr_val);
         return status;
 }
 
@@ -125,22 +212,22 @@ static mc_status_t irgen_cast_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(stmt);
-        struct lvalue *result = irgen_lvalue_get(gen);
+        struct ir_object *result = irgen_obj_get(gen);
         struct pt_node *last_expr = pt_node_child_last(stmt);
-        struct lvalue *cast_expr_val = irgen_lvalue_create(gen, last_expr);
+        struct ir_object *cast_expr_val = irgen_obj_create(gen, last_expr);
         status = irgen_unary_expression(gen, last_expr);
         if (!MC_SUCC(status))
                 return status;
 
         for (uint16_t i_node = child_count - 1; i_node > 0; i_node--) {
                 struct pt_node *cast_type = pt_node_child_number(stmt, i_node);
-                status = irgen_lvalue_type_cast(gen, cast_expr_val, cast_type);
+                status = irgen_obj_type_cast(gen, cast_expr_val, cast_type);
                 if (!MC_SUCC(status))
                         return status;
         }
 
         irgen_value_set(gen, &result->val);
-        status = irgen_lvalue_move_single(gen, cast_expr_val);
+        status = irgen_obj_move_single(gen, cast_expr_val);
         return status;
 }
 
@@ -149,19 +236,19 @@ static mc_status_t irgen_multiplicative_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(stmt);
-        struct lvalue *result = irgen_lvalue_get(gen);
+        struct ir_object *result = irgen_obj_get(gen);
         struct pt_node *left_expr;
-        struct lvalue *left_expr_val;
-        struct lvalue *right_expr_val;
+        struct ir_object *left_expr_val;
+        struct ir_object *right_expr_val;
 
         left_expr = pt_node_child_first(stmt);
-        left_expr_val = irgen_lvalue_create(gen, left_expr);
+        left_expr_val = irgen_obj_create(gen, left_expr);
         status = irgen_cast_expression(gen, left_expr);
         if (!MC_SUCC(status))
                 return status;
 
         if (child_count != 1)
-                right_expr_val = irgen_lvalue_create(gen, NULL);
+                right_expr_val = irgen_obj_create(gen, NULL);
 
         for (uint16_t i_node = 2; i_node < child_count; i_node += 2) {
                 struct pt_node *right_expr = pt_node_child_number(stmt, 
@@ -171,8 +258,8 @@ static mc_status_t irgen_multiplicative_expression(struct irgen_context *gen,
                 if (!MC_SUCC(status))
                         return status;
 
-                if (!ir_lvalue_is_arithmetic(left_expr_val) 
-                        || !ir_lvalue_is_arithmetic(right_expr_val)) {
+                if (!ir_obj_is_arithmetic(left_expr_val) 
+                        || !ir_obj_is_arithmetic(right_expr_val)) {
                         return IRGEN_ERROR(gen, right_expr, 
                                 "operands must be arithmetic");
                 }
@@ -181,35 +268,35 @@ static mc_status_t irgen_multiplicative_expression(struct irgen_context *gen,
                 irgen_value_set(gen, &left_expr_val->val);
                 
                 if (pt_node_sym_cmp(mult_op, PARSER_PUNCTUATOR(punc_mul))) {
-                        status = irgen_lvalue_mul(gen, right_expr_val, 
+                        status = irgen_obj_mul(gen, right_expr_val, 
                                 left_expr_val);
                 } else if (pt_node_sym_cmp(mult_op, 
                         PARSER_PUNCTUATOR(punc_forward_slash))) {
-                        status = irgen_lvalue_div(gen, right_expr_val, 
+                        status = irgen_obj_div(gen, right_expr_val, 
                                 left_expr_val);
                 } else {
-                        if (!ir_lvalue_is_integer(left_expr_val) 
-                                || !ir_lvalue_is_integer(right_expr_val)) {
+                        if (!ir_obj_is_integer(left_expr_val) 
+                                || !ir_obj_is_integer(right_expr_val)) {
                                 return IRGEN_ERROR(gen, right_expr, 
                                         "operands must be integer type");
                         }
-                        status = irgen_lvalue_mod(gen, right_expr_val, 
+                        status = irgen_obj_mod(gen, right_expr_val, 
                                 left_expr_val);
                 }
                 if (!MC_SUCC(status))
                         return status;
         }
         irgen_value_set(gen, &result->val);
-        status = irgen_lvalue_move_single(gen, left_expr_val);
+        status = irgen_obj_move_single(gen, left_expr_val);
         return status;
 }
 
-static _Bool irgen_additive_op_valid(struct lvalue *op1, struct lvalue *op2)
+static _Bool irgen_additive_op_valid(struct ir_object *op1, struct ir_object *op2)
 {
-        if (ir_lvalue_is_arithmetic(op1) && ir_lvalue_is_arithmetic(op2))
+        if (ir_obj_is_arithmetic(op1) && ir_obj_is_arithmetic(op2))
                 return true;
-        if ((ir_lvalue_is_ptr_obj(op1) && ir_lvalue_is_integer(op2))
-                || (ir_lvalue_is_integer(op1) && ir_lvalue_is_ptr_obj(op2)))
+        if ((ir_obj_is_ptr_obj(op1) && ir_obj_is_integer(op2))
+                || (ir_obj_is_integer(op1) && ir_obj_is_ptr_obj(op2)))
                 return true;
         return false;
 }
@@ -219,19 +306,19 @@ static mc_status_t irgen_additive_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(stmt);
-        struct lvalue *result = irgen_lvalue_get(gen);
+        struct ir_object *result = irgen_obj_get(gen);
         struct pt_node *left_expr;
-        struct lvalue *left_expr_val;
-        struct lvalue *right_expr_val;
+        struct ir_object *left_expr_val;
+        struct ir_object *right_expr_val;
 
         left_expr = pt_node_child_first(stmt);
-        left_expr_val = irgen_lvalue_create(gen, left_expr);
+        left_expr_val = irgen_obj_create(gen, left_expr);
         status = irgen_multiplicative_expression(gen, left_expr);
         if (!MC_SUCC(status))
                 return status;
 
         if (child_count != 1)
-                right_expr_val = irgen_lvalue_create(gen, NULL);
+                right_expr_val = irgen_obj_create(gen, NULL);
 
         for (uint16_t i_node = 2; i_node < child_count; i_node += 2) {
                 struct pt_node *right_expr = pt_node_child_number(stmt, 
@@ -250,10 +337,10 @@ static mc_status_t irgen_additive_expression(struct irgen_context *gen,
                 irgen_value_set(gen, &left_expr_val->val);
                 
                 if (pt_node_sym_cmp(add_op, PARSER_PUNCTUATOR(punc_add))) {
-                        status = irgen_lvalue_add(gen, right_expr_val, 
+                        status = irgen_obj_add(gen, right_expr_val, 
                                 left_expr_val);
                 } else {
-                        status = irgen_lvalue_sub(gen, right_expr_val, 
+                        status = irgen_obj_sub(gen, right_expr_val, 
                                 left_expr_val);
                 }
                 if (!MC_SUCC(status))
@@ -261,7 +348,7 @@ static mc_status_t irgen_additive_expression(struct irgen_context *gen,
         }
 
         irgen_value_set(gen, &result->val);
-        status = irgen_lvalue_move_single(gen, left_expr_val);
+        status = irgen_obj_move_single(gen, left_expr_val);
         return status;
 }
 
@@ -270,19 +357,19 @@ static mc_status_t irgen_shift_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(stmt);
-        struct lvalue *result = irgen_lvalue_get(gen);
+        struct ir_object *result = irgen_obj_get(gen);
         struct pt_node *left_expr;
-        struct lvalue *left_expr_val;
-        struct lvalue *right_expr_val;
+        struct ir_object *left_expr_val;
+        struct ir_object *right_expr_val;
 
         left_expr = pt_node_child_first(stmt);
-        left_expr_val = irgen_lvalue_create(gen, left_expr);
+        left_expr_val = irgen_obj_create(gen, left_expr);
         status = irgen_additive_expression(gen, left_expr);
         if (!MC_SUCC(status))
                 return status;
 
         if (child_count != 1)
-                right_expr_val = irgen_lvalue_create(gen, NULL);
+                right_expr_val = irgen_obj_create(gen, NULL);
 
         for (uint16_t i_node = 2; i_node < child_count; i_node += 2) {
                 struct pt_node *right_expr = pt_node_child_number(stmt, 
@@ -292,8 +379,8 @@ static mc_status_t irgen_shift_expression(struct irgen_context *gen,
                 if (!MC_SUCC(status))
                         return status;
 
-                if (!ir_lvalue_is_integer(left_expr_val) 
-                || !ir_lvalue_is_integer(right_expr_val)) {
+                if (!ir_obj_is_integer(left_expr_val) 
+                || !ir_obj_is_integer(right_expr_val)) {
                         return IRGEN_ERROR(gen, right_expr, 
                                 "operands must be integer type");
                 }
@@ -302,10 +389,10 @@ static mc_status_t irgen_shift_expression(struct irgen_context *gen,
                 irgen_value_set(gen, &left_expr_val->val);
                 
                 if (pt_node_sym_cmp(shift_op, PARSER_PUNCTUATOR(punc_shl))) {
-                        status = irgen_lvalue_lshift(gen, right_expr_val, 
+                        status = irgen_obj_lshift(gen, right_expr_val, 
                                 left_expr_val);
                 } else {
-                        status = irgen_lvalue_rshift(gen, right_expr_val, 
+                        status = irgen_obj_rshift(gen, right_expr_val, 
                                 left_expr_val);
                 }
                 if (!MC_SUCC(status))
@@ -313,20 +400,20 @@ static mc_status_t irgen_shift_expression(struct irgen_context *gen,
         }
 
         irgen_value_set(gen, &result->val);
-        status = irgen_lvalue_move_single(gen, left_expr_val);
+        status = irgen_obj_move_single(gen, left_expr_val);
         return status;
 }
 
-static inline _Bool irgen_relational_op_valid(struct lvalue *op1, 
-                                              struct lvalue *op2)
+static inline _Bool irgen_relational_op_valid(struct ir_object *op1, 
+                                              struct ir_object *op2)
 {
-        if (ir_lvalue_is_arithmetic(op1) 
-                && ir_lvalue_is_arithmetic(op2))
+        if (ir_obj_is_arithmetic(op1) 
+                && ir_obj_is_arithmetic(op2))
                 return true;
-        if (ir_lvalue_ptr_compat(op1, op2)) {
-                if ((ir_lvalue_is_ptr_obj(op1) && ir_lvalue_is_ptr_obj(op2))
-                        || (ir_lvalue_is_ptr_incompl(op1) 
-                                && ir_lvalue_is_ptr_incompl(op2)))
+        if (ir_obj_ptr_compat(op1, op2)) {
+                if ((ir_obj_is_ptr_obj(op1) && ir_obj_is_ptr_obj(op2))
+                        || (ir_obj_is_ptr_incompl(op1) 
+                                && ir_obj_is_ptr_incompl(op2)))
                 return true;
         }
         return false;
@@ -338,19 +425,19 @@ static mc_status_t irgen_relational_expression(struct irgen_context *gen,
 
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(expr);
-        struct lvalue *result = irgen_lvalue_get(gen);
+        struct ir_object *result = irgen_obj_get(gen);
         struct pt_node *left_expr;
-        struct lvalue *left_expr_val;
-        struct lvalue *right_expr_val;
+        struct ir_object *left_expr_val;
+        struct ir_object *right_expr_val;
 
         left_expr = pt_node_child_first(expr);
-        left_expr_val = irgen_lvalue_create(gen, left_expr);
+        left_expr_val = irgen_obj_create(gen, left_expr);
         status = irgen_shift_expression(gen, left_expr);
         if (!MC_SUCC(status))
                 return status;
 
         if (child_count != 1)
-                right_expr_val = irgen_lvalue_create(gen, NULL);
+                right_expr_val = irgen_obj_create(gen, NULL);
         
         for (uint16_t i_node = 2; i_node < child_count; i_node += 2) {
                 struct pt_node *right_expr = pt_node_child_number(expr, 
@@ -370,18 +457,18 @@ static mc_status_t irgen_relational_expression(struct irgen_context *gen,
                 irgen_value_set(gen, &left_expr_val->val);
                 
                 if (pt_node_sym_cmp(rel_op, PARSER_PUNCTUATOR(punc_less))) {
-                        status = irgen_lvalue_lt(gen, right_expr_val, 
+                        status = irgen_obj_lt(gen, right_expr_val, 
                                 left_expr_val);
                 } else if (pt_node_sym_cmp(rel_op, 
                         PARSER_PUNCTUATOR(punc_greater))) {
-                        status = irgen_lvalue_gt(gen, right_expr_val, 
+                        status = irgen_obj_gt(gen, right_expr_val, 
                                 left_expr_val);
                 } else if (pt_node_sym_cmp(rel_op, 
                         PARSER_PUNCTUATOR(punc_less_eq))) {
-                        status = irgen_lvalue_le(gen, right_expr_val, 
+                        status = irgen_obj_le(gen, right_expr_val, 
                                 left_expr_val);
                 } else {
-                        status = irgen_lvalue_ge(gen, right_expr_val, 
+                        status = irgen_obj_ge(gen, right_expr_val, 
                                 left_expr_val);
                 }
                 if (!MC_SUCC(status))
@@ -389,27 +476,27 @@ static mc_status_t irgen_relational_expression(struct irgen_context *gen,
         }
 
         irgen_value_set(gen, &result->val);
-        status = irgen_lvalue_move_single(gen, left_expr_val);
+        status = irgen_obj_move_single(gen, left_expr_val);
         return status;
 }
 
-static inline _Bool irgen_equality_op_valid(struct lvalue *op1, 
-                                            struct lvalue *op2)
+static inline _Bool irgen_equality_op_valid(struct ir_object *op1, 
+                                            struct ir_object *op2)
 {
-        if (ir_lvalue_is_arithmetic(op1) 
-                && ir_lvalue_is_arithmetic(op2))
+        if (ir_obj_is_arithmetic(op1) 
+                && ir_obj_is_arithmetic(op2))
                 return true;
-        if (ir_lvalue_ptr_compat(op1, op2))
+        if (ir_obj_ptr_compat(op1, op2))
                 return true;
-        if ((ir_lvalue_is_ptr_obj(op1) || ir_lvalue_is_ptr_incompl(op1))
-                && ir_lvalue_is_ptr_void(op2))
+        if ((ir_obj_is_ptr_obj(op1) || ir_obj_is_ptr_incompl(op1))
+                && ir_obj_is_ptr_void(op2))
                 return true;
-        if ((ir_lvalue_is_ptr_obj(op2) || ir_lvalue_is_ptr_incompl(op2))
-                && ir_lvalue_is_ptr_void(op1))
+        if ((ir_obj_is_ptr_obj(op2) || ir_obj_is_ptr_incompl(op2))
+                && ir_obj_is_ptr_void(op1))
                 return true;
-        if (ir_lvalue_is_pointer(op2) && ir_lvalue_is_nullptr(op1))
+        if (ir_obj_is_pointer(op2) && ir_obj_is_nullptr(op1))
                 return true;
-        if (ir_lvalue_is_pointer(op2) && ir_lvalue_is_nullptr(op1))
+        if (ir_obj_is_pointer(op2) && ir_obj_is_nullptr(op1))
                 return true;
         return false;
 }
@@ -420,20 +507,20 @@ static mc_status_t irgen_equality_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(expr);
-        struct lvalue *result = irgen_lvalue_get(gen);
+        struct ir_object *result = irgen_obj_get(gen);
         struct pt_node *left_expr;
-        struct lvalue *left_expr_val;
-        struct lvalue *right_expr_val;
+        struct ir_object *left_expr_val;
+        struct ir_object *right_expr_val;
 
         left_expr = pt_node_child_first(expr);
-        left_expr_val = irgen_lvalue_create(gen, 
+        left_expr_val = irgen_obj_create(gen, 
                 left_expr);
         status = irgen_relational_expression(gen, left_expr);
         if (!MC_SUCC(status))
                 return status;
 
         if (child_count != 1)
-                right_expr_val = irgen_lvalue_create(gen, NULL);
+                right_expr_val = irgen_obj_create(gen, NULL);
         
         for (uint16_t i_node = 2; i_node < child_count; i_node += 2) {
                 struct pt_node *right_expr = pt_node_child_number(expr, 
@@ -443,7 +530,7 @@ static mc_status_t irgen_equality_expression(struct irgen_context *gen,
                 if (!MC_SUCC(status))
                         return status;
 
-                if (irgen_equality_op_valid(left_expr_val, right_expr_val)) {
+                if (!irgen_equality_op_valid(left_expr_val, right_expr_val)) {
                         return IRGEN_ERROR(gen, right_expr, 
                                 "invalid operand types for equality expr");
                 }
@@ -451,16 +538,16 @@ static mc_status_t irgen_equality_expression(struct irgen_context *gen,
                 struct pt_node *eq_op = pt_node_child_number(expr, i_node);
                 irgen_value_set(gen, &left_expr_val->val);
                 if (pt_node_sym_cmp(eq_op, PARSER_PUNCTUATOR(punc_equal))) {
-                        status = irgen_lvalue_eq(gen, right_expr_val, 
+                        status = irgen_obj_eq(gen, right_expr_val, 
                                 left_expr_val);
                 } else {
-                        status = irgen_lvalue_neq(gen, right_expr_val, 
+                        status = irgen_obj_neq(gen, right_expr_val, 
                                 left_expr_val);
                 }
         }
 
         irgen_value_set(gen, &result->val);
-        status = irgen_lvalue_move_single(gen, left_expr_val);
+        status = irgen_obj_move_single(gen, left_expr_val);
         return status;
 }
 
@@ -469,19 +556,19 @@ static mc_status_t irgen_and_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(expr);
-        struct lvalue *result = irgen_lvalue_get(gen);
+        struct ir_object *result = irgen_obj_get(gen);
         struct pt_node *left_expr;
-        struct lvalue *left_expr_val;
-        struct lvalue *right_expr_val;
+        struct ir_object *left_expr_val;
+        struct ir_object *right_expr_val;
 
         left_expr = pt_node_child_first(expr);
-        left_expr_val = irgen_lvalue_create(gen, left_expr);
+        left_expr_val = irgen_obj_create(gen, left_expr);
         status = irgen_equality_expression(gen, left_expr);
         if (!MC_SUCC(status))
                 return status;
 
         if (child_count != 1)
-                right_expr_val = irgen_lvalue_create(gen, NULL);
+                right_expr_val = irgen_obj_create(gen, NULL);
         
         for (uint16_t i_node = 2; i_node < child_count; i_node++) {
                 struct pt_node *right_expr = pt_node_child_number(expr, i_node);
@@ -490,20 +577,20 @@ static mc_status_t irgen_and_expression(struct irgen_context *gen,
                 if (!MC_SUCC(status))
                         return status;
 
-                if (!ir_lvalue_is_integer(left_expr_val) 
-                        || !ir_lvalue_is_integer(right_expr_val)) {
+                if (!ir_obj_is_integer(left_expr_val) 
+                        || !ir_obj_is_integer(right_expr_val)) {
                         return IRGEN_ERROR(gen, right_expr, 
                                 "each of the operands shall have integer type");
                 }
 
                 irgen_value_set(gen, &left_expr_val->val);
-                status = irgen_lvalue_and(gen, right_expr_val, left_expr_val);
+                status = irgen_obj_and(gen, right_expr_val, left_expr_val);
                 if (!MC_SUCC(status))
                         return status;
         }
 
         irgen_value_set(gen, &result->val);
-        status = irgen_lvalue_move_single(gen, left_expr_val);
+        status = irgen_obj_move_single(gen, left_expr_val);
         return status;
 }
 
@@ -512,19 +599,19 @@ static mc_status_t irgen_exclusive_or_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(expr);
-        struct lvalue *result = irgen_lvalue_get(gen);
+        struct ir_object *result = irgen_obj_get(gen);
         struct pt_node *left_expr;
-        struct lvalue *left_expr_val;
-        struct lvalue *right_expr_val;
+        struct ir_object *left_expr_val;
+        struct ir_object *right_expr_val;
 
         left_expr = pt_node_child_first(expr);
-        left_expr_val = irgen_lvalue_create(gen, left_expr);
+        left_expr_val = irgen_obj_create(gen, left_expr);
         status = irgen_and_expression(gen, left_expr);
         if (!MC_SUCC(status))
                 return status;
 
         if (child_count != 1)
-                right_expr_val = irgen_lvalue_create(gen, NULL);
+                right_expr_val = irgen_obj_create(gen, NULL);
         
         for (uint16_t i_node = 2; i_node < child_count; i_node++) {
                 struct pt_node *right_expr = pt_node_child_number(expr, i_node);
@@ -533,19 +620,19 @@ static mc_status_t irgen_exclusive_or_expression(struct irgen_context *gen,
                 if (!MC_SUCC(status))
                         return status;
 
-                if (!ir_lvalue_is_integer(left_expr_val) 
-                        || !ir_lvalue_is_integer(right_expr_val)) {
+                if (!ir_obj_is_integer(left_expr_val) 
+                        || !ir_obj_is_integer(right_expr_val)) {
                         return IRGEN_ERROR(gen, right_expr, 
                                 "each of the operands shall have integer type");
                 }
 
                 irgen_value_set(gen, &left_expr_val->val);
-                status = irgen_lvalue_xor(gen, right_expr_val, left_expr_val);
+                status = irgen_obj_xor(gen, right_expr_val, left_expr_val);
                 if (!MC_SUCC(status))
                         return status;
         }
         irgen_value_set(gen, &result->val);
-        status = irgen_lvalue_move_single(gen, left_expr_val);
+        status = irgen_obj_move_single(gen, left_expr_val);
         return status;
 }
 
@@ -554,19 +641,19 @@ static mc_status_t irgen_inclusive_or_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(expr);
-        struct lvalue *result = irgen_lvalue_get(gen);
+        struct ir_object *result = irgen_obj_get(gen);
         struct pt_node *left_expr;
-        struct lvalue *left_expr_val;
-        struct lvalue *right_expr_val;
+        struct ir_object *left_expr_val;
+        struct ir_object *right_expr_val;
 
         left_expr = pt_node_child_first(expr);
-        left_expr_val = irgen_lvalue_create(gen, left_expr);
+        left_expr_val = irgen_obj_create(gen, left_expr);
         status = irgen_exclusive_or_expression(gen, left_expr);
         if (!MC_SUCC(status))
                 return status;
 
         if (child_count != 1)
-                right_expr_val = irgen_lvalue_create(gen, NULL);
+                right_expr_val = irgen_obj_create(gen, NULL);
         
         for (uint16_t i_node = 2; i_node < child_count; i_node++) {
                 struct pt_node *right_expr = pt_node_child_number(expr, i_node);
@@ -575,20 +662,20 @@ static mc_status_t irgen_inclusive_or_expression(struct irgen_context *gen,
                 if (!MC_SUCC(status))
                         return status;
 
-                if (!ir_lvalue_is_integer(left_expr_val) 
-                        || !ir_lvalue_is_integer(right_expr_val)) {
+                if (!ir_obj_is_integer(left_expr_val) 
+                        || !ir_obj_is_integer(right_expr_val)) {
                         return IRGEN_ERROR(gen, right_expr, 
                                 "each of the operands shall have integer type");
                 }
 
                 irgen_value_set(gen, &left_expr_val->val);
-                status = irgen_lvalue_or(gen, right_expr_val, left_expr_val);
+                status = irgen_obj_or(gen, right_expr_val, left_expr_val);
                 if (!MC_SUCC(status))
                         return status;
         }
 
         irgen_value_set(gen, &result->val);
-        status = irgen_lvalue_move_single(gen, left_expr_val);
+        status = irgen_obj_move_single(gen, left_expr_val);
         return status;
 }
 
@@ -597,19 +684,19 @@ static mc_status_t irgen_logical_and_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(expr);
-        struct lvalue *result = irgen_lvalue_get(gen);
+        struct ir_object *result = irgen_obj_get(gen);
         struct pt_node *left_expr;
-        struct lvalue *left_expr_val;
-        struct lvalue *right_expr_val;
+        struct ir_object *left_expr_val;
+        struct ir_object *right_expr_val;
 
         left_expr = pt_node_child_first(expr);
-        left_expr_val = irgen_lvalue_create(gen, left_expr);
+        left_expr_val = irgen_obj_create(gen, left_expr);
         status = irgen_inclusive_or_expression(gen, left_expr);
         if (!MC_SUCC(status))
                 return status;
 
         if (child_count != 1)
-                right_expr_val = irgen_lvalue_create(gen, NULL);
+                right_expr_val = irgen_obj_create(gen, NULL);
         
         for (uint16_t i_node = 2; i_node < child_count; i_node++) {
                 struct pt_node *right_expr = pt_node_child_number(expr, i_node);
@@ -618,20 +705,20 @@ static mc_status_t irgen_logical_and_expression(struct irgen_context *gen,
                 if (!MC_SUCC(status))
                         return status;
 
-                if (!ir_lvalue_is_scalar(left_expr_val) 
-                        || !ir_lvalue_is_scalar(right_expr_val)) {
+                if (!ir_obj_is_scalar(left_expr_val) 
+                        || !ir_obj_is_scalar(right_expr_val)) {
                         return IRGEN_ERROR(gen, right_expr,
                                 "each of the operands shall have scalar type");
                 }
 
                 irgen_value_set(gen, &left_expr_val->val);
-                status = irgen_lvalue_log_and(gen, right_expr_val, left_expr_val);
+                status = irgen_obj_log_and(gen, right_expr_val, left_expr_val);
                 if (!MC_SUCC(status))
                         return status;
         }
 
         irgen_value_set(gen, &result->val);
-        status = irgen_lvalue_move_single(gen, left_expr_val);
+        status = irgen_obj_move_single(gen, left_expr_val);
         return status;
 }
 
@@ -640,19 +727,19 @@ static mc_status_t irgen_logical_or_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(expr);
-        struct lvalue *result = irgen_lvalue_get(gen);
+        struct ir_object *result = irgen_obj_get(gen);
         struct pt_node *left_expr;
-        struct lvalue *left_expr_val;
-        struct lvalue *right_expr_val;
+        struct ir_object *left_expr_val;
+        struct ir_object *right_expr_val;
 
         left_expr = pt_node_child_first(expr);
-        left_expr_val = irgen_lvalue_create(gen, left_expr);
+        left_expr_val = irgen_obj_create(gen, left_expr);
         status = irgen_logical_and_expression(gen, left_expr);
         if (!MC_SUCC(status))
                 return status;
 
         if (child_count != 1)
-                right_expr_val = irgen_lvalue_create(gen, NULL);
+                right_expr_val = irgen_obj_create(gen, NULL);
         
         for (uint16_t i_node = 2; i_node < child_count; i_node++) {
                 struct pt_node *right_expr = pt_node_child_number(expr, i_node);
@@ -661,44 +748,45 @@ static mc_status_t irgen_logical_or_expression(struct irgen_context *gen,
                 if (!MC_SUCC(status))
                         return status;
 
-                if (!ir_lvalue_is_scalar(left_expr_val) 
-                        || !ir_lvalue_is_scalar(right_expr_val)) {
+                if (!ir_obj_is_scalar(left_expr_val) 
+                        || !ir_obj_is_scalar(right_expr_val)) {
                         return IRGEN_ERROR(gen, right_expr,
                                 "each of the operands shall have scalar type");
                 }
 
                 irgen_value_set(gen, &left_expr_val->val);
-                status = irgen_lvalue_log_or(gen, right_expr_val, left_expr_val);
+                status = irgen_obj_log_or(gen, right_expr_val, left_expr_val);
                 if (!MC_SUCC(status))
                         return status;
         }
 
         irgen_value_set(gen, &result->val);
-        status = irgen_lvalue_move_single(gen, left_expr_val);
+        status = irgen_obj_move_single(gen, left_expr_val);
         return status;
 }
 
-static mc_status_t irgen_conditional_expression_compat
-                                             (struct irgen_context *gen, 
-                                             struct pt_node *node,
-                                             struct lvalue *val1, 
-                                             struct lvalue *val2)
+static mc_status_t irgen_conditional_expression_compat(struct irgen_context *gen,
+                                                       struct pt_node *node,
+                                                       struct ir_object *obj1,
+                                                       struct ir_object *obj2)
 {
-        if (ir_lvalue_is_arithmetic(val1) && ir_lvalue_is_arithmetic(val2))
+        struct ir_value *val1 = ir_obj_value_get(obj1);
+        struct ir_value *val2 = ir_obj_value_get(obj2);
+        if (ir_obj_is_arithmetic(obj1) && ir_obj_is_arithmetic(obj2))
                 return true;
-        if (ir_lvalue_compat_struct_or_union(val1, val2)) 
+        if (ir_obj_compat_struct_or_union(obj1, obj2))
                 return true;
-        if (val1->type == lvalue_void && val2->type == lvalue_void) 
+        if (val1->type == ir_value_void && val2->type == ir_value_void)
                 return true;
-        if (ir_lvalue_ptr_compat(val1, val2))
+        if (ir_obj_ptr_compat(obj1, obj2))
                 return true;
-        if (ir_lvalue_is_pointer(val1) && ir_lvalue_is_nullptr(val2))
+        if (ir_obj_is_pointer(obj1) && ir_obj_is_nullptr(obj2))
                 return true;
-        if (ir_lvalue_is_pointer(val2) && ir_lvalue_is_nullptr(val1))
+        if (ir_obj_is_pointer(obj2) && ir_obj_is_nullptr(obj1))
                 return true;
-        if (ir_lvalue_is_ptr_obj(val1) && ir_lvalue_is_ptr_void(val2))
+        if (ir_obj_is_ptr_obj(obj1) && ir_obj_is_ptr_void(obj2))
                 return true;
-        if (ir_lvalue_is_ptr_obj(val2) && ir_lvalue_is_ptr_void(val1))
+        if (ir_obj_is_ptr_obj(obj2) && ir_obj_is_ptr_void(obj1))
                 return true;
         return IRGEN_ERROR(gen, node, "types not compatible");
 }
@@ -707,25 +795,25 @@ static mc_status_t irgen_conditional_expression(struct irgen_context *gen,
                                                 struct pt_node *stmt)
 {
         mc_status_t status;
-        struct lvalue *result = irgen_lvalue_get(gen);
+        struct ir_object *result = irgen_obj_get(gen);
         /* logical-or-expr should be scalar */
         struct pt_node *node_log_or_expr = pt_node_child_first(stmt);
-        struct lvalue *log_expr_val = irgen_lvalue_create(gen, node_log_or_expr);
+        struct ir_object *log_expr_val = irgen_obj_create(gen, node_log_or_expr);
         status = irgen_logical_or_expression(gen, node_log_or_expr);
         if (!MC_SUCC(status))
                 return status;
 
-        assert(log_expr_val->type != lvalue_scalar);
+        assert(log_expr_val->type != ir_object_scalar);
 
         if (pt_node_child_count(stmt) != 1) {
                 struct pt_node *node_expr = pt_node_child_number(stmt, 2);
-                struct lvalue *expr_val = irgen_lvalue_create(gen, node_expr);
+                struct ir_object *expr_val = irgen_obj_create(gen, node_expr);
                 status = irgen_expression(gen, node_expr);
                 if (!MC_SUCC(status))
                         return status;
 
                 struct pt_node *node_cond_expr = pt_node_child_number(stmt, 3);
-                struct lvalue *cond_expr_val = irgen_lvalue_create(gen, 
+                struct ir_object *cond_expr_val = irgen_obj_create(gen, 
                         node_cond_expr);
                 status = irgen_conditional_expression(gen, node_cond_expr);
                 if (!MC_SUCC(status))
@@ -738,11 +826,10 @@ static mc_status_t irgen_conditional_expression(struct irgen_context *gen,
 
                 /* set target value */
                 irgen_value_set(gen, &result->val);
-                status = irgen_lvalue_move_cond(gen, log_expr_val, expr_val, 
-                        result);
+                status = irgen_obj_move_cond(gen, log_expr_val, expr_val, result);
         } else {
                 irgen_value_set(gen, &result->val);
-                status = irgen_lvalue_move_single(gen, log_expr_val);
+                status = irgen_obj_move_single(gen, log_expr_val);
         }
         return status;
 }
@@ -752,14 +839,14 @@ static mc_status_t irgen_constant_expression(struct irgen_context *gen,
 {
         mc_status_t status;
 
-        assert(irgen_value_type(gen) == ir_value_lvalue);
-        struct lvalue *val_c_expr = irgen_lvalue_get(gen);
+        assert(irgen_value_type(gen) == ir_value_object);
+        struct ir_object *val_c_expr = irgen_obj_get(gen);
 
         status = irgen_conditional_expression(gen, pt_node_child_first(stmt));
         if (!MC_SUCC(status))
                 return status;
 
-        if (ir_lvalue_const_eval(val_c_expr))
+        if (ir_obj_const_eval(val_c_expr))
                 status = IRGEN_ERROR(gen, stmt, "expected const value");
 
         return status;
@@ -837,7 +924,7 @@ static mc_status_t irgen_labeled_statement_case(struct irgen_context *gen,
                                                 struct pt_node *stmt)
 {
         mc_status_t status;
-        struct lvalue *expr_val;
+        struct ir_object *expr_val;
 
         /* add new basic block, if needed */
         if (!irgen_bb_empty(gen))
@@ -850,12 +937,12 @@ static mc_status_t irgen_labeled_statement_case(struct irgen_context *gen,
 
         /* integer constant expression type here */
         struct pt_node *node_c_expr = pt_node_child_number(stmt, 2);
-        irgen_lvalue_create(gen, node_c_expr);
+        irgen_obj_create(gen, node_c_expr);
         status = irgen_constant_expression(gen, node_c_expr);
         if (!MC_SUCC(status))
                return status; 
-        expr_val = irgen_lvalue_get(gen);
-        assert(expr_val->type == lvalue_scalar);
+        expr_val = irgen_obj_get(gen);
+        assert(expr_val->type == ir_object_scalar);
 
         struct pt_node *sw_node = irgen_labeled_statement_last_switch(stmt);
         struct switch_label_set *lbl_set 
@@ -1050,21 +1137,41 @@ static mc_status_t irgen_external_declaration(struct irgen_context *gen,
         return status;
 }
 
-mc_status_t irgen_translation_unit(struct irgen_context *gen, 
-                                   struct pt_node *unit)
-{
-        mc_status_t status;
-        assert(unit->sym == psym_translation_unit);
+static struct irgen_translation_ops irgen_translation_ops = {
+        .external_declaration = irgen_external_declaration,
+        .function_definition = irgen_function_definition,
 
-        AST_FOREACH_CHILD(unit) {
-                struct pt_node *ext_decl = (struct pt_node *)entry;
-                status = irgen_external_declaration(gen, ext_decl);
-                if (!MC_SUCC(status))
-                        goto fail;
-        }
-        
-        return status;
-fail:
-        irgen_free(gen);
-        return status;
+        .statement = irgen_statement,
+        .compound_statement = irgen_compound_statement,
+        .labeled_statement = irgen_labeled_statement,
+        .expression_statement = irgen_expression_statement,
+        .selection_statement = irgen_selection_statement,
+        .iteration_statement = irgen_iteration_statement,
+        .jump_statement = irgen_jump_statement,
+
+        .expression = irgen_expression,
+        .assignment_expression = NULL,
+        .conditional_expression = irgen_conditional_expression,
+        .logical_or_expression = irgen_logical_or_expression,
+        .logical_and_expression = irgen_logical_and_expression,
+        .inclusive_or_expression = irgen_inclusive_or_expression,
+        .exclusive_or_expression = irgen_exclusive_or_expression,
+        .and_expression = irgen_and_expression,
+        .equality_expression = irgen_equality_expression,
+        .relational_expression = irgen_relational_expression,
+        .shift_expression = irgen_shift_expression,
+        .additive_expression = irgen_additive_expression,
+        .multiplicative_expression = irgen_multiplicative_expression,
+        .cast_expression = irgen_cast_expression,
+        .unary_expression = irgen_unary_expression,
+        .postfix_expression = irgen_postfix_expression,
+        .primary_expression = irgen_primary_expression,
+
+        .initializer = NULL,
+        .initializer_list = irgen_initializer_list
+};
+
+void _irgen_translation_ops_init(struct irgen_context *gen)
+{
+        gen->ops = &irgen_translation_ops;
 }

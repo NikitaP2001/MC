@@ -94,6 +94,12 @@ static inline double test_get_time()
 #define TCASE_DEF(module, case) TCASE_NAME(module, case) (_Bool *result)
 #define TEST_RUN(module, case) case_ ## module ## _ ## case ()
 
+#ifndef _TEST_RESULT_
+#define _TEST_RESULT_
+static _Bool g_test_result = true;
+#endif /* _TEST_RESULT_ */
+#define TEST_RESULT (g_test_result ? 0 : 1)
+
 #define TEST_CASE(module, case)                                                \
 static void TCASE_DEF(module, case);                                           \
 static void TEST_RUN(module, case)                                             \
@@ -107,6 +113,7 @@ static void TEST_RUN(module, case)                                             \
                 printf("[       OK ] "#module"."#case" (%f ms)\n", t_ms);      \
         else                                                                   \
                 printf("[  FAILED  ] "#module"."#case" (%f ms)\n", t_ms);      \
+        g_test_result &= result;                                               \
 }                                                                              \
 static void TCASE_DEF(module, case)
 

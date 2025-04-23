@@ -2,7 +2,7 @@
 #include <ir/value.h>
 
 
-void ir_ins_insert_use(struct instruction *ins, struct value *val)
+void ir_ins_insert_use(struct instruction *ins, struct ir_value *val)
 {
         struct ir_ins_use *use = calloc(1, sizeof(struct ir_ins_use));
         if (ins->use != NULL)

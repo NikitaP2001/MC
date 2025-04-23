@@ -69,12 +69,12 @@ enum ir_ins_type {
         ir_ins_and,
 };
 
-struct value;
+struct ir_value;
 struct instruction;
 
 struct ir_ins_use {
         struct list_head *link;
-        struct value *val;
+        struct ir_value *val;
         struct instruction *ins;
 };
 
@@ -83,7 +83,7 @@ struct instruction {
         struct ir_ins_use *use;
 };
 
-void ir_ins_insert_use(struct instruction *ins, struct value *val);
+void ir_ins_insert_use(struct instruction *ins, struct ir_value *val);
 
 static inline _Bool ir_ins_is_control_transfer(struct instruction *ins)
 {
