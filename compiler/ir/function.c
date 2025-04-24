@@ -5,7 +5,7 @@
 #include <ir.h>
 #include <parser/ast.h>
 
-struct function *ir_function_create(struct module *module, 
+struct function *ir_function_create(struct ir_module *module, 
                                     struct pt_node *func_def)
 {
         struct function *func = calloc(1, sizeof(struct function));
@@ -16,6 +16,7 @@ struct function *ir_function_create(struct module *module,
 
         struct ir_value_params params = {
                 .id = func_id,
+                .type = ir_value_function,
         };
         ir_value_init(&func->val, &params);
         func->module = module;
@@ -38,7 +39,7 @@ struct ir_value *ir_function_value_seek(struct function *func,
 {
         struct ir_value *result;
         struct token *token = ast_declarator_id(id);
-        struct module *mod = func->module;
+        struct ir_module *mod = func->module;
 
         result = ir_seek_var_in_table(&func->var_tbl, token);
         if (result == NULL) {

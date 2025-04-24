@@ -6,7 +6,7 @@
 
 struct function {
         /* associated module */
-        struct module *module;
+        struct ir_module *module;
 
         _Bool is_static;
         /* replace usage with value
@@ -20,7 +20,7 @@ struct function {
         struct basic_block *entry;
 };
 
-struct function *ir_function_create(struct module *module, 
+struct function *ir_function_create(struct ir_module *module, 
                                     struct pt_node *func_def);
 
 void ir_function_destroy(struct function *func);

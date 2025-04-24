@@ -3,7 +3,7 @@
      
 #include <mc.h>
 #include <parser.h>
-#include <test_common.h>
+#include <test_suite.h>
 
 struct parser_context {
         struct token *curr;
@@ -12,7 +12,7 @@ struct parser_context {
 };
 
 void parser_context_init(struct parser_context *pctx, 
-                        struct convert_context *cctx)
+                         struct convert_context *cctx)
 {
         pctx->curr = convert_get_token(cctx);
         pctx->last_error = NULL;
@@ -84,7 +84,7 @@ static mc_status_t parser_test_init(struct parser_test_context *t_ctx,
                 return status;
 
         parser_context_init(&t_ctx->pctx, &t_ctx->ctx);
-        struct parser_ops ops = {
+        struct parser_clb ops = {
                 .pull_token     = pull_token,
                 .put_token      = put_token,
                 .fetch_token    = fetch_token,
@@ -109,11 +109,15 @@ static _Bool parser_tcase_run(const char *name)
         struct parser_test_context t_ctx;
         if (!MC_SUCC(parser_test_init(&t_ctx, name)))
                 return false;
-
-        struct pt_node *node = parser_translation_unit(&t_ctx.ps);
+        struct parser *ps = &t_ctx.ps;
+        mc_status_t status = ps->ops->translation_unit(ps);
+        if (!MC_SUCC(status))
+                result = false;
+        struct pt_node *node = parser_result_pull(ps);
         if (node == NULL)
                 result = false;
-
+        else
+                pt_node_destroy(node);
         parser_test_free(&t_ctx);
         return result;
 }

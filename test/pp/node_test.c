@@ -2,7 +2,7 @@
 #include <string.h>
 
 #include <pp.h>
-#include <test_common.h>
+#include <test_suite.h>
 
 TEST_CASE(pp_node, insert_macro)
 {

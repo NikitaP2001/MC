@@ -97,14 +97,19 @@ int main(int argc, char *argv[])
         }
         struct parser_context pctx; 
         parser_context_init(&pctx, &ctx);
-        struct parser_ops ops = {
+        struct parser_clb ops = {
                 .pull_token = pull_token,
                 .put_token = put_token,
                 .fetch_token = fetch_token,
                 .error = error_handler,
         };
         parser_init(&ps, ops, &pctx);
-        struct pt_node *unit = parser_translation_unit(&ps);
+        status = ps.ops->translation_unit(&ps);
+        if (!MC_SUCC(status)) {
+                puts("Bad parsing");
+                exit(1);
+        }
+        struct pt_node *unit = parser_result_pull(&ps);
 
         irgen_init(&gen, &ps);
         assert(pt_node_sym_cmp(unit, psym_translation_unit));
@@ -117,6 +122,7 @@ int main(int argc, char *argv[])
                 }
         }
 
+        pt_node_destroy(unit);
         parser_free(&ps);
 
         convert_free(&ctx);

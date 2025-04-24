@@ -32,6 +32,7 @@ void irgen_init(struct irgen_context *gen, struct parser *ps)
 
         stack_init(&gen->switch_sets, IRGEN_STACK_CAPACITY, 
                    sizeof(struct switch_label_set*));
+        _irgen_translation_ops_init(gen);
 }
 
 void irgen_free(struct irgen_context *gen)
@@ -149,6 +150,44 @@ static void irgen_obj_specify_type(struct ir_object *s_val,
         s_val->node = lval_node;
 }
 
+#define FUNCTION_INDICATOR                                              \
+        [psym_function_definition] = 1,                                 \
+        [psym_compound_statement] = 1,                                  \
+        [psym_block_item_list] = 1,                                     \
+        [psym_block_item] = 1,                                          \
+        [psym_statement] = 1,                                           \
+        [psym_expression_statement] = 1,                                \
+        [psym_labeled_statement] = 1,                                   \
+        [psym_iteration_statement] = 1,                                 \
+        [psym_selection_statement] = 1,                                 \
+        [psym_jump_statement] = 1,
+
+#define GLOBAL_INDICATOR                                                \
+        [psym_translation_unit] = 1,                                    \
+        [psym_external_declaration] = 1,                                \
+
+/* TODO: move that to symtable C while adding new definition, to
+ * traverse parents only one  */
+static _Bool irgen_obj_is_global(struct pt_node *lval_node)
+{
+        _Bool is_global = true;
+        static const uint8_t function_ind[] = { FUNCTION_INDICATOR };
+        static const uint8_t global_ind[] = { GLOBAL_INDICATOR };
+        if (lval_node != NULL) {
+                struct pt_node *parent = lval_node->parent;
+                while (parent != NULL) {
+                        if (function_ind[parent->sym]) {
+                                is_global = false;
+                                break;
+                        } else if (global_ind[parent->sym]) {
+                                break;
+                        }
+                        parent = parent->parent;
+                }
+        }
+        return is_global;
+}
+
 /* set new value type, based on associated @pt_node if it could
  * be unambiguously defined, leave unspecified othervise */
 struct ir_object *irgen_obj_create(struct irgen_context *gen, 
@@ -160,7 +199,10 @@ struct ir_object *irgen_obj_create(struct irgen_context *gen,
         gen->curr_value = &s_val->val;
         if (lval_node != NULL)
                 irgen_obj_specify_type(s_val, lval_node);
-        ir_function_value_add(gen->curr_func, gen->curr_value);
+        if (irgen_obj_is_global(lval_node))
+                ir_module_add_global(gen->mod, s_val);
+        else 
+                ir_function_value_add(gen->curr_func, &s_val->val);
         return s_val;
 }
 

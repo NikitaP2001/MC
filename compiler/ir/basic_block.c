@@ -6,6 +6,7 @@ struct basic_block *ir_bb_create(const char *prefix, uint32_t index)
         struct ir_value_params params = {
                 .prefix = prefix,
                 .index = index,
+                .type = ir_value_basic_block,
         };
         ir_value_init(&bb->val, &params);
         bb->val.type = ir_value_basic_block;

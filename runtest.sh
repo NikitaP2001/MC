@@ -39,7 +39,7 @@ for file in **/*.exe; do
         cd "$test_dir"
 
         if [ $exit_code != 0 ]; then
-                n_failed=$((n_crash + 1))
+                n_failed=$((n_failed + 1))
                 echo -e "${RED}[==========]${RESET} Test set $test_name FAILED"
         else
                 n_passed=$((n_passed + 1))
@@ -49,7 +49,8 @@ done
 
 shopt -u globstar 
 
-echo "[==========] Test suite finished, $((n_passed + n_crash)) tests run"
+n_total=$((n_passed + n_failed))
+echo "[==========] Test suite finished, $n_passed / $n_total"
 if [ $n_passed != 0 ]; then
         echo -e "$n_passed ${GREEN}PASSED${RESET} TESTS"
 fi

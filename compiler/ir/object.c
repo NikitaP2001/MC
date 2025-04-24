@@ -9,6 +9,7 @@ ir_obj_create(const char *prefix, uint32_t index)
         struct ir_value_params params = {
                 .prefix = prefix,
                 .index = index,
+                .type = ir_value_object,
         };
         ir_value_init(&s_val->val, &params);
         s_val->eval = NULL;

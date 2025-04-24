@@ -118,7 +118,7 @@ enum parser_symbol parser_token_tosymbol(struct token *tok)
 static inline struct token*
 parser_pull_token(struct parser *ps)
 {
-        struct parser_ops ops = ps->ops; 
+        struct parser_clb ops = ps->clb; 
         struct token *next = ops.fetch_token(ps->data);
         ops.pull_token(ps->data);
         return next;
@@ -126,14 +126,14 @@ parser_pull_token(struct parser *ps)
 
 static inline void parser_put_token(struct parser *ps, struct token *tok)
 {
-        struct parser_ops ops = ps->ops; 
+        struct parser_clb ops = ps->clb; 
         ops.put_token(ps->data, tok);
 }
 
 static inline struct token*
 parser_fetch_token(struct parser *ps)
 {
-        struct parser_ops ops = ps->ops; 
+        struct parser_clb ops = ps->clb; 
         return ops.fetch_token(ps->data);
 }
 
@@ -148,7 +148,7 @@ parser_fetch_symbol(struct parser *ps)
 }
 
 #define PARSER_ERROR(ps, message)                               \
-        ps->ops.error(ps->data, message)
+        ps->clb.error(ps->data, message)
 
 static inline _Bool parser_is_typedef(struct parser *ps, 
                                       struct token *id)
@@ -3357,9 +3357,10 @@ fail:
         return status;
 }
 
-struct pt_node *parser_translation_unit(struct parser *ps)
+mc_status_t parser_translation_unit(struct parser *ps)
 {
         struct pt_node *unit = pt_node_create(psym_translation_unit);
+        assert(parser_stack_empty(ps));
         parser_stack_push(ps, unit);
         mc_status_t status = MC_OK;
         enum parser_symbol sym;
@@ -3382,16 +3383,90 @@ struct pt_node *parser_translation_unit(struct parser *ps)
         assert(parser_stack_topsym(ps) == psym_translation_unit);
         if (pt_node_child_empty(unit) || !MC_SUCC(status)) {
                 pt_node_destroy(unit);
+                parser_stack_pop(ps);
                 unit = NULL;
         }
-        parser_stack_pop(ps);
-        return unit;
+        return status;
 }
 
-void parser_init(struct parser *ps, struct parser_ops ops, void *user_data)
+struct pt_node *parser_result_pull(struct parser *ps)
 {
-        ps->ops = ops;
+        struct pt_node *node = NULL;
+        if (parser_stack_empty(ps)) {
+                MC_DBG(MC_ERR, "Parser stack is empty");
+        } else {
+                node = parser_stack_pop(ps);
+                if (pt_node_child_empty(node)) {
+                        pt_node_destroy(node);
+                        MC_DBG(MC_WARN, "Empty node on stack");
+                        node = NULL;
+                }
+        }
+        return node;
+}
+
+static const struct parser_ops g_parser_ops = {
+        .primary_expression = parser_primary_expression,
+        .postfix_expression = parser_postfix_expression,
+        .argument_expression_list = parser_argument_expression_list,
+        .unary_expression = parser_unary_expression,
+        .cast_expression = parser_cast_expression,
+        .multiplicative_expression = parser_multiplicative_expression,
+        .additive_expression = parser_additive_expression,
+        .shift_expression = parser_shift_expression,
+        .relational_expression = parser_relational_expression,
+        .equality_expression = parser_equality_expression,
+        .and_expression = parser_and_expression,
+        .exclusive_or_expression = parser_exclusive_or_expression,
+        .inclusive_or_expression = parser_inclusive_or_expression,
+        .logical_and_expression = parser_logical_and_expression,
+        .logical_or_expression = parser_logical_or_expression,
+        .conditional_expression = parser_conditional_expression,
+        .assignment_expression = parser_assignment_expression,
+        .expression = parser_expression,
+        .constant_expression = parser_constant_expression,
+        .declaration = parser_declaration,
+        .declaration_specifiers = parser_declaration_specifiers,
+        .init_declarator_list = parser_init_declarator_list,
+        .init_declarator = parser_init_declarator,
+        .type_specifier = parser_type_specifier,
+        .struct_or_union_specifier = parser_struct_or_union_specifier,
+        .enum_specifier = parser_enum_specifier,
+        .declarator = parser_declarator,
+        .direct_declarator = parser_direct_declarator,
+        .pointer = parser_pointer,
+        .type_qualifier_list = parser_type_qualifier_list,
+        .parameter_type_list = parser_parameter_type_list,
+        .parameter_list = parser_parameter_list,
+        .parameter_declaration = parser_parameter_declaration,
+        .identifier_list = parser_identifier_list,
+        .type_name = parser_type_name,
+        .abstract_declarator = parser_abstract_declarator,
+        .direct_abstract_declarator = parser_direct_abstract_declarator,
+        .initializer = parser_initializer,
+        .initializer_list = parser_initializer_list,
+        .designation = parser_designation,
+        .designator_list = parser_designator_list,
+        .designator = parser_designator,
+        .statement = parser_statement,
+        .labeled_statement = parser_labeled_statement,
+        .compound_statement = parser_compound_statement,
+        .block_item_list = parser_block_item_list,
+        .block_item = parser_block_item,
+        .expression_statement = parser_expression_statement,
+        .selection_statement = parser_selection_statement,
+        .iteration_statement = parser_iteration_statement,
+        .jump_statement = parser_jump_statement,
+        .translation_unit = parser_translation_unit,
+        .external_declaration = parser_external_declaration,
+        .function_definition = parser_function_definition,
+};
+
+void parser_init(struct parser *ps, struct parser_clb clb, void *user_data)
+{
+        ps->clb = clb;
         ps->data = user_data;
+        ps->ops = &g_parser_ops;
         parser_stack_init(ps);
         symtable_init(&ps->sym_tbl); 
 }

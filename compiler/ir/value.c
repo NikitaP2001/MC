@@ -74,6 +74,7 @@ void ir_value_init(struct ir_value *val, struct ir_value_params *params)
         else
                 ir_value_name_temp(val, params->prefix, params->index);
         val->hash = ir_value_hash(val);
+        val->type = params->type;
         vector_init(&val->ins_use, IR_VALUE_USE_COUNT, 
                 sizeof(struct ir_ins_use *));
 }

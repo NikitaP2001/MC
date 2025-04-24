@@ -37,6 +37,7 @@ struct ir_value_params {
         const char *prefix;
         uint32_t index;
         struct token *id;
+        enum ir_value_type type;
 };
 
 void ir_value_init(struct ir_value *val, struct ir_value_params *params);

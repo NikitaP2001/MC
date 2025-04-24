@@ -4,7 +4,7 @@
 #include <pp.h>
 #include <fs.h>
 #include <token.h>
-#include <test_common.h>
+#include <test_suite.h>
 
 #define RAW_VAL_CMP(token, t_val)                             \
 {                                                             \

@@ -5,7 +5,7 @@
 
 #include <pp.h>
 #include <fs.h>
-#include <test_common.h>
+#include <test_suite.h>
 
 /* @ex_type - expected pp token type 
  * @value - char * value of token */ 

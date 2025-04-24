@@ -11,7 +11,7 @@ typedef mc_status_t (*irgen_error_t)(struct pt_node *node,
 
 struct irgen_context {
         struct parser *parser;
-        struct module *mod;
+        struct ir_module *mod;
 
         struct function *curr_func;
 
