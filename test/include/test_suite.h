@@ -113,16 +113,13 @@ static void TEST_RUN(module, case)                                             \
 {                                                                              \
         /* Renamed variable from result to __test_case_status__ */             \
         _Bool __test_case_status__ = true;                                     \
-        printf("[ RUN      ] "#module"."#case"\n");                            \
         double t_ms = test_get_time();                                         \
         /* Pass the renamed variable */                                        \
         TCASE_NAME(module, case)(&__test_case_status__);                       \
         t_ms = test_get_time() - t_ms;                                         \
         /* Check the renamed variable */                                       \
-        if (__test_case_status__)                                              \
-                printf("[       OK ] "#module"."#case" (%f ms)\n", t_ms);      \
-        else                                                                   \
-                printf("[  FAILED  ] "#module"."#case" (%f ms)\n", t_ms);      \
+        const char *str_res = __test_case_status__ ? "true" : "false";         \
+        printf(""#module":"#case":%s:%f\n", str_res , t_ms);                   \
         /* Update global result with the renamed variable */                   \
         g_test_result &= __test_case_status__;                                 \
 }                                                                              \
