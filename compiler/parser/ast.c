@@ -41,6 +41,7 @@ struct pt_node* pt_node_create_leaf(struct token *tok)
         return node;
 }
 
+/* TODO: get rid of the recursion */
 void pt_node_destroy(struct pt_node *node)
 {
         for (int i = 0; i < node->childs.size; i++)

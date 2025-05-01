@@ -59,16 +59,16 @@ function test_ok_msg() {
         local module=$1
         local case=$2
         local time=$3
-        printf "$(pr_run) %s.%s\n$(pr_ok) %s.%s (%s ms)\n"\
-         "$module" "$case" "$module" "$case" "$time"
+        printf "$(pr_run) %s.%s\n$(pr_ok) %s.%s (%s ms)\n\r" \
+        "$module" "$case" "$module" "$case" "$time"
 }
 
 function test_fail_msg() {
         local module=$1
         local case=$2
         local time=$3
-        printf "$(pr_run) %s.%s\n$(pr_failed) %s.%s (%s ms)\n\
-        " "$module" "$case" "$module" "$case" "$time"
+        printf "$(pr_run) %s.%s\n$(pr_failed) %s.%s (%s ms)\n\r" \
+        "$module" "$case" "$module" "$case" "$time"
 }
 
 # Helper function to print module footer and update counts
@@ -112,23 +112,19 @@ for file in **/*.exe; do
                         IFS=':' read -r module_name case_name result time <<< "$line"
                         time=${time%$'\r'}
 
-                        # --- Module Transition Logic ---
                         if [[ "$module_name" != "$current_module" ]]; then
                                 print_module_footer "$current_module" "$current_module_failed"
                                 current_module="$module_name"
                                 current_module_failed="false"
                                 test_case_run_msg "$current_module"
                         fi
-                        # --- End Module Transition Logic ---
 
-                        # --- Process Current Test Case ---
                         if [[ "$result" == "true" ]]; then
-                                test_case_buffer+=$(test_ok_msg "$module_name" "$case_name" "$time")"\n"
+                                test_case_buffer+=$(test_ok_msg "$module_name" "$case_name" "$time")
                         elif [[ "$result" == "false" ]]; then
-                                test_case_buffer+=$(test_fail_msg "$module_name" "$case_name" "$time")"\n"
+                                test_case_buffer+=$(test_fail_msg "$module_name" "$case_name" "$time")
                                 current_module_failed="true"
                         fi
-                        # --- End Process Current Test Case ---
                 fi
         done <<< "$summary_output"
 
@@ -139,7 +135,7 @@ for file in **/*.exe; do
                 test_case_run_msg "$current_module"
         fi
 
-	if [[ -n "$test_case_buffer" && "$current_module_failed" == "true" ]]; then
+	if [ -n "$test_case_buffer" ] && [ "$current_module_failed" == "true" ]; then
 		echo -e "$test_case_buffer"   
 	fi
 

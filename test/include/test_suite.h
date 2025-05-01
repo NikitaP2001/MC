@@ -1,4 +1,4 @@
-#include "test_common.h"
+#include "test_tools.h"
 
 #include <assert.h>
 #include <string.h>
@@ -107,6 +107,8 @@ static _Bool g_test_result = true;
 #endif /* _TEST_RESULT_ */
 #define TEST_RESULT (g_test_result ? 0 : 1)
 
+typedef long unsigned int test_time_t;
+
 #define TEST_CASE(module, case)                                                \
 static void TCASE_DEF(module, case);                                           \
 static void TEST_RUN(module, case)                                             \
@@ -119,7 +121,8 @@ static void TEST_RUN(module, case)                                             \
         t_ms = test_get_time() - t_ms;                                         \
         /* Check the renamed variable */                                       \
         const char *str_res = __test_case_status__ ? "true" : "false";         \
-        printf(""#module":"#case":%s:%f\n", str_res , t_ms);                   \
+        printf(""#module":"#case":%s:%lu\n", str_res, (test_time_t)t_ms);      \
+        fflush(stdout);                                                        \
         /* Update global result with the renamed variable */                   \
         g_test_result &= __test_case_status__;                                 \
 }                                                                              \
