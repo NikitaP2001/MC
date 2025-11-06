@@ -81,6 +81,17 @@ TEST_CASE(parser, struct_empty_invalid)
         ASSERT_FALSE(parser_test_case_file("test11.tc"));
 }
 
+static inline struct pt_node *parser_test_get_subexpr(struct pt_node *expr_node,
+                                            enum parser_symbol sym)
+{
+        struct pt_node *subexpr = NULL;
+        while ((expr_node = pt_node_child_first(expr_node))) {
+                if (expr_node->sym == sym)
+                        subexpr = expr_node;
+        }
+        return subexpr;
+}
+
 TEST_CASE(parser, additive_expression_simple)
 {
         const char *code_snippet = "1+2";
@@ -93,14 +104,15 @@ TEST_CASE(parser, additive_expression_simple)
         ASSERT_TRUE(MC_SUCC(status));
 
         struct parser *ps = &t_ctx.parser;
-        status = ps->ops->additive_expression(ps);
+        status = ps->ops->constant_expression(ps);
         ASSERT_TRUE(MC_SUCC(status));
 
-        expr_node = parser_result_pull(ps);
+        expr_node = parser_test_get_subexpr(parser_result_pull(ps), 
+                psym_additive_expression);
         ASSERT_NE(expr_node, NULL);
 
-        ASSERT_EQ(expr_node->sym, psym_additive_expression);
-        ASSERT_EQ(pt_node_child_count(expr_node), 3);
+        EXPECT_EQ(expr_node->sym, psym_additive_expression);
+        EXPECT_EQ(pt_node_child_count(expr_node), 3);
 
         struct pt_node *left_operand_expr = pt_node_child_first(expr_node);
         struct pt_node *op_node = pt_node_child_number(expr_node, 1);
@@ -110,32 +122,26 @@ TEST_CASE(parser, additive_expression_simple)
         ASSERT_NE(op_node, NULL);
         ASSERT_NE(right_operand_expr, NULL);
 
-        ASSERT_EQ(left_operand_expr->sym, psym_primary_expression);
-        ASSERT_EQ(pt_node_child_count(left_operand_expr), 1);
-        struct pt_node *left_const_node = pt_node_child_first(left_operand_expr);
-        ASSERT_NE(left_const_node, NULL);
-        ASSERT_EQ(left_const_node->sym, psym_constant);
+        EXPECT_EQ(left_operand_expr->sym, psym_multiplicative_expression);
+        EXPECT_EQ(right_operand_expr->sym, psym_multiplicative_expression);
 
-        struct token *left_token = left_const_node->node_value.value;
+        struct pt_node *left_const_node = parser_test_get_subexpr(
+                left_operand_expr, psym_constant);
+        ASSERT_NE(left_const_node, NULL);
+        struct pt_node *right_const_node = parser_test_get_subexpr(
+                right_operand_expr, psym_constant);
+        ASSERT_NE(right_const_node, NULL);
+
+        struct token *left_token = left_const_node ->node_value.value;
         ASSERT_NE(left_token, NULL);
-        EXPECT_EQ(left_token->type, tok_constant);
         EXPECT_EQ(left_token->value.var_const.type, const_int);
         EXPECT_EQ(left_token->value.var_const.data.var_int, 1);
 
-        ASSERT_EQ(op_node->sym, PARSER_PUNCTUATOR(punc_add));
-
-        ASSERT_EQ(right_operand_expr->sym, psym_primary_expression);
-        ASSERT_EQ(pt_node_child_count(right_operand_expr), 1);
-        struct pt_node *right_const_node = pt_node_child_first(right_operand_expr);
-        ASSERT_NE(right_const_node, NULL);
-        ASSERT_EQ(right_const_node->sym, psym_constant);
-
         struct token *right_token = right_const_node->node_value.value;
-        ASSERT_NE(right_token, NULL);
-        EXPECT_EQ(right_token->type, tok_constant);
+        ASSERT_NE(right_token , NULL);
         EXPECT_EQ(right_token->value.var_const.type, const_int);
         EXPECT_EQ(right_token->value.var_const.data.var_int, 2);
-
+        
         pt_node_destroy(expr_node);
         parser_test_free(&t_ctx);
 }

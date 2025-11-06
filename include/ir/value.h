@@ -49,6 +49,8 @@ ir_value_hlist_entry(struct hlist_entry *node)
         return container_of(node, struct ir_value, hlist);
 }
 
+#define IR_VALUE_NAME_HASH(name_str, length) fnv_1_hash(name_str, length)
+
 hash_key_t ir_value_node_hash(struct hlist_entry *node);
 
 hash_key_t ir_value_hash(struct ir_value *value);

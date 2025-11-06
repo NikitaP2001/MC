@@ -1574,6 +1574,7 @@ fail:
 static mc_status_t parser_cast_expression(struct parser *ps)
 {
         mc_status_t status;
+        static const uint8_t unary_expr_first[] = { UNARY_EXPRESSION };
         static const uint8_t cast_expr_first[] = { CAST_EXPRESSION };
         static const uint8_t type_name_first[] = { TYPE_NAME };
         struct pt_node *expr = parser_lookahead_pull(ps, psym_cast_expression);
@@ -1590,69 +1591,77 @@ static mc_status_t parser_cast_expression(struct parser *ps)
         
         enum parser_symbol sym = parser_fetch_symbol(ps);
         if (!cast_expr_first[sym])
-                goto fail;
+                goto fail_tname;
 
         /* we need to differ type-name in postfix-expression from
          * one in cast-expression. 
          * note, that one (type-name) could already be in expr */
-        do {
-                struct token *tok = parser_pull_token(ps);
-                if (parser_token_tosymbol(tok) ==
-                        PARSER_PUNCTUATOR(punc_left_rnd_br) 
-                        && type_name_first[parser_fetch_symbol(ps)]) {
+        const enum parser_symbol left_rnd_br = PARSER_PUNCTUATOR(punc_left_rnd_br);
+        for (struct token *tok = NULL; 
+                cast_expr_first[sym]; sym = parser_fetch_symbol(ps)) {
 
-                        struct pt_node *old_lk = parser_lookahead_swap(ps, 
-                                pt_node_create(psym_unary_expression));
+                if (!(tok = parser_pull_token(ps)) 
+                || !type_name_first[parser_fetch_symbol(ps)]
+                || parser_token_tosymbol(tok) != left_rnd_br) {
+                        parser_put_token(ps, tok);
+                        break;
+                }
 
-                        status = parser_type_name(ps);
+                struct pt_node *old_lk = parser_lookahead_swap(ps, 
+                        pt_node_create(psym_unary_expression));
+
+                status = parser_type_name(ps);
+                if (!MC_SUCC(status)) {
+                        parser_lookahead_restore(ps, old_lk);
+                        goto fail_tname;
+                }
+
+                if (parser_fetch_symbol(ps) 
+                        != PARSER_PUNCTUATOR(punc_right_rnd_br)) {
+                        parser_lookahead_restore(ps, old_lk);
+                        goto fail_tname;
+                }
+                parser_pull_token(ps);
+                
+                if (parser_fetch_symbol(ps) 
+                        == PARSER_PUNCTUATOR(punc_left_ql_br)) {
+                        /* add type-name from stack */
+                        parser_lookahead_add(ps, parser_stack_pop(ps));
+
+                        status = parser_unary_expression(ps);
                         if (!MC_SUCC(status)) {
                                 parser_lookahead_restore(ps, old_lk);
-                                goto fail;
-                        }
+                                goto fail_tname;
+                        }       
 
-                        if (parser_fetch_symbol(ps) 
-                                != PARSER_PUNCTUATOR(punc_right_rnd_br)) {
-                                parser_lookahead_restore(ps, old_lk);
-                                goto fail;
-                        }
-                        parser_pull_token(ps);
-                        
-                        if (parser_fetch_symbol(ps) 
-                                == PARSER_PUNCTUATOR(punc_left_ql_br)) {
-                                /* add type-name from stack */
-                                parser_lookahead_add(ps, parser_stack_pop(ps));
-
-                                status = parser_unary_expression(ps);
-                                if (!MC_SUCC(status)) {
-                                        parser_lookahead_restore(ps, old_lk);
-                                        goto fail;
-                                }       
-
-                                old_lk = parser_lookahead_swap(ps, old_lk);
-                                assert(old_lk == NULL);
-                        } else {
-                                parser_lookahead_restore(ps, old_lk);
-                        }
-
-                        pt_node_child_add(expr, parser_stack_pop(ps));
-                        continue;
+                        old_lk = parser_lookahead_swap(ps, old_lk);
+                        assert(old_lk == NULL);
+                } else {
+                        parser_lookahead_restore(ps, old_lk);
                 }
-                parser_put_token(ps, tok);
 
-                status = parser_unary_expression(ps);
-                if (!MC_SUCC(status))
-                        goto fail;
-                pt_node_child_add(expr, parser_stack_pop(ps));       
-        } while (cast_expr_first[sym = parser_fetch_symbol(ps)]);
-
-        if (pt_node_child_type(expr, pt_node_child_count(expr) - 1) 
-                != psym_unary_expression)
+                pt_node_child_add(expr, parser_stack_pop(ps));
+        }
+        if (!unary_expr_first[sym]) {
+                status = PARSER_ERROR(ps, "expected unary expression");
                 goto fail;
+        }
+        status = parser_unary_expression(ps);
+        if (!MC_SUCC(status)) {
+                status = PARSER_ERROR(ps, "invalid unary expression");
+                goto fail;
+        }
+        pt_node_child_add(expr, parser_stack_pop(ps)); 
+
+        assert(pt_node_child_type(expr, pt_node_child_count(expr) - 1) 
+                == psym_unary_expression);
         assert(parser_stack_topsym(ps) == psym_cast_expression);
 
         return MC_OK;
+
+fail_tname:
+        status = PARSER_ERROR(ps, "ivalid type-name cast");
 fail:
-        status = PARSER_ERROR(ps, "expected unary expr");
         parser_stack_restore(ps, expr);
         return status;
 }

@@ -5,7 +5,7 @@
 #include <mc.h>
 
 enum scalar_type {
-        scalar_invalid,
+        scalar_absent,
         scalar_integer_first,
         s_i1 = scalar_integer_first,
         s_i8,
@@ -74,16 +74,25 @@ static inline _Bool ir_scalar_is_pointer(struct ir_scalar var)
         return (var.type == s_pointer);
 }
 
-static inline _Bool ir_scalar_type_compatible(struct ir_scalar var1, 
-                                              struct ir_scalar var2)
+static inline _Bool ir_scalar_is_absent(struct ir_scalar src)
 {
-        return (var1.type == var2.type);
+        return (src.type == scalar_absent);
+}
+
+static inline _Bool ir_scalar_type_compatible(struct ir_scalar src, 
+                                              struct ir_scalar dest)
+{
+        return (src.type == dest.type) || (ir_scalar_is_absent(dest));
 } 
 
 _Bool ir_scalar_const_cmp(struct ir_scalar var1, struct ir_scalar var2);
 
 mc_status_t ir_scalar_const_cast(struct ir_scalar *var,
                                  enum scalar_type type);
+
+mc_status_t ir_scalar_add(_IN struct ir_scalar var1, 
+                         _IN struct ir_scalar var2,
+                         _OUT struct ir_scalar *result);
 
 mc_status_t ir_scalar_or(_IN struct ir_scalar var1, 
                          _IN struct ir_scalar var2,
@@ -97,11 +106,26 @@ mc_status_t ir_scalar_and(_IN struct ir_scalar var1,
                           _IN struct ir_scalar var2,
                           _OUT struct ir_scalar *result);
 
-static inline struct ir_scalar ir_scalar_create_int(int value)
+static inline struct ir_scalar ir_scalar_create_int(enum scalar_type type, 
+                                                    int value)
 {
+        assert(ir_scalar_type_integer(type));
         struct ir_scalar result = {
-                .type = s_i32,
+                .type = type,
                 .data.var_int = value,
+                .is_signed = true,
+        };
+        return result;
+}
+
+static inline struct ir_scalar ir_scalar_create_uint(enum scalar_type type, 
+                                                    int value)
+{
+        assert(ir_scalar_type_integer(type));
+        struct ir_scalar result = {
+                .type = type,
+                .data.var_uint = value,
+                .is_signed = false,
         };
         return result;
 }
@@ -112,5 +136,9 @@ static inline _Bool ir_scalar_eval_true(struct ir_scalar val)
         assert(false); /* TBD */
         return false;
 }
+
+struct token;
+
+void ir_scalar_from_token(struct ir_scalar *scalar, struct token *tok);
 
 #endif /* _IR_SCALAR_H_ */

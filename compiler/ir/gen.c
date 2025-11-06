@@ -8,6 +8,20 @@ struct declaration *irgen_get_declaration(struct irgen_context *gen)
 }
 */
 
+/* Specify if @result has const evaluation, or set it`s basic block.
+ * In result of some generation procedure, we will have @result, 
+ * if evaluation could be const, or block of code which leads to 
+ * forming @result value otherwise */
+static inline void irgen_obj_set_eval(struct irgen_context *gen, 
+                                         struct ir_object *result)
+{
+        /* we have non-const evaluation */
+        if (irgen_value_type(gen) == ir_value_basic_block)
+                ir_obj_set_eval(result, irgen_bb_get(gen));
+        else
+                ir_obj_set_eval(result, NULL);
+}
+
 struct label *irgen_get_label(struct irgen_context *gen, struct pt_node *scope)
 {
         struct token *id;
@@ -48,18 +62,29 @@ void irgen_free(struct irgen_context *gen)
         stack_free(&gen->switch_sets);
 }
 
+struct ir_value *irgen_context_value_get(struct irgen_context *gen, 
+                                         struct pt_node *id_node)
+{
+        struct token *id_tok = ast_declarator_id(id_node);
+        struct ir_function *func = gen->curr_func;
+        struct ir_module *mod = gen->mod;
+
+        struct ir_value *value = ir_function_value_get(func, id_tok);
+        if (value == NULL)
+                value = ir_module_value_get(mod, id_tok);
+
+        return value;
+}
+
 void irgen_function_create(struct irgen_context *gen, 
                            struct pt_node *func_def)
 {
         assert(func_def->sym == psym_function_definition);
-        struct function *func = ir_function_create(gen->mod, func_def);
+        struct ir_function *func = ir_function_create(func_def);
         gen->curr_func = func;
 }
 
-/* Create new block based on current node, store it to current
- * analysed function and set it for all subsequent code to be 
- * inserted into it (or appended in case of new basic blocks)
- * source - ast node which will lead to this basic block
+/* Create new block based on current node, put in in current value bb
  *      @return: replaced basic block, which was previously on top */
 struct basic_block *irgen_bb_create(struct irgen_context *gen, 
                                     struct pt_node *source)
@@ -75,7 +100,7 @@ struct basic_block *irgen_bb_create(struct irgen_context *gen,
                         preffix = "bb";
                         break;
         }
-
+        assert(gen->curr_value != NULL);
         struct basic_block *bb = ir_bb_create(preffix, irgen_label_index(gen));
         if (irgen_value_type(gen) == ir_value_basic_block) {
                 struct basic_block *bb_prev = irgen_bb_get(gen);
@@ -88,34 +113,6 @@ struct basic_block *irgen_bb_create(struct irgen_context *gen,
         return bb;
 }
 
-static inline 
-enum scalar_type 
-irgen_const_type_to_scalar(enum constant_type type)
-{
-        switch (type) {
-                case const_int:
-                        return s_i32;
-                case const_uint:
-                        return s_i32;
-                case const_long_int:
-                        return s_i64;
-                case const_ulong_int:
-                        return s_i64;
-                case const_long_long_int:
-                        return s_i64;
-                case const_ulong_long_int:
-                        return s_i64;
-                case const_float:
-                        return s_f32;
-                case const_double:
-                        return s_f64;
-                case const_long_double:
-                        return s_f80;
-                default:
-                        MC_DBG(MC_CRIT, "unexpected constant type");
-                        return scalar_invalid;
-        }
-}
 
 #define IRGEN_INTEGER_EXPRESSION                \
         [psym_constant_expression] = 1,         \
@@ -137,12 +134,9 @@ static void irgen_obj_specify_type(struct ir_object *s_val,
                 };
                 ir_obj_scalar_set(s_val, scalar);
         } else if (sym == psym_constant) {
+                struct ir_scalar scalar;
                 struct token *const_tok = lval_node->node_value.value;
-                enum constant_type type = token_constant(const_tok).type;
-                struct ir_scalar scalar = {
-                        .type = irgen_const_type_to_scalar(type),
-                        .is_signed = token_const_is_signed(type)
-                };
+                ir_scalar_from_token(&scalar, const_tok);
                 ir_obj_scalar_set(s_val, scalar);
         } else if (sym == psym_type_name) {
                 assert(false);
@@ -193,14 +187,14 @@ static _Bool irgen_obj_is_global(struct pt_node *lval_node)
 struct ir_object *irgen_obj_create(struct irgen_context *gen, 
         struct pt_node *lval_node)
 {
-        const char *prefix = "lvalue";
+        const char *prefix = "object";
         struct ir_object *s_val = ir_obj_create(prefix, 
                 irgen_label_index(gen));
         gen->curr_value = &s_val->val;
         if (lval_node != NULL)
                 irgen_obj_specify_type(s_val, lval_node);
         if (irgen_obj_is_global(lval_node))
-                ir_module_add_global(gen->mod, s_val);
+                ir_module_object_add(gen->mod, s_val);
         else 
                 ir_function_value_add(gen->curr_func, &s_val->val);
         return s_val;
@@ -276,26 +270,12 @@ struct basic_block *ir_bb_form_final(struct irgen_context *gen,
         return bb_final;
 }
 
-/* Specify if @result has const evaluation, or set it`s basic block.
- * In result of some generation procedure, we will have @result, 
- * if evaluation could be const, or block of code which leads to 
- * forming @result value otherwise */
-static inline void irgen_obj_set_eval(struct irgen_context *gen, 
-                                         struct ir_object *result)
-{
-        /* we have non-const evaluation */
-        if (irgen_value_type(gen) == ir_value_basic_block)
-                ir_obj_set_eval(result, irgen_bb_get(gen));
-        else
-                ir_obj_set_eval(result, NULL);
-}
-
 mc_status_t irgen_obj_move_single(struct irgen_context *gen, 
                                      struct ir_object *val_mov)
 {
         mc_status_t status = MC_OK;
-
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
+        assert(result != val_mov);
         struct basic_block *bb_val = ir_obj_get_eval(val_mov);
         if (bb_val == NULL) {
                 status = ir_obj_const_move(val_mov, result);
@@ -321,7 +301,8 @@ mc_status_t irgen_obj_move_cond(struct irgen_context *gen,
                                    struct ir_object *value_false)
 {
         mc_status_t status = MC_OK;
-        struct ir_object *result = irgen_obj_get(gen);
+        /* instead put one of the expression to the result */
+        struct ir_object *result = irgen_obj_create(gen, NULL);
 
         struct basic_block *bb_val_true = ir_obj_get_eval(value_true);
         struct basic_block *bb_val_false = ir_obj_get_eval(value_false);
@@ -439,7 +420,7 @@ mc_status_t irgen_obj_and(struct irgen_context *gen,
                              struct ir_object *val1, 
                              struct ir_object *val2)
 {
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         mc_status_t status;
 
         /* The usual arithmetic conversions are performed on the operands */
@@ -492,7 +473,7 @@ mc_status_t irgen_obj_xor(struct irgen_context *gen,
                              struct ir_object *val1, 
                              struct ir_object *val2)
 {
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         mc_status_t status;
 
         /* The usual arithmetic conversions are performed on the operands */
@@ -545,7 +526,7 @@ mc_status_t irgen_obj_or(struct irgen_context *gen,
                             struct ir_object *val1, 
                             struct ir_object *val2)
 {
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         mc_status_t status;
         /* The usual arithmetic conversions are performed on the operands */
         irgen_scalar_integer_promotion(gen, val1, val2);
@@ -599,19 +580,21 @@ mc_status_t irgen_obj_log_and(struct irgen_context *gen,
 {
         mc_status_t status = MC_OK;
 
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         struct basic_block *bb_val1 = ir_obj_get_eval(val1);
         struct basic_block *bb_val2 = ir_obj_get_eval(val2);
         _Bool val1_false = (bb_val1 == NULL && !ir_obj_eval_true(val1));
         _Bool val2_false = (bb_val2 == NULL && !ir_obj_eval_true(val2));
 
         if (val1_false || (bb_val1 == NULL && val2_false)) {
-                status = ir_obj_const_set(result, ir_scalar_create_int(0));
+                status = ir_obj_const_set(result, 
+                        ir_scalar_create_int(s_i32, 0));
                 if (!MC_SUCC(status))
                         goto fail;
         } else if (bb_val1 == NULL && !val1_false 
                 && bb_val2 == NULL && !val2_false) {
-                status = ir_obj_const_set(result, ir_scalar_create_int(1));
+                status = ir_obj_const_set(result, 
+                        ir_scalar_create_int(s_i32, 1));
                 if (!MC_SUCC(status))
                         goto fail;
         } else {
@@ -621,7 +604,7 @@ mc_status_t irgen_obj_log_and(struct irgen_context *gen,
                 struct basic_block *bb_true = NULL;
 
                 struct ir_object *val_0 = irgen_scalar_create(gen, 
-                        ir_scalar_create_int(0));
+                        ir_scalar_create_int(s_i32, 0));
                 status = ir_obj_move(bb_val_false, val_0, result);
                 if (!MC_SUCC(status))
                         goto fail;
@@ -629,7 +612,7 @@ mc_status_t irgen_obj_log_and(struct irgen_context *gen,
                 if (!val2_false) {
                         bb_true = irgen_bb_create(gen, NULL);
                         struct ir_object *val_1 = irgen_scalar_create(gen, 
-                                ir_scalar_create_int(1));
+                                ir_scalar_create_int(s_i32, 1));
                         status = ir_obj_move(bb_true, val_1, result);
                         if (!MC_SUCC(status))
                                 goto fail;
@@ -675,19 +658,21 @@ mc_status_t irgen_obj_log_or(struct irgen_context *gen,
 {
         mc_status_t status = MC_OK;
 
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         struct basic_block *bb_val1 = ir_obj_get_eval(val1);
         struct basic_block *bb_val2 = ir_obj_get_eval(val2);
         _Bool val1_true = (bb_val1 == NULL && ir_obj_eval_true(val1));
         _Bool val2_true = (bb_val2 == NULL && ir_obj_eval_true(val2));
 
         if (val1_true || (bb_val1 == NULL && val2_true)) {
-                status = ir_obj_const_set(result, ir_scalar_create_int(1));
+                status = ir_obj_const_set(result, 
+                        ir_scalar_create_int(s_i32, 1));
                 if (!MC_SUCC(status))
                         goto fail;
         } else if (bb_val1 == NULL && !val1_true 
                 && bb_val2 == NULL && !val2_true) {
-                status = ir_obj_const_set(result, ir_scalar_create_int(0));
+                status = ir_obj_const_set(result, 
+                        ir_scalar_create_int(s_i32, 0));
                 if (!MC_SUCC(status))
                         goto fail;
         } else {
@@ -697,7 +682,7 @@ mc_status_t irgen_obj_log_or(struct irgen_context *gen,
                 struct basic_block *bb_false = NULL;
 
                 struct ir_object *val_1 = irgen_scalar_create(gen, 
-                        ir_scalar_create_int(1));
+                        ir_scalar_create_int(s_i32, 1));
                 status = ir_obj_move(bb_val_true, val_1, result);
                 if (!MC_SUCC(status))
                         goto fail;
@@ -705,7 +690,7 @@ mc_status_t irgen_obj_log_or(struct irgen_context *gen,
                 if (!val2_true) {
                         bb_false = irgen_bb_create(gen, NULL);
                         struct ir_object *val_0 = irgen_scalar_create(gen, 
-                                ir_scalar_create_int(0));
+                                ir_scalar_create_int(s_i32, 0));
                         status = ir_obj_move(bb_false, val_0, result);
                         if (!MC_SUCC(status))
                                 goto fail;
@@ -749,7 +734,7 @@ static mc_status_t irgen_obj_cmp(struct irgen_context *gen,
                                     enum ir_ins_type cmp_type)
 {
         mc_status_t status = MC_OK;
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         assert(ir_obj_is_integer(result));
 
         /* Complex number comparisons are not supported now */
@@ -765,9 +750,9 @@ static mc_status_t irgen_obj_cmp(struct irgen_context *gen,
                 struct ir_scalar s_cmp_val;
                 if (ir_scalar_const_cmp(ir_obj_scalar_get(val1), 
                         ir_obj_scalar_get(val2)))
-                        s_cmp_val = ir_scalar_create_int(1);
+                        s_cmp_val = ir_scalar_create_int(s_i32, 1);
                 else
-                        s_cmp_val = ir_scalar_create_int(0);
+                        s_cmp_val = ir_scalar_create_int(s_i32, 0);
                 ir_obj_const_set(result, s_cmp_val);
         } else {
                 struct basic_block *bb_jmp = irgen_bb_create(gen, NULL);
@@ -867,6 +852,59 @@ mc_status_t irgen_obj_add(struct irgen_context *gen,
         UNUSED(gen);
         UNUSED(val1);
         UNUSED(val2);
+        struct ir_object *result = irgen_object_get(gen);
+
+        if (ir_obj_is_arithmetic(val1) && ir_obj_is_arithmetic(val2)) {
+                irgen_scalar_integer_promotion(gen, val1, val2);
+        } 
+        assert(ir_obj_is_integer(val1) && ir_obj_is_integer(val2));
+
+        if (ir_obj_const_eval(val1) && ir_obj_const_eval(val2)) {
+                struct ir_scalar s_sum = ir_obj_scalar_get(result);
+                if (!MC_SUCC(ir_scalar_add(ir_obj_scalar_get(val1),
+                        ir_obj_scalar_get(val2),
+                        &s_sum)))
+                        return IRGEN_ERROR(gen, val1->node,
+                                "integer addition overflow");
+                ir_obj_scalar_set(result, s_sum);
+        } else {
+                struct basic_block *bb_jmp = irgen_bb_create(gen, NULL);
+                struct basic_block *bb_jmp_start = bb_jmp;
+                struct basic_block *val_bb;
+
+                if (!ir_obj_const_eval(val1)) {
+                        val_bb = ir_obj_get_eval(val1);
+                        val_bb = ir_bb_form_final(gen, val_bb);
+                        ir_bb_ctf_uncond(bb_jmp, val_bb);
+                        bb_jmp = val_bb;
+                }
+                if (!ir_obj_const_eval(val2)) {
+                        val_bb = ir_obj_get_eval(val2);
+                        val_bb = ir_bb_form_final(gen, val_bb);
+                        ir_bb_ctf_uncond(bb_jmp, val_bb);
+                        bb_jmp = val_bb;
+                }
+
+                if (!ir_scalar_type_compatible(ir_obj_scalar_get(result),
+                        ir_obj_scalar_get(val1))) {
+                        return IRGEN_ERROR(gen, result->node,
+                                "incompatible result type");
+                }
+
+                if (!ir_scalar_type_compatible(ir_obj_scalar_get(result),
+                        ir_obj_scalar_get(val2))) {
+                        return IRGEN_ERROR(gen, result->node,
+                                "incompatible result type");
+                }
+
+                if (!ir_obj_add(bb_jmp, val1, val2, result)) {
+                        return IRGEN_ERROR(gen, val1->node,
+                                "integer addition overflow");
+                }
+
+                irgen_value_set(gen, ir_bb_value(bb_jmp_start));
+                irgen_obj_set_eval(gen, result);
+        }
         return MC_OK;
 }
 

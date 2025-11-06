@@ -67,6 +67,11 @@ enum ir_ins_type {
          * or <value result>, <operand 1>, <operand 2> 
          */
         ir_ins_and,
+
+        /* Binary add operation 
+         * add <value result>, <operand 1>, <operand 2> 
+         */
+        ir_ins_add,
 };
 
 struct ir_value;

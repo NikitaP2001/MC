@@ -24,14 +24,20 @@ static mc_status_t irgen_expression(struct irgen_context *gen,
 static mc_status_t irgen_primary_expression(struct irgen_context *gen,
                                             struct pt_node *stmt)
 {
-        mc_status_t status = MC_FAIL;
+        mc_status_t status = MC_OK;
         struct ir_object *result = NULL;
         struct pt_node *curr_node = pt_node_child_first(stmt);
         if (pt_node_sym_cmp(curr_node, psym_identifier)) {
-
-                /*
-                struct *value  = irgen
-                */
+                struct ir_value *value;
+                value = irgen_context_value_get(gen, curr_node);
+                if (value == NULL) {
+                        status = IRGEN_ERROR(gen, curr_node, 
+                                "referenced but not defined");
+                } else {
+                        result = ir_value_object_get(value);
+                }
+        } else if (pt_node_sym_cmp(curr_node, psym_constant)) {
+                result = irgen_obj_create(gen, curr_node);
         }
         irgen_value_set(gen, &result->val);
         return status;
@@ -62,15 +68,16 @@ static mc_status_t irgen_postfix_expression(struct irgen_context *gen,
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(stmt);
         uint16_t i_node = 1;
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         struct pt_node *curr_node = pt_node_child_first(stmt);
         struct pt_node *id;
-        struct ir_object *curr_val;
+        struct ir_object *curr_val = NULL;
         struct ir_object *old_val;
 
         if (pt_node_sym_cmp(curr_node, psym_primary_expression)) {
                 status = irgen_primary_expression(gen, curr_node);
-                curr_val = irgen_obj_create(gen, curr_node);
+                if (child_count == 1)
+                        curr_val = irgen_object_get(gen);
         } else { 
                 curr_val = irgen_obj_create(gen, curr_node);
                 assert(pt_node_sym_cmp(curr_node, psym_type_name));
@@ -118,8 +125,11 @@ static mc_status_t irgen_postfix_expression(struct irgen_context *gen,
                 if (!MC_SUCC(status))
                         return status;
         }
-        irgen_value_set(gen, &result->val);
-        status = irgen_obj_move_single(gen, curr_val);
+        if (curr_val != NULL) {
+                irgen_value_set(gen, &result->val);
+                status = irgen_obj_move_single(gen, curr_val);
+        }
+        
         return status;
 }
 
@@ -128,7 +138,7 @@ static mc_status_t irgen_unary_operator(struct irgen_context *gen,
                                         struct pt_node *cast_expr)
 {
         mc_status_t status;
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         assert(pt_node_sym_cmp(unary_op, psym_unary_operator));
         struct ir_object *cast_expr_val = irgen_obj_create(gen, cast_expr);
         status = irgen_cast_expression(gen, cast_expr);
@@ -166,7 +176,7 @@ static mc_status_t irgen_unary_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(stmt);
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         struct pt_node *last_expr = pt_node_child_last(stmt);
 
         struct ir_object *expr_val = irgen_obj_create(gen, last_expr);
@@ -212,7 +222,7 @@ static mc_status_t irgen_cast_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(stmt);
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         struct pt_node *last_expr = pt_node_child_last(stmt);
         struct ir_object *cast_expr_val = irgen_obj_create(gen, last_expr);
         status = irgen_unary_expression(gen, last_expr);
@@ -236,7 +246,7 @@ static mc_status_t irgen_multiplicative_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(stmt);
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         struct pt_node *left_expr;
         struct ir_object *left_expr_val;
         struct ir_object *right_expr_val;
@@ -306,7 +316,7 @@ static mc_status_t irgen_additive_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(stmt);
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         struct pt_node *left_expr;
         struct ir_object *left_expr_val;
         struct ir_object *right_expr_val;
@@ -357,7 +367,7 @@ static mc_status_t irgen_shift_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(stmt);
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         struct pt_node *left_expr;
         struct ir_object *left_expr_val;
         struct ir_object *right_expr_val;
@@ -425,7 +435,7 @@ static mc_status_t irgen_relational_expression(struct irgen_context *gen,
 
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(expr);
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         struct pt_node *left_expr;
         struct ir_object *left_expr_val;
         struct ir_object *right_expr_val;
@@ -507,7 +517,7 @@ static mc_status_t irgen_equality_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(expr);
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         struct pt_node *left_expr;
         struct ir_object *left_expr_val;
         struct ir_object *right_expr_val;
@@ -556,7 +566,7 @@ static mc_status_t irgen_and_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(expr);
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         struct pt_node *left_expr;
         struct ir_object *left_expr_val;
         struct ir_object *right_expr_val;
@@ -599,7 +609,7 @@ static mc_status_t irgen_exclusive_or_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(expr);
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         struct pt_node *left_expr;
         struct ir_object *left_expr_val;
         struct ir_object *right_expr_val;
@@ -641,7 +651,7 @@ static mc_status_t irgen_inclusive_or_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(expr);
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         struct pt_node *left_expr;
         struct ir_object *left_expr_val;
         struct ir_object *right_expr_val;
@@ -684,7 +694,7 @@ static mc_status_t irgen_logical_and_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(expr);
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         struct pt_node *left_expr;
         struct ir_object *left_expr_val;
         struct ir_object *right_expr_val;
@@ -727,7 +737,7 @@ static mc_status_t irgen_logical_or_expression(struct irgen_context *gen,
 {
         mc_status_t status;
         uint16_t child_count = pt_node_child_count(expr);
-        struct ir_object *result = irgen_obj_get(gen);
+        struct ir_object *result = irgen_object_get(gen);
         struct pt_node *left_expr;
         struct ir_object *left_expr_val;
         struct ir_object *right_expr_val;
@@ -795,29 +805,27 @@ static mc_status_t irgen_conditional_expression(struct irgen_context *gen,
                                                 struct pt_node *stmt)
 {
         mc_status_t status;
-        struct ir_object *result = irgen_obj_get(gen);
         /* logical-or-expr should be scalar */
         struct pt_node *node_log_or_expr = pt_node_child_first(stmt);
-        struct ir_object *log_expr_val = irgen_obj_create(gen, node_log_or_expr);
         status = irgen_logical_or_expression(gen, node_log_or_expr);
         if (!MC_SUCC(status))
                 return status;
+        struct ir_object *log_expr_val = irgen_object_get(gen);
 
-        assert(log_expr_val->type != ir_object_scalar);
+        assert(log_expr_val->type == ir_object_scalar);
 
         if (pt_node_child_count(stmt) != 1) {
                 struct pt_node *node_expr = pt_node_child_number(stmt, 2);
-                struct ir_object *expr_val = irgen_obj_create(gen, node_expr);
                 status = irgen_expression(gen, node_expr);
                 if (!MC_SUCC(status))
                         return status;
+                struct ir_object *expr_val = irgen_object_get(gen);
 
                 struct pt_node *node_cond_expr = pt_node_child_number(stmt, 3);
-                struct ir_object *cond_expr_val = irgen_obj_create(gen, 
-                        node_cond_expr);
                 status = irgen_conditional_expression(gen, node_cond_expr);
                 if (!MC_SUCC(status))
                         return status;
+                struct ir_object *cond_expr_val = irgen_object_get(gen);
 
                 status = irgen_conditional_expression_compat(gen, stmt, 
                         expr_val, cond_expr_val);
@@ -825,12 +833,8 @@ static mc_status_t irgen_conditional_expression(struct irgen_context *gen,
                         return status;
 
                 /* set target value */
-                irgen_value_set(gen, &result->val);
-                status = irgen_obj_move_cond(gen, log_expr_val, expr_val, result);
-        } else {
-                irgen_value_set(gen, &result->val);
-                status = irgen_obj_move_single(gen, log_expr_val);
-        }
+                status = irgen_obj_move_cond(gen, log_expr_val, expr_val, cond_expr_val);
+        }        
         return status;
 }
 
@@ -839,14 +843,11 @@ static mc_status_t irgen_constant_expression(struct irgen_context *gen,
 {
         mc_status_t status;
 
-        assert(irgen_value_type(gen) == ir_value_object);
-        struct ir_object *val_c_expr = irgen_obj_get(gen);
-
         status = irgen_conditional_expression(gen, pt_node_child_first(stmt));
         if (!MC_SUCC(status))
                 return status;
-
-        if (ir_obj_const_eval(val_c_expr))
+        
+        if (!ir_obj_const_eval(irgen_object_get(gen)))
                 status = IRGEN_ERROR(gen, stmt, "expected const value");
 
         return status;
@@ -926,22 +927,18 @@ static mc_status_t irgen_labeled_statement_case(struct irgen_context *gen,
         mc_status_t status;
         struct ir_object *expr_val;
 
-        /* add new basic block, if needed */
-        if (!irgen_bb_empty(gen))
-                irgen_bb_create(gen, stmt);
-                
-        struct basic_block *bb_stmt = irgen_bb_get(gen);
         status = irgen_statement(gen, pt_node_child_last(stmt));
         if (!MC_SUCC(status))
                 return status;
+        struct ir_value *stmt_val = irgen_value_get(gen);
+        assert(stmt_val != NULL);
 
         /* integer constant expression type here */
         struct pt_node *node_c_expr = pt_node_child_number(stmt, 2);
-        irgen_obj_create(gen, node_c_expr);
         status = irgen_constant_expression(gen, node_c_expr);
         if (!MC_SUCC(status))
                return status; 
-        expr_val = irgen_obj_get(gen);
+        expr_val = irgen_object_get(gen);
         assert(expr_val->type == ir_object_scalar);
 
         struct pt_node *sw_node = irgen_labeled_statement_last_switch(stmt);
@@ -949,7 +946,7 @@ static mc_status_t irgen_labeled_statement_case(struct irgen_context *gen,
                 = irgen_switch_label_set_get(gen, sw_node);
         struct switch_label_entry *entry 
                 = irgen_switch_label_set_entry(lbl_set);
-        entry->block = bb_stmt;
+        entry->result = stmt_val;
         entry->val = expr_val;
 
         return status;
@@ -960,10 +957,6 @@ static mc_status_t irgen_labeled_statement_default(struct irgen_context *gen,
 {
         mc_status_t status;
 
-        /* add new basic block, if needed */
-        if (!irgen_bb_empty(gen))
-                irgen_bb_create(gen, stmt);
-
         status = irgen_statement(gen, pt_node_child_last(stmt));
         if (!MC_SUCC(status))
                 return status;
@@ -973,7 +966,7 @@ static mc_status_t irgen_labeled_statement_default(struct irgen_context *gen,
                 = irgen_switch_label_set_get(gen, sw_node);
         struct switch_label_entry *entry 
                 = irgen_switch_label_set_entry(lbl_set);
-        entry->block = irgen_bb_get(gen);
+        entry->result = irgen_value_get(gen);
         entry->val = NULL;
 
         return status;
@@ -1109,8 +1102,8 @@ static mc_status_t irgen_function_definition(struct irgen_context *gen,
         mc_status_t status = MC_PARSE_ERROR;
         /* TODO: check func def constraints 6.9.1 */
 
-        irgen_bb_create(gen, func_def);
         status = irgen_compound_statement(gen, pt_node_child_last(func_def));
+        /* assert compare returned type to function type */
 
         return status;
 }

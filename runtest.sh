@@ -67,8 +67,9 @@ function test_fail_msg() {
         local module=$1
         local case=$2
         local time=$3
-        printf "$(pr_run) %s.%s\n$(pr_failed) %s.%s (%s ms)\n\r" \
-        "$module" "$case" "$module" "$case" "$time"
+        local errors=$4
+        printf "$(pr_run) %s.%s\n%s$(pr_failed) %s.%s (%s ms)\n\r" \
+        "$module" "$case" "$errors" "$module" "$case" "$time"
 }
 
 # Helper function to print module footer and update counts
@@ -106,6 +107,7 @@ for file in **/*.exe; do
         summary_output=$($file_path)
         cd "$test_dir"
 
+        errors=""
         while IFS= read -r line ; do
                 line=${line%$'\r'}
                 if [[ "$line" == *":"*":"*":"* ]]; then
@@ -114,6 +116,7 @@ for file in **/*.exe; do
 
                         if [[ "$module_name" != "$current_module" ]]; then
                                 print_module_footer "$current_module" "$current_module_failed"
+                                errors=""
                                 current_module="$module_name"
                                 current_module_failed="false"
                                 test_case_run_msg "$current_module"
@@ -122,9 +125,12 @@ for file in **/*.exe; do
                         if [[ "$result" == "true" ]]; then
                                 test_case_buffer+=$(test_ok_msg "$module_name" "$case_name" "$time")
                         elif [[ "$result" == "false" ]]; then
-                                test_case_buffer+=$(test_fail_msg "$module_name" "$case_name" "$time")
+                                test_case_buffer+=$(test_fail_msg "$module_name" \
+                                "$case_name" "$time" "$errors")
                                 current_module_failed="true"
                         fi
+                else
+                        errors+="$line\n"
                 fi
         done <<< "$summary_output"
 

@@ -13,7 +13,7 @@ struct irgen_context {
         struct parser *parser;
         struct ir_module *mod;
 
-        struct function *curr_func;
+        struct ir_function *curr_func;
 
         /* the abstraction of value we are currently
          * working with. The main two examples may be
@@ -78,9 +78,9 @@ struct declaration *irgen_get_declaration(struct irgen_context *gen,
                                           struct pt_node *scope);
 
 struct switch_label_entry {
-        /* we heve block - we know where to jump, we have
+        /* we heve block inside result - we know where to jump, we have
          * value - we know when to jump */
-        struct basic_block *block;
+        struct ir_value *result;
         /* NULL mean default */
         struct ir_object *val; 
 };
@@ -102,6 +102,9 @@ void irgen_switch_label_set_free(struct switch_label_set *set);
 void irgen_init(struct irgen_context *gen, struct parser *ps);
 
 void irgen_free(struct irgen_context *gen);
+
+struct ir_value *irgen_context_value_get(struct irgen_context *gen, 
+                                         struct pt_node *id_node);
 
 static inline
 uint32_t irgen_label_index(struct irgen_context *gen)
@@ -275,23 +278,21 @@ irgen_value_obj_set(struct irgen_context *gen,
 
 static inline 
 struct ir_value *
-irgen_value_seek(struct irgen_context *gen, struct pt_node *id)
+irgen_value_get(struct irgen_context *gen)
 {
-        return ir_function_value_seek(gen->curr_func, id);
-}
-
-static inline 
-struct basic_block *
-irgen_bb_get(struct irgen_context *gen)
-{
-        return ir_value_bb_get(gen->curr_value);
+        return gen->curr_value;
 }
 
 static inline 
 struct ir_object *
-irgen_obj_get(struct irgen_context *gen)
+irgen_object_get(struct irgen_context *gen)
 {
-        return ir_obj_get(gen->curr_value);
+        return ir_value_object_get(irgen_value_get(gen));
+}
+
+static inline struct basic_block *irgen_bb_get(struct irgen_context *gen)
+{
+        return ir_value_bb_get(irgen_value_get(gen));
 }
 
 static inline _Bool irgen_bb_empty(struct irgen_context *gen)

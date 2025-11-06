@@ -13,8 +13,14 @@ ir_obj_create(const char *prefix, uint32_t index)
         };
         ir_value_init(&s_val->val, &params);
         s_val->eval = NULL;
-        s_val->type = ir_object_unspecified;
+        s_val->type = ir_object_absent;
         return s_val;
+}
+
+
+void ir_obj_destroy(struct ir_object *obj)
+{
+        free(obj);
 }
 
 struct ir_value *ir_obj_value_get(struct ir_object *obj)
@@ -28,7 +34,16 @@ _Bool ir_obj_scalar_compat(struct ir_object *source, struct ir_object *result)
         struct ir_scalar src = source->var.scalar;
         struct ir_scalar res = result->var.scalar;
         /* currently we assume no type cast */
-        return ir_scalar_type_compatible(src, res);
+        return res.type == scalar_absent || ir_scalar_type_compatible(src, res);
+}
+
+static inline _Bool ir_obj_scalar_triple_compat(struct ir_object *first,
+                                                struct ir_object *second,
+                                                struct ir_object *result)
+{
+        return ir_obj_scalar_compat(first, result) 
+                && ir_obj_scalar_compat(second, result);
+        
 }
 
 mc_status_t ir_obj_const_move(struct ir_object *source, struct ir_object *result)
@@ -36,8 +51,11 @@ mc_status_t ir_obj_const_move(struct ir_object *source, struct ir_object *result
         assert(ir_obj_const_eval(source) && ir_obj_const_eval(result));
         mc_status_t status = MC_FAIL;
         /* currently we assume no type cast */
-        if (ir_obj_scalar_compat(source, result)) {
+        if ((ir_obj_scalar_compat(source, result) 
+                && source->type == ir_object_scalar) 
+                || source->type == ir_object_absent) {
                 result->var.scalar = source->var.scalar;
+                result->type = ir_object_scalar;
                 status = MC_OK;
         }
         return status;
@@ -116,8 +134,7 @@ mc_status_t ir_obj_or(struct basic_block *bb, struct ir_object *val1,
                   struct ir_object *val2, struct ir_object *result)
 {
         mc_status_t status = MC_FAIL;
-        if (ir_obj_scalar_compat(val1, result) 
-                && ir_obj_scalar_compat(val2, result)) {
+        if (ir_obj_scalar_triple_compat(val1, val2, result)) {
                 struct instruction *ins = ir_bb_add_ins(bb, ir_ins_or);
                 ir_ins_insert_use(ins, &result->val);
                 ir_ins_insert_use(ins, &val1->val);
@@ -131,8 +148,7 @@ mc_status_t ir_obj_xor(struct basic_block *bb, struct ir_object *val1,
                           struct ir_object *val2, struct ir_object *result)
 {
         mc_status_t status = MC_FAIL;
-        if (ir_obj_scalar_compat(val1, result) 
-                && ir_obj_scalar_compat(val2, result)) {
+        if (ir_obj_scalar_triple_compat(val1, val2, result)) {
                 struct instruction *ins = ir_bb_add_ins(bb, ir_ins_xor);
                 ir_ins_insert_use(ins, &result->val);
                 ir_ins_insert_use(ins, &val1->val);
@@ -146,8 +162,7 @@ mc_status_t ir_obj_and(struct basic_block *bb, struct ir_object *val1,
                           struct ir_object *val2, struct ir_object *result)
 {
         mc_status_t status = MC_FAIL;
-        if (ir_obj_scalar_compat(val1, result) 
-                && ir_obj_scalar_compat(val2, result)) {
+        if (ir_obj_scalar_triple_compat(val1, val2, result)) {
                 struct instruction *ins = ir_bb_add_ins(bb, ir_ins_and);
                 ir_ins_insert_use(ins, &result->val);
                 ir_ins_insert_use(ins, &val1->val);
@@ -163,6 +178,20 @@ mc_status_t ir_obj_cmp(struct basic_block *bb, enum ir_ins_type type,
         mc_status_t status = MC_FAIL;
         if (ir_obj_is_integer(result)) {
                 struct instruction *ins = ir_bb_add_ins(bb, type);
+                ir_ins_insert_use(ins, &result->val);
+                ir_ins_insert_use(ins, &val1->val);
+                ir_ins_insert_use(ins, &val2->val);
+                status = MC_OK;
+        }
+        return status;
+}
+
+mc_status_t ir_obj_add(struct basic_block *bb, struct ir_object *val1, 
+                       struct ir_object *val2, struct ir_object *result)
+{
+        mc_status_t status = MC_FAIL;
+        if (ir_obj_scalar_triple_compat(val1, val2, result)) {
+                struct instruction *ins = ir_bb_add_ins(bb, ir_ins_add);
                 ir_ins_insert_use(ins, &result->val);
                 ir_ins_insert_use(ins, &val1->val);
                 ir_ins_insert_use(ins, &val2->val);

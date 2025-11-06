@@ -7,7 +7,7 @@ struct ir_value *ir_seek_var_in_table(struct hash_table *tbl,
         struct token_value_raw val = var_id->value.var_raw;
         char *name = val.value;
         file_size_t length = val.length;
-        hash_key_t key = fnv_1_hash(name, length);
+        hash_key_t key = IR_VALUE_NAME_HASH(name, length);
         HASH_FOREACH_ENTRY(tbl, key) {
                 struct ir_value *val = ir_value_hlist_entry(entry);
                 const char *val_name = ir_value_name_get(val);

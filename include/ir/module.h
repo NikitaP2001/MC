@@ -11,9 +11,14 @@ struct ir_module {
 
 struct ir_module *ir_module_create();
 
-void ir_module_add_function(struct ir_module *module, struct function *func);
+void ir_module_add_function(struct ir_module *module, struct ir_function *func);
 
-void ir_module_add_global(struct ir_module *module, struct ir_object *obj);
+void ir_module_function_create(struct ir_module *module, struct pt_node *func_def);
+
+void ir_module_object_add(struct ir_module *module, struct ir_object *obj);
+
+struct ir_value *ir_module_value_get(struct ir_module *module, 
+                                     struct token *id_tok);
 
 void ir_module_destroy(struct ir_module *module);
 

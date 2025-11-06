@@ -23,18 +23,20 @@ hash_key_t ir_value_node_hash(struct hlist_entry *node)
 hash_key_t ir_value_hash(struct ir_value *value)
 {
         const char *name = ir_value_name_get(value);
-        return fnv_1_hash(name, strlen(name));
+        return IR_VALUE_NAME_HASH(name, strlen(name));
 }
 
 void ir_value_free(struct hlist_entry *node)
 {
         struct ir_value *val = ir_value_hlist_entry(node);
+        fixed_str_free(&val->name);
+        vector_free(&val->ins_use);
         switch (val->type) {
                 case ir_value_basic_block:
                         ir_bb_destroy(ir_value_bb_get(val));
                         break;
                 case ir_value_object:
-                        assert(false);
+                        ir_obj_destroy(ir_value_object_get(val));
                         break;
                 case ir_value_function:
                         ir_function_destroy(ir_value_function_get(val));
@@ -42,8 +44,6 @@ void ir_value_free(struct hlist_entry *node)
                 default:
                         MC_DBG(MC_ERR, "unexpected value type");
         }
-        fixed_str_free(&val->name);
-        vector_free(&val->ins_use);
 }
 
 static void ir_value_name_temp(struct ir_value *val, 
