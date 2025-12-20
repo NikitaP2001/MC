@@ -63,6 +63,8 @@ static inline _Bool ir_obj_is_scalar(struct ir_object *val)
 
 static inline struct ir_scalar ir_obj_scalar_get(struct ir_object *val)
 {
+        if (ir_obj_is_scalar(val) == false)
+                assert(false);
         assert(ir_obj_is_scalar(val));
         return val->var.scalar;
 }
@@ -137,6 +139,14 @@ _Bool ir_obj_is_ptr_void(struct ir_object *val)
         return false;
 }
 
+
+static inline 
+_Bool ir_obj_is_bool(struct ir_object *val)
+{
+        assert(ir_obj_is_scalar(val));
+        return ir_obj_scalar_get(val).type == s_i1;
+}
+
 /* pointers to qualified or unqualified versions of compatible types; */
 static inline 
 _Bool ir_obj_ptr_compat(struct ir_object *val1, 
@@ -148,7 +158,7 @@ _Bool ir_obj_ptr_compat(struct ir_object *val1,
         return false;
 }
 
-struct ir_object *ir_obj_create(const char *prefix, uint32_t index);
+struct ir_object *ir_obj_create(struct pt_node *identifier, uint32_t index);
 
 void ir_obj_destroy(struct ir_object *obj);
 

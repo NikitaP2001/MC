@@ -1,15 +1,19 @@
+#include <parser/symtable.h>
 #include <ir/basic_block.h>
 #include <ir/value.h>
 #include <ir/object.h>
 
 struct ir_object *
-ir_obj_create(const char *prefix, uint32_t index)
+ir_obj_create(struct pt_node *identifier, uint32_t index)
 {
+        const char *prefix = "object";
+        assert(identifier == NULL || identifier->sym == psym_identifier);
         struct ir_object *s_val = calloc(1, sizeof(struct ir_object));
         struct ir_value_params params = {
                 .prefix = prefix,
                 .index = index,
                 .type = ir_value_object,
+                .id = (identifier) ? identifier->node_value.value : NULL,
         };
         ir_value_init(&s_val->val, &params);
         s_val->eval = NULL;

@@ -4,26 +4,10 @@
 #include <tools/fnv_1.h>
 #include "symset.h"
 
-/* TODO: add flags to declaration struct  indicating present specifiers,
- * also make check to not to add ambiguous specifiers */
-static inline _Bool declaration_spec_is_typedef(struct pt_node *decl_spec)
-{
-        AST_FOREACH_CHILD(decl_spec) {
-                struct pt_node *node = (struct pt_node *)entry;
-                if (node->sym == psym_storage_class_specifier) {
-                        node = pt_node_child_first(node);
-                        if (token_get_keyword(node->node_value.value) 
-                                == keyw_typedef)
-                                return true;
-                }
-
-        }
-        return false;
-}
-
 _Bool declaration_is_typedef(struct declaration decl)
 {
-        return declaration_spec_is_typedef(decl.decl_specs);
+        struct declaration_specifiers *specs = &decl.type->base;
+        return (specs->storage_class & scs_typedef);
 }
 
 static inline hash_key_t symtable_token_hash(struct token *id)
@@ -230,23 +214,93 @@ struct label *symtable_get_label(struct symtable *sym_tbl,
         return NULL;
 }
 
-static mc_status_t symtable_add_declaration_type(struct hash_table *ht,
-                                                 struct pt_node *decl_spec)
+static void sympable_parse_storage_class_specifier(struct declaration_specifiers *specs_info,
+                                                   struct pt_node *scs_node)
 {
-        UNUSED(ht);
-        UNUSED(decl_spec);
+        struct pt_node *val_node = pt_node_child_first(scs_node);
+        enum keyword_type keyw_type 
+                = token_get_keyword(val_node->node_value.value);
+        specs_info->storage_class 
+                = SCS_KEYWORD_TO_ENUM(keyw_type); 
+}
+
+static void sympable_parse_type_specifier(struct declaration_specifiers *specs_info,
+                                          struct pt_node *ts_node)
+{
+        struct pt_node *val_node = pt_node_child_first(ts_node);
+        if (val_node->sym == psym_struct_or_union_specifier) {
+                struct pt_node *su_node = val_node;
+                UNUSED(su_node);
+                specs_info->type_spec |= ts_struct_or_union;
+        }
+        else if (val_node->sym == psym_enum_specifier) {
+                specs_info->type_spec |= ts_enum;
+        }
+        else if (val_node->sym == psym_typedef_name) {
+                specs_info->type_spec |= ts_typedef_name;
+        } else {
+                enum keyword_type keyw_type 
+                        = token_get_keyword(val_node->node_value.value);
+                specs_info->type_spec 
+                        |= TS_KEYWORD_TO_ENUM(keyw_type); 
+        }
+}
+
+static void sympable_parse_type_qualifier(struct declaration_specifiers *specs_info,
+                                          struct pt_node *tq_node)
+{
+        struct pt_node *val_node = pt_node_child_first(tq_node);
+        enum keyword_type keyw_type 
+                = token_get_keyword(val_node->node_value.value);
+        specs_info->type_qual 
+                = TQ_KEYWORD_TO_ENUM(keyw_type);
+}
+
+static void sympable_parse_function_specifier(struct declaration_specifiers *specs_info,
+                                              struct pt_node *su_node)
+{
+        struct pt_node *val_node = pt_node_child_first(su_node);
+        enum keyword_type keyw_type 
+                = token_get_keyword(val_node->node_value.value);
+        if (keyw_type == keyw_inline) {
+                specs_info->function_spec = fs_inline;
+        } else {
+                MC_DBG(MC_CRIT, "Unexpected function specifier");
+        }
+}
+
+static mc_status_t symtable_parse_declaration_type(struct hash_table *ht,
+                                                   struct type_info *t_info,
+                                                   struct pt_node *decl_spec)
+{
         mc_status_t status = MC_OK;
-        /*
+        UNUSED(ht);
         uint16_t child_count = pt_node_child_count(decl_spec);
+        struct declaration_specifiers *specs_info = &t_info->base;
 
         for (uint16_t i_node = 1; i_node <= child_count; i_node++) {
                 struct pt_node *curr = pt_node_child_number(decl_spec, i_node);
-                if (curr->sym == psym_storage_class_specifier) {
-
+                switch (curr->sym) {
+                case psym_storage_class_specifier:
+                        sympable_parse_storage_class_specifier(specs_info, curr);
+                        break;
+                case psym_type_specifier:
+                        sympable_parse_type_specifier(specs_info, curr);
+                        break;
+                case psym_type_qualifier:
+                        sympable_parse_type_qualifier(specs_info, curr);
+                        break;
+                case psym_function_specifier:
+                        sympable_parse_function_specifier(specs_info, curr);
+                        break;
+                default:
+                        MC_DBG(MC_ERR, "Unexpected declaration specifier");
+                        status = MC_PARSE_ERROR;
+                        break;
                 }
         }
         assert(false);
-        */
+
         return status;
 }
 
@@ -257,10 +311,18 @@ mc_status_t symtable_add_declaration(struct symtable *sym_tbl,
         assert(decl->sym == psym_declaration);
         struct pt_node *init_lst = pt_node_child_last(decl);
         struct pt_node *decl_spec = pt_node_child_first(decl);
+        struct type_info t_info_temp = { 0 };
+        struct type_info *t_info = &t_info_temp;
 
-        status = symtable_add_declaration_type(&sym_tbl->type_tbl, decl);
+        status = symtable_parse_declaration_type(&sym_tbl->type_tbl, 
+                t_info, decl_spec);
         if (status != MC_OK)
                 return status;
+
+        if (!symtable_is_anonymous(t_info)) {
+                t_info = malloc(sizeof(struct type_info));
+                memcpy(t_info, &t_info_temp, sizeof(struct type_info));
+        }
 
         if (init_lst->sym == psym_declaration_specifiers)
                 return MC_OK;
@@ -276,7 +338,8 @@ mc_status_t symtable_add_declaration(struct symtable *sym_tbl,
                         .decl = {
                                 .decl_specs = decl_spec,
                                 .init_decl = init_decl,
-                        },
+                                .type = &t_info,
+                        }
                 };
                 /* TODO: 
                  * 1. check 6.7p2 no more than one declaration of the 

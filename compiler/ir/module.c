@@ -27,6 +27,7 @@ static inline void ir_module_value_add(struct ir_module *module,
 struct ir_value *ir_module_value_get(struct ir_module *module, 
                                      struct token *id_tok)
 {
+        assert(module != NULL);
         return ir_seek_var_in_table(&module->var_tbl, id_tok);
 }
 

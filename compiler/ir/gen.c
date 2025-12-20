@@ -68,8 +68,10 @@ struct ir_value *irgen_context_value_get(struct irgen_context *gen,
         struct token *id_tok = ast_declarator_id(id_node);
         struct ir_function *func = gen->curr_func;
         struct ir_module *mod = gen->mod;
+        struct ir_value *value = NULL;
 
-        struct ir_value *value = ir_function_value_get(func, id_tok);
+        if (func != NULL)
+                value = ir_function_value_get(func, id_tok);
         if (value == NULL)
                 value = ir_module_value_get(mod, id_tok);
 
@@ -82,6 +84,11 @@ void irgen_function_create(struct irgen_context *gen,
         assert(func_def->sym == psym_function_definition);
         struct ir_function *func = ir_function_create(func_def);
         gen->curr_func = func;
+}
+
+void irgen_funtion_end(struct irgen_context *gen)
+{
+        gen->curr_func = NULL;
 }
 
 /* Create new block based on current node, put in in current value bb
@@ -122,7 +129,8 @@ struct basic_block *irgen_bb_create(struct irgen_context *gen,
         [psym_relational_expression] = 1,       \
 
 static void irgen_obj_specify_type(struct ir_object *s_val, 
-        struct pt_node *lval_node)
+                                   struct symtable *symtab,
+                                   struct pt_node *lval_node)
 {
         enum parser_symbol sym = lval_node->sym;
         static const uint8_t int_expr[] = { IRGEN_INTEGER_EXPRESSION };
@@ -139,6 +147,14 @@ static void irgen_obj_specify_type(struct ir_object *s_val,
                 ir_scalar_from_token(&scalar, const_tok);
                 ir_obj_scalar_set(s_val, scalar);
         } else if (sym == psym_type_name) {
+                assert(false);
+        } else if (sym == psym_identifier) {
+                struct declaration *decl = symtable_get_declaration(
+                        symtab,
+                        lval_node->node_value.value,
+                        lval_node);
+                assert(false);
+        } else {
                 assert(false);
         }
         s_val->node = lval_node;
@@ -187,12 +203,17 @@ static _Bool irgen_obj_is_global(struct pt_node *lval_node)
 struct ir_object *irgen_obj_create(struct irgen_context *gen, 
         struct pt_node *lval_node)
 {
-        const char *prefix = "object";
-        struct ir_object *s_val = ir_obj_create(prefix, 
-                irgen_label_index(gen));
-        gen->curr_value = &s_val->val;
+        struct ir_object *s_val;
+
+        if (lval_node != NULL) 
+                s_val = ir_obj_create(lval_node, 0);
+        else
+                s_val = ir_obj_create(NULL, irgen_label_index(gen));
+
         if (lval_node != NULL)
-                irgen_obj_specify_type(s_val, lval_node);
+                irgen_obj_specify_type(s_val, gen->parser->sym_tbl, lval_node);
+
+        gen->curr_value = &s_val->val;
         if (irgen_obj_is_global(lval_node))
                 ir_module_object_add(gen->mod, s_val);
         else 
@@ -275,6 +296,8 @@ mc_status_t irgen_obj_move_single(struct irgen_context *gen,
 {
         mc_status_t status = MC_OK;
         struct ir_object *result = irgen_object_get(gen);
+        if (result == val_mov)
+                abort();
         assert(result != val_mov);
         struct basic_block *bb_val = ir_obj_get_eval(val_mov);
         if (bb_val == NULL) {
@@ -1057,5 +1080,15 @@ mc_status_t irgen_obj_array_index(struct irgen_context *gen,
         UNUSED(gen);
         UNUSED(array);
         UNUSED(index);
+        return MC_OK;
+}
+
+mc_status_t irgen_obj_assign(struct irgen_context *gen, 
+                             struct ir_object *left,
+			     struct ir_object *right)
+{
+        UNUSED(gen);
+        UNUSED(left);
+        UNUSED(right);
         return MC_OK;
 }

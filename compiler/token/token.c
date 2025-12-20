@@ -32,45 +32,52 @@ void token_destroy(struct token *tok)
         free(tok);
 }
 
-/* order should match enum token_type */
+/* order should match enum keyword_type */
 const char* token_keywords[] = {
-        "auto",
-        "enum",
-        "restrict",
-        "break",
-        "extern",
-        "return",
-        "unsigned",
-        "void",
-        "case",
-        "float",
-        "short",
-        "char",
-        "for",
-        "signed",
-        "volatile",
-        "while",
-        "const",
-        "goto",
-        "sizeof",
-        "_Bool",
-        "continue",
-        "if",
-        "static",
-        "_Complex",
-        "default",
-        "inline",
-        "struct",
-        "_Imaginary",
-        "do",
-        "int",
-        "switch",
-        "double",
-        "long",
+        /* storage-class-specifier */
         "typedef",
-        "else",
+        "extern",
+        "static",
+        "auto",
         "register",
-        "union"
+        /* type-specifier */
+        "void",
+        "char",
+        "short",
+        "int",
+        "long",
+        "float",
+        "double",
+        "signed",
+        "unsigned",
+        "_Bool",
+        "_Complex",
+        "_Imaginary",
+        /* struct-or-union */
+        "struct",
+        "union",
+        /* enum-specifier */
+        "enum",
+        /* function-specifier */
+        "inline",
+        /* type-qualifier */
+        "const",
+        "restrict",
+        "volatile",
+        /* other keywords */
+        "break",
+        "case",
+        "continue",
+        "default",
+        "do",
+        "else",
+        "for",
+        "goto",
+        "if",
+        "return",
+        "sizeof",
+        "switch",
+        "while"
 };
 
 static struct trie_node token_keyw_trie;

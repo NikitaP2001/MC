@@ -94,45 +94,65 @@ enum token_type {
 extern const char* token_keywords[];
 
 enum keyword_type {
-        keyw_auto,
-        keyw_enum,
-        keyw_restrict,
-        keyw_break,
+        /* storage-class-specifier */
+        keyw_storage_class_specifier_first,
+        keyw_typedef = keyw_storage_class_specifier_first,
         keyw_extern,
-        keyw_return,
-        keyw_unsigned,
-        keyw_void,
-        keyw_case,
-        keyw_float,
-        keyw_short,
-        keyw_char,
-        keyw_for,
-        keyw_signed,
-        keyw_volatile,
-        keyw_while,
-        keyw_const,
-        keyw_goto,
-        keyw_sizeof,
-        keyw_Bool,
-        keyw_continue,
-        keyw_if,
         keyw_static,
-        keyw_Complex,
-        keyw_default,
-        keyw_inline,
-        keyw_struct,
-        keyw_Imaginary,
-        keyw_do,
-        keyw_int,
-        keyw_switch,
-        keyw_double,
-        keyw_long,
-        keyw_typedef,
-        keyw_else,
+        keyw_auto,
         keyw_register,
-        keyw_union,
-        keyw_last = keyw_union,
+        keyw_storage_class_specifier_last = keyw_register,
 
+        /* type-specifier */
+        keyw_type_specifier_first,
+        keyw_void = keyw_type_specifier_first,
+        keyw_char,
+        keyw_short,
+        keyw_int,
+        keyw_long,
+        keyw_float,
+        keyw_double,
+        keyw_signed,
+        keyw_unsigned,
+        keyw_Bool,
+        keyw_Complex,
+        keyw_Imaginary,
+        keyw_type_specifier_last = keyw_Imaginary,
+
+        /* struct-or-union */
+        keyw_struct_or_union_first,
+        keyw_struct = keyw_struct_or_union_first,
+        keyw_union,
+        keyw_struct_or_union_last = keyw_union,
+
+        /* enum-specifier */
+        keyw_enum,
+
+        /* function-specifier */
+        keyw_inline,
+
+        /* type-qualifier */
+        keyw_type_qualifier_first,
+        keyw_const = keyw_type_qualifier_first,
+        keyw_restrict,
+        keyw_volatile,
+
+        /* other keywords */
+        keyw_break,
+        keyw_case,
+        keyw_continue,
+        keyw_default,
+        keyw_do,
+        keyw_else,
+        keyw_for,
+        keyw_goto,
+        keyw_if,
+        keyw_return,
+        keyw_sizeof,
+        keyw_switch,
+        keyw_while,
+
+        keyw_last = keyw_while,
         keyw_invalid
 };
 
@@ -263,13 +283,13 @@ void token_print(struct token *tok);
 
 static inline const char *token_get_strlit(struct token *tok)
 {
-        assert(tok->type == tok_strlit);
+        assert(tok->type == tok_identifier);
         return tok->value.var_raw.value;
 }
 
-static inline file_size_t token_get_strlit_length(struct token *tok)
+static inline file_size_t token_get_id_length(struct token *tok)
 {
-        assert(tok->type == tok_strlit);
+        assert(tok->type == tok_identifier);
         return tok->value.var_raw.length;
 }       
 

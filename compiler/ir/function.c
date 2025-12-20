@@ -33,6 +33,7 @@ void ir_function_value_add(struct ir_function *func, struct ir_value *val)
 struct ir_value *ir_function_value_get(struct ir_function *func, 
                                        struct token *id_tok)
 {
+        assert(func != NULL);
         return ir_seek_var_in_table(&func->var_tbl, id_tok);
 }
 

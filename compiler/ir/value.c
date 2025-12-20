@@ -62,8 +62,10 @@ static void ir_value_name_temp(struct ir_value *val,
 static void ir_value_name_fixed(struct ir_value *val, 
                                 struct token *token)
 {
+        if (token->type != tok_identifier)
+                abort();
         fixed_str_init(&val->name, token_get_strlit(token), 
-                token_get_strlit_length(token));
+                token_get_id_length(token));
 }
 
 void ir_value_init(struct ir_value *val, struct ir_value_params *params)

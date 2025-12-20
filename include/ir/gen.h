@@ -115,6 +115,8 @@ uint32_t irgen_label_index(struct irgen_context *gen)
 void irgen_function_create(struct irgen_context *gen,
                            struct pt_node *func_def);
 
+void irgen_funtion_end(struct irgen_context *gen);
+
 struct basic_block *irgen_bb_create(struct irgen_context *gen, 
         struct pt_node *source);
 
@@ -128,6 +130,10 @@ struct ir_object *irgen_obj_create(struct irgen_context *gen,
 
 struct ir_object *irgen_scalar_create(struct irgen_context *gen, 
         struct ir_scalar var);
+
+typedef mc_status_t (*irgen_obj_op_t)(struct irgen_context *gen, 
+                                        struct ir_object *left,
+                                        struct ir_object *right);
 
 /* constraints: @value_true/false may have first basic block in use, which will
  * lead to their initial value assignatioin, make sure associated with them 
@@ -255,6 +261,10 @@ mc_status_t irgen_obj_struct_ptr_op(struct irgen_context *gen,
 mc_status_t irgen_obj_array_index(struct irgen_context *gen,
                                  struct ir_object *array,
                                  struct ir_object *index);
+
+mc_status_t irgen_obj_assign(struct irgen_context *gen, 
+                             struct ir_object *left,
+			     struct ir_object *right);
 
 static inline enum ir_value_type
 irgen_value_type(struct irgen_context *gen)
