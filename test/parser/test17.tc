@@ -1,0 +1,11 @@
+/* additional valid abstract type-name declarators */
+
+int main()
+{
+        sizeof(const int *);
+        sizeof(volatile unsigned long *[3]);
+        sizeof(int (*)(const char *, ...));
+        sizeof(int (*(*)(void))[7]);
+        sizeof(void (*)(int (*)[4]));
+        return 0;
+}

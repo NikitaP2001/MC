@@ -78,6 +78,11 @@ static inline struct pt_node *pt_node_child_last(struct pt_node *node)
         return node->childs.nodes[node->childs.size - 1];
 }
 
+static inline struct token *pt_node_value_get(struct pt_node *node)
+{
+        return node->node_value.value;
+}
+
 static inline struct pt_node *pt_node_child_first(struct pt_node *node)
 {
         if (pt_node_child_count(node) == 0)

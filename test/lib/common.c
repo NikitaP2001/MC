@@ -120,3 +120,104 @@ void parser_test_free(struct parser_test_context *t_ctx)
         pp_free(&t_ctx->pp);
 	fs_free(&t_ctx->fs);
 }
+
+mc_status_t parser_test_parse_translation_unit(struct parser_test_context *t_ctx,
+					       struct pt_node **root)
+{
+	struct parser *ps = &t_ctx->parser;
+	mc_status_t status = ps->ops->translation_unit(ps);
+
+	if (!MC_SUCC(status))
+		return status;
+
+	*root = parser_result_pull(ps);
+	if (*root == NULL)
+		return MC_FAIL;
+
+	return MC_OK;
+}
+
+void parser_test_free_tree(struct parser_test_context *t_ctx,
+			   struct pt_node *root)
+{
+	if (root != NULL)
+		pt_node_destroy(root);
+	parser_test_free(t_ctx);
+}
+
+static struct pt_node *parser_test_find_node_by_symbol_impl(
+	struct pt_node *node,
+	enum parser_symbol sym,
+	uint16_t occurrence,
+	uint16_t *current)
+{
+	if (node == NULL)
+		return NULL;
+
+	if (node->sym == sym) {
+		(*current)++;
+		if (*current == occurrence)
+			return node;
+	}
+
+	for (uint16_t index = 1; index <= pt_node_child_count(node); index++) {
+		struct pt_node *child = pt_node_child_number(node, index);
+		struct pt_node *result = parser_test_find_node_by_symbol_impl(
+			child, sym, occurrence, current);
+		if (result != NULL)
+			return result;
+	}
+
+	return NULL;
+}
+
+struct pt_node *parser_test_find_node_by_symbol(struct pt_node *root,
+						enum parser_symbol sym,
+						uint16_t occurrence)
+{
+	uint16_t current = 0;
+	return parser_test_find_node_by_symbol_impl(root, sym, occurrence,
+		&current);
+}
+
+static struct token *parser_test_find_identifier_impl(struct pt_node *node,
+						      const char *identifier,
+						      uint16_t occurrence,
+						      uint16_t *current)
+{
+	if (node == NULL)
+		return NULL;
+
+	if (node->sym == psym_identifier) {
+		struct token *tok = pt_node_value_get(node);
+		size_t id_len = strlen(identifier);
+
+		if (tok != NULL && tok->type == tok_identifier
+			&& tok->value.var_raw.length == id_len
+			&& memcmp(tok->value.var_raw.value, identifier,
+				id_len) == 0) {
+			(*current)++;
+			if (*current == occurrence)
+				return tok;
+		}
+	}
+
+	for (uint16_t index = 1; index <= pt_node_child_count(node); index++) {
+		struct pt_node *child = pt_node_child_number(node, index);
+		struct token *result = parser_test_find_identifier_impl(
+			child, identifier, occurrence, current);
+		if (result != NULL)
+			return result;
+	}
+
+	return NULL;
+}
+
+struct token *parser_test_find_identifier(struct pt_node *root,
+					  const char *identifier,
+					  uint16_t occurrence)
+{
+	uint16_t current = 0;
+	return parser_test_find_identifier_impl(root, identifier, occurrence,
+		&current);
+}

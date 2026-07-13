@@ -1,0 +1,8 @@
+/* typedef used before declaration in same scope: invalid */
+
+int main()
+{
+        T value;
+        typedef int T;
+        return 0;
+}

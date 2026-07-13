@@ -16,7 +16,7 @@ TEST_CASE(ir_gen, additive_expression_simple_const)
 
 	/* Initialize environment and parse code */
 	status = ir_test_init_with_code(&full_env, code, NULL);
-	if (status != MC_OK) {
+	if (!MC_SUCC(status)) {
 		return;
 	}
 
@@ -27,7 +27,7 @@ TEST_CASE(ir_gen, additive_expression_simple_const)
 	    &full_env, 
             ps->ops->expression, 
             &expr_node);
-	if (!expr_node || status != MC_OK) {
+	if (!expr_node || !MC_SUCC(status)) {
 		goto cleanup;
 	}
 
@@ -71,7 +71,7 @@ TEST_CASE(ir_gen, assignment_expression_simple_const)
 
 	/* Initialize environment and parse code */
 	status = ir_test_init_with_code(&full_env, code, NULL);
-	if (status != MC_OK) {
+	if (!MC_SUCC(status)) {
 		return;
 	}
 
@@ -82,7 +82,7 @@ TEST_CASE(ir_gen, assignment_expression_simple_const)
 	    &full_env, 
 	    ps->ops->assignment_expression, 
 	    &expr_node);
-	if (!expr_node || status != MC_OK) {
+	if (!expr_node || !MC_SUCC(status)) {
 		goto cleanup;
 	}
 
@@ -133,7 +133,7 @@ TEST_CASE(ir_gen, assignment_expression_simple_dyn)
 
 	/* Initialize environment and parse code */
 	status = ir_test_init_with_code(&full_env, code, NULL);
-	if (status != MC_OK) {
+	if (!MC_SUCC(status)) {
 		return;
 	}
 
@@ -144,7 +144,7 @@ TEST_CASE(ir_gen, assignment_expression_simple_dyn)
 	    &full_env, 
 	    ps->ops->external_declaration, 
 	    &proc_node);
-	if (!proc_node || status != MC_OK) {
+	if (!proc_node || !MC_SUCC(status)) {
 		goto cleanup;
 	}
         status = full_env.gen_ctx.ops->external_declaration(&full_env.gen_ctx,

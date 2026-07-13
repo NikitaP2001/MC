@@ -10,13 +10,14 @@ enum mc_status {
         MC_FILE_OP_FAIL = 2,
         MC_MEMALLOC_FAIL = 3,
         MC_INVALID_ARG = 4,
-        MC_OPEN_FILE_FAIL = 5,
-        MC_INVALID_PATH = 6,
-        MC_UNKNOWN_CHAR = 7,
-        MC_SYNTAX_ERR   = 8,
-        MC_FILE_NOT_FOUND = 9,
-        MC_PARSE_ERROR = 10,
-        MC_IRGEN_ERROR = 11,
+        MC_INVALID_TYPE = 5,
+        MC_OPEN_FILE_FAIL = 6,
+        MC_INVALID_PATH = 7,
+        MC_UNKNOWN_CHAR = 8,
+        MC_SYNTAX_ERR   = 9,
+        MC_FILE_NOT_FOUND = 10,
+        MC_PARSE_ERROR = 11,
+        MC_IRGEN_ERROR = 12,
 };
 
 typedef enum mc_status mc_status_t;
@@ -29,7 +30,7 @@ extern const char *mc_status_table[];
 
 static inline _Bool __mc_succ(enum mc_status status)
 {
-        return (status == 0);
+        return (status <= 0);
 }
 #define MC_SUCC(status) __mc_succ(status)
 

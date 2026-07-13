@@ -1,0 +1,7 @@
+/* additional invalid abstract type-name declarators */
+
+int main()
+{
+        sizeof(int (*)[]());
+        return 0;
+}

@@ -153,6 +153,7 @@ static void irgen_obj_specify_type(struct ir_object *s_val,
                         symtab,
                         lval_node->node_value.value,
                         lval_node);
+                UNUSED(decl);
                 assert(false);
         } else {
                 assert(false);
@@ -211,7 +212,7 @@ struct ir_object *irgen_obj_create(struct irgen_context *gen,
                 s_val = ir_obj_create(NULL, irgen_label_index(gen));
 
         if (lval_node != NULL)
-                irgen_obj_specify_type(s_val, gen->parser->sym_tbl, lval_node);
+                irgen_obj_specify_type(s_val, &gen->parser->sym_tbl, lval_node);
 
         gen->curr_value = &s_val->val;
         if (irgen_obj_is_global(lval_node))

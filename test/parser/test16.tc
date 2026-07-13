@@ -1,0 +1,7 @@
+/* parameter identifier is not a typedef-name: invalid type use */
+
+int foo(int T)
+{
+        T x;
+        return 0;
+}
